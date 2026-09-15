@@ -522,6 +522,15 @@ function startOfWeek(d){
 function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1, 0,0,0,0); }
 
 /* ---------------- boot ---------------- */
+function unsubscribeAllListeners(){
+  if(userDocUnsub){ userDocUnsub(); userDocUnsub = null; }
+  if(myShiftUnsub){ myShiftUnsub(); myShiftUnsub = null; }
+  if(myEntriesUnsub){ myEntriesUnsub(); myEntriesUnsub = null; }
+  if(adminUsersUnsub){ adminUsersUnsub(); adminUsersUnsub = null; }
+  if(adminEntriesUnsub){ adminEntriesUnsub(); adminEntriesUnsub = null; }
+  if(adminShiftsUnsub){ adminShiftsUnsub(); adminShiftsUnsub = null; }
+}
+
 buildSprockets();
 if(!isConfigured){
   renderScreen('setup');
@@ -531,6 +540,7 @@ if(!isConfigured){
   db = getFirestore(app);
   onAuthStateChanged(auth, (user)=>{
     if(!user){
+      unsubscribeAllListeners(); // safety net in case sign-out happened without going through doLogout
       currentUser = null;
       renderScreen('auth');
       return;
@@ -555,6 +565,7 @@ function watchUserDoc(uid, email){
       else renderScreen('staff');
     }
   }, (err)=>{
+    if(!currentUser) return; // already logged out — ignore the trailing permission error
     document.getElementById('app').innerHTML = '<div class="loading">Could not load your account:<br>'+escapeHtml(err.message)+'</div>';
   });
 }
@@ -566,6 +577,8 @@ function updateWhoami(){
 }
 window.doLogout = async function(){
   if(!confirm('Log out of this account?')) return;
+  unsubscribeAllListeners(); // stop syncing before the session actually ends, so nothing gets a permission error
+  currentUser = null;
   try{ await signOut(auth); }catch(e){}
 };
 
