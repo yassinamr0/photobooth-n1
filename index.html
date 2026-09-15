@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Booth Log</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Booth Log">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14101a">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2314101a'/%3E%3Cpath d='M55 12 22 58h26l-4 30 35-46H53l2-30Z' fill='%23FFC93C'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --font-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:'SF Mono','SFMono-Regular',Menlo,Consolas,'Roboto Mono',monospace;
+    --bg:#14101a;
+    --bg-2:#1b1523;
+    --card:#241d2f;
+    --card-2:#2c2338;
+    --well:#0e0b14;
+    --border:#3c3149;
+    --border-lt:#4d3f5c;
+    --text:#f5f0e8;
+    --muted:#a89dbb;
+    --flash:#ffc93c;
+    --flash-shade:#b8862a;
+    --flash-dim:#4a3e1c;
+    --pink:#ff4d8d;
+    --pink-shade:#b32e5f;
+    --pink-dim:#3d2030;
+    --cash:#4ade80;
+    --cash-shade:#237a45;
+    --cash-dim:#16301f;
+    --visa:#5b9cff;
+    --visa-shade:#2f5aa8;
+    --visa-dim:#152742;
+    --danger:#ff5c5c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 600px 260px at 50% -60px, rgba(255,201,60,0.07), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 5px),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:56px;
+    min-height:100vh;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 14px;}
+  ::selection{background:var(--flash); color:var(--bg);}
+
+  /* ---------- Header / filmstrip ---------- */
+  .filmstrip{
+    background:linear-gradient(180deg,#1c1526,#14101a 90%);
+    padding:10px 0 0;
+    position:relative;
+    border-bottom:1px solid var(--border);
+  }
+  .sprockets{display:flex; justify-content:space-between; padding:0 18px;}
+  .sprockets span{
+    width:7px;height:7px;border-radius:2px;background:var(--bg);
+    border:1px solid var(--border);
+    box-shadow:inset 0 1px 1px rgba(0,0,0,0.6);
+  }
+  .header-inner{padding:16px 4px 18px; display:flex; align-items:center; justify-content:space-between;}
+  .brand{display:flex; align-items:center; gap:11px;}
+  .bolt-wrap{
+    width:38px; height:38px; flex:none; border-radius:11px;
+    background:radial-gradient(circle at 32% 28%, #3a2e49, var(--well) 75%);
+    border:1px solid var(--border-lt);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.06), inset 0 -3px 6px rgba(0,0,0,0.55), 0 0 18px rgba(255,201,60,0.18);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .bolt{width:18px;height:18px;flex:none; filter:drop-shadow(0 0 5px rgba(255,201,60,0.65));}
+  h1{font-family:var(--font-display); font-weight:900; letter-spacing:0.2px; font-size:19px; margin:0; line-height:1.1; color:var(--flash);}
+  .brand small{display:block;color:var(--muted);font-size:11px;margin-top:3px; letter-spacing:0.3px;}
+  #whoami{font-size:11px;color:var(--muted); text-align:right; font-family:var(--font-mono); max-width:150px;}
+  #whoami b{color:var(--text); display:block; font-size:12px;}
+  .logout-link{display:block; font-size:9.5px; color:var(--muted); text-decoration:underline; margin-top:3px; cursor:pointer; font-family:var(--font-body);}
+
+  /* ---------- Panels ---------- */
+  .card{
+    background:linear-gradient(180deg, var(--card-2), var(--card) 60%);
+    border:1px solid var(--border);
+    border-radius:13px;
+    padding:16px;
+    margin-top:14px;
+    position:relative;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 24px -16px rgba(0,0,0,0.75);
+  }
+  .card::before{
+    content:"";
+    position:absolute; left:14px; right:14px; top:0; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
+  }
+  .card h2{
+    font-family:var(--font-display); font-weight:900; font-size:13.5px; text-transform:uppercase; letter-spacing:0.8px;
+    margin:0 0 13px; color:var(--muted); display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .tag{
+    font-family:var(--font-body); font-weight:800; font-size:9.5px; color:var(--bg); background:var(--flash);
+    padding:3px 8px; border-radius:5px; letter-spacing:0.4px; box-shadow:0 1px 0 var(--flash-shade);
+  }
+  .card h2 .tag.waste{background:var(--pink); box-shadow:0 1px 0 var(--pink-shade);}
+  .card h2 .tag.admin{background:var(--visa); box-shadow:0 1px 0 var(--visa-shade);}
+
+  /* ---------- Sticky summary (LED readout strip) ---------- */
+  .summary{
+    position:sticky; top:0; z-index:20;
+    background:rgba(20,16,26,0.97); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border); padding:10px 0 12px;
+  }
+  .summary-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
+  .sumcell{
+    background:var(--well); border:1px solid var(--border); border-radius:9px;
+    padding:7px 3px; text-align:center; box-shadow:inset 0 2px 5px rgba(0,0,0,0.55);
+  }
+  .sumcell .v{font-family:var(--font-mono); font-weight:700; font-size:13.5px; letter-spacing:0.1px; color:var(--text);}
+  .sumcell.total .v{color:var(--flash);font-size:15px; text-shadow:0 0 10px rgba(255,201,60,0.45);}
+  .sumcell.cash .v{color:var(--cash); text-shadow:0 0 8px rgba(74,222,128,0.35);}
+  .sumcell.visa .v{color:var(--visa); text-shadow:0 0 8px rgba(91,156,255,0.35);}
+  .sumcell .l{font-size:8px;color:var(--muted);margin-top:3px;letter-spacing:0.2px;}
+
+  /* ---------- Stepper (shutter-style circular buttons) ---------- */
+  .stepper-row{display:flex; align-items:center; gap:14px;}
+  .step-btn{
+    width:54px;height:54px;flex:none; border-radius:50%;
+    border:1px solid var(--border-lt);
+    background:radial-gradient(circle at 34% 28%, var(--card-2) 0%, var(--well) 78%);
+    color:var(--text); font-size:24px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -4px 7px rgba(0,0,0,0.55), 0 3px 5px rgba(0,0,0,0.35);
+    transition:transform .07s ease, box-shadow .1s ease;
+  }
+  .step-btn:active{transform:scale(0.9); box-shadow:inset 0 2px 6px rgba(0,0,0,0.7), 0 0 14px rgba(255,201,60,0.35); color:var(--flash);}
+  .step-mid{flex:1; text-align:center;}
+  .step-mid .qty{font-family:var(--font-mono); font-weight:700; font-size:26px; line-height:1; letter-spacing:0.3px;}
+  .step-mid .qty span{font-size:12.5px; font-family:var(--font-body); color:var(--muted); font-weight:500; letter-spacing:0.2px;}
+  .price-row{display:flex; align-items:center; justify-content:center; gap:7px; margin-top:10px;}
+  .price-row label{font-size:10.5px;color:var(--muted); text-transform:uppercase; letter-spacing:0.4px;}
+  .price-input{
+    width:104px; background:var(--well); border:1px solid var(--border); border-radius:7px;
+    color:var(--flash); font-family:var(--font-mono); font-weight:700; font-size:15px; text-align:center; padding:7px 4px;
+    box-shadow:inset 0 2px 5px rgba(0,0,0,0.6); text-shadow:0 0 8px rgba(255,201,60,0.35);
+  }
+  .price-input.pink{color:var(--pink); text-shadow:0 0 8px rgba(255,77,141,0.35);}
+  .presets{display:flex; gap:6px; flex-wrap:wrap; margin-top:13px; justify-content:center;}
+  .preset-chip{
+    background:var(--well); border:1px solid var(--border); color:var(--muted); font-family:var(--font-mono);
+    font-size:12px; padding:6px 12px; border-radius:20px; cursor:pointer; box-shadow:inset 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .preset-chip:active{background:var(--flash-dim); color:var(--flash); border-color:var(--flash-shade);}
+  .preset-chip.active{background:var(--flash-dim); color:var(--flash); border-color:var(--flash-shade);}
+
+  /* ---------- Frames ---------- */
+  .frame-grid{display:flex; gap:10px;}
+  .frame-btn{
+    flex:1; background:linear-gradient(180deg, var(--card-2), var(--well) 130%);
+    border:1px solid var(--border); border-radius:12px; padding:14px 8px 12px; text-align:center; cursor:pointer;
+    position:relative; box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .frame-btn::after{
+    content:""; position:absolute; top:9px; right:9px; width:7px; height:7px; border-radius:50%;
+    background:var(--border-lt); box-shadow:inset 0 1px 1px rgba(0,0,0,0.5);
+    transition:background .15s, box-shadow .15s;
+  }
+  .frame-btn.lit::after{background:var(--flash); box-shadow:0 0 8px 2px rgba(255,201,60,0.7);}
+  .frame-btn:active{background:linear-gradient(180deg, var(--flash-dim), var(--well) 130%);}
+  .frame-btn .fname{font-weight:700; font-size:13px;}
+  .frame-btn .fprice{color:var(--flash); font-family:var(--font-mono); font-weight:700; font-size:14px; margin-top:4px;}
+  .frame-btn .fqty{margin-top:10px; font-size:11px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:9px;}
+  .frame-btn .fqty .fq-num{color:var(--text); font-weight:700; font-size:13px; font-family:var(--font-mono);}
+  .mini-btn{
+    width:23px;height:23px;border-radius:50%;border:1px solid var(--border-lt); background:var(--well); color:var(--text);
+    font-size:14px; line-height:1; display:flex;align-items:center;justify-content:center; box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  /* ---------- Custom item ---------- */
+  .custom-toggle{
+    width:100%; padding:11px; border-radius:9px; background:var(--well); border:1px dashed var(--border-lt);
+    color:var(--muted); font-size:12.5px; cursor:pointer; margin-top:13px; letter-spacing:0.2px;
+  }
+  .custom-form{display:none; gap:8px; margin-top:10px;}
+  .custom-form.open{display:flex;}
+  .custom-form input{
+    background:var(--well); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:10px;
+    font-size:13px; font-family:var(--font-body); box-shadow:inset 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .custom-form input[name="cname"]{flex:1.4;}
+  .custom-form input[name="cprice"]{flex:1; text-align:center; font-family:var(--font-mono);}
+  .custom-add-btn{
+    background:var(--flash); color:var(--bg); border:none; border-radius:8px; padding:0 15px; font-weight:800;
+    font-size:13px; cursor:pointer; box-shadow:0 2px 0 var(--flash-shade);
+  }
+  .custom-add-btn:active{transform:translateY(2px); box-shadow:none;}
+
+  /* ---------- Cart list ---------- */
+  .cart-list{margin-top:14px;}
+  .cart-item{display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-top:1px dashed var(--border); font-size:13px;}
+  .cart-item .ci-label{color:var(--text);}
+  .cart-item .ci-right{display:flex; align-items:center; gap:10px;}
+  .cart-item .ci-price{color:var(--flash); font-weight:700; font-family:var(--font-mono);}
+  .cart-remove{background:none; border:none; color:var(--danger); font-size:15px; cursor:pointer; padding:2px 4px;}
+  .cart-total-row{display:flex; justify-content:space-between; align-items:center; padding-top:13px; margin-top:6px; border-top:2px solid var(--border);}
+  .cart-total-row .ctl{font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px;}
+  .cart-total-row .ctv{font-family:var(--font-mono); font-weight:700; font-size:22px; color:var(--flash); text-shadow:0 0 10px rgba(255,201,60,0.4);}
+
+  /* ---------- Payment (split cash/visa amounts) ---------- */
+  .subtotal-ref{text-align:center; font-size:11px; color:var(--muted); margin-top:14px; font-family:var(--font-mono);}
+  .subtotal-ref span{color:var(--text); font-weight:700;}
+  .payment-row{display:flex; gap:10px; margin-top:10px;}
+  .pay-field{flex:1; background:var(--well); border:1px solid var(--border); border-radius:10px; padding:9px 10px; box-shadow:inset 0 2px 5px rgba(0,0,0,0.55);}
+  .pay-field label{font-size:9.5px; letter-spacing:0.5px; color:var(--muted); font-weight:700;}
+  .pay-field.cash label{color:var(--cash);}
+  .pay-field.visa label{color:var(--visa);}
+  .pay-input{display:block; width:100%; background:none; border:none; outline:none; font-family:var(--font-mono); font-weight:700; font-size:18px; color:var(--text); margin-top:2px; padding:0;}
+  .pay-field.cash .pay-input{color:var(--cash);}
+  .pay-field.visa .pay-input{color:var(--visa);}
+  .pay-quick{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; justify-content:center;}
+  .payment-hint{text-align:center; font-size:11px; margin-top:9px; min-height:14px; color:var(--muted); font-weight:600;}
+  .payment-hint.mismatch{color:var(--danger);}
+
+  .log-sale-btn{
+    width:100%; margin-top:15px; padding:16px; border:none; border-radius:11px; background:var(--flash); color:var(--bg);
+    font-family:var(--font-display); font-weight:900; font-size:14.5px; letter-spacing:0.6px; cursor:pointer; text-transform:uppercase;
+    box-shadow:0 4px 0 var(--flash-shade), 0 10px 18px -8px rgba(0,0,0,0.5); transition:transform .07s, box-shadow .07s;
+  }
+  .log-sale-btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--flash-shade);}
+  .log-sale-btn:disabled{background:var(--card-2); color:var(--muted); cursor:not-allowed; box-shadow:0 4px 0 var(--border);}
+
+  .log-waste-btn{
+    width:100%; margin-top:15px; padding:14px; border:none; border-radius:11px; background:var(--pink); color:#2a0512;
+    font-family:var(--font-display); font-weight:900; font-size:13.5px; letter-spacing:0.5px; cursor:pointer; text-transform:uppercase;
+    box-shadow:0 4px 0 var(--pink-shade); transition:transform .07s, box-shadow .07s;
+  }
+  .log-waste-btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--pink-shade);}
+  .log-waste-btn:disabled{background:var(--card-2); color:var(--muted); cursor:not-allowed; box-shadow:0 4px 0 var(--border);}
+
+  .primary-btn{
+    width:100%; padding:16px; border:none; border-radius:11px; background:var(--flash); color:var(--bg);
+    font-family:var(--font-display); font-weight:900; font-size:14.5px; letter-spacing:0.6px; cursor:pointer; text-transform:uppercase;
+    box-shadow:0 4px 0 var(--flash-shade); transition:transform .07s, box-shadow .07s;
+  }
+  .primary-btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--flash-shade);}
+  .primary-btn.pink{background:var(--pink); box-shadow:0 4px 0 var(--pink-shade); color:#2a0512;}
+  .primary-btn.visa{background:var(--visa); box-shadow:0 4px 0 var(--visa-shade); color:#04122b;}
+  .primary-btn:disabled{background:var(--card-2); color:var(--muted); cursor:not-allowed; box-shadow:0 4px 0 var(--border);}
+  .ghost-btn{
+    width:100%; padding:13px; border-radius:10px; text-align:center; font-weight:700; font-size:12.5px; cursor:pointer;
+    border:1px solid var(--border); background:var(--card-2); color:var(--text); box-shadow:0 2px 0 var(--border);
+  }
+  .ghost-btn:active{transform:translateY(2px); box-shadow:none;}
+
+  /* ---------- Shift log ---------- */
+  .log-header{display:flex; justify-content:space-between; align-items:center;}
+  .log-entry{border-top:1px dashed var(--border); padding:11px 0; display:flex; justify-content:space-between; gap:10px;}
+  .log-entry:first-child{border-top:none;}
+  .le-left{flex:1; min-width:0;}
+  .le-time{font-size:10px; color:var(--muted); font-family:var(--font-mono);}
+  .le-desc{font-size:13px; margin-top:3px; word-break:break-word;}
+  .le-badge{display:inline-block; font-size:9px; font-weight:800; padding:2px 8px; border-radius:5px; margin-top:6px; margin-right:4px; letter-spacing:0.4px;}
+  .le-badge.Cash{background:var(--cash-dim); color:var(--cash);}
+  .le-badge.Visa{background:var(--visa-dim); color:var(--visa);}
+  .le-badge.Waste{background:var(--pink-dim); color:var(--pink);}
+  .le-right{text-align:right; flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+  .le-price{font-family:var(--font-mono); font-weight:700; font-size:14.5px; color:var(--flash);}
+  .le-del{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;}
+  .empty-log{color:var(--muted); font-size:13px; text-align:center; padding:22px 0;}
+
+  /* ---------- Auth screens ---------- */
+  .auth-wrap{max-width:420px; margin:0 auto; padding:60px 16px 40px; text-align:center;}
+  .auth-icon{width:64px;height:64px; margin:0 auto 18px; border-radius:18px;
+    background:radial-gradient(circle at 32% 28%, #3a2e49, var(--well) 75%);
+    border:1px solid var(--border-lt); box-shadow:inset 0 1px 1px rgba(255,255,255,0.06), inset 0 -3px 6px rgba(0,0,0,0.55), 0 0 22px rgba(255,201,60,0.2);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .auth-title{font-family:var(--font-display); font-weight:900; font-size:20px; color:var(--flash); margin:0 0 6px;}
+  .auth-sub{color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 24px;}
+  .name-form{display:flex; flex-direction:column; gap:10px; text-align:left;}
+  .name-form label{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:block;}
+  .name-form input{
+    width:100%; background:var(--well); border:1px solid var(--border); border-radius:9px; color:var(--text);
+    padding:13px 12px; font-size:15px; font-family:var(--font-body); box-shadow:inset 0 2px 5px rgba(0,0,0,0.55);
+  }
+  .pulse-dot{width:10px;height:10px;border-radius:50%; background:var(--flash); margin:0 auto 20px;
+    box-shadow:0 0 0 0 rgba(255,201,60,0.6); animation:pulse 1.6s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(255,201,60,0.55);}
+    70%{box-shadow:0 0 0 14px rgba(255,201,60,0);}
+    100%{box-shadow:0 0 0 0 rgba(255,201,60,0);}
+  }
+  .setup-code{
+    text-align:left; background:var(--well); border:1px solid var(--border); border-radius:9px; padding:12px;
+    font-family:var(--font-mono); font-size:11px; color:var(--muted); white-space:pre-wrap; margin-top:16px; line-height:1.6;
+  }
+  .reset-link{display:inline-block; margin-top:22px; color:var(--muted); font-size:11px; text-decoration:underline; cursor:pointer;}
+  .auth-tabs{display:flex; gap:8px; margin-bottom:20px; background:var(--well); border:1px solid var(--border); border-radius:10px; padding:4px;}
+  .auth-tab{flex:1; text-align:center; padding:9px 0; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; color:var(--muted);}
+  .auth-tab.active{background:var(--flash-dim); color:var(--flash);}
+
+  /* ---------- Shift bar ---------- */
+  .shift-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--well); border:1px solid var(--border); border-radius:11px; padding:12px 14px; margin-top:14px;
+    box-shadow:inset 0 2px 5px rgba(0,0,0,0.5);
+  }
+  .shift-bar .sb-label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px;}
+  .shift-bar .sb-time{font-family:var(--font-mono); font-weight:700; font-size:15px; color:var(--flash); margin-top:2px;}
+  .shift-bar .sb-btn{
+    background:var(--pink); color:#2a0512; border:none; border-radius:8px; padding:9px 14px; font-weight:800; font-size:11.5px;
+    cursor:pointer; box-shadow:0 3px 0 var(--pink-shade); letter-spacing:0.3px; text-transform:uppercase;
+  }
+  .shift-bar .sb-btn:active{transform:translateY(2px); box-shadow:none;}
+  .locked-note{text-align:center; color:var(--muted); font-size:12px; padding:6px 0 2px;}
+
+  /* ---------- Admin ---------- */
+  .range-tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .range-tab{
+    flex:1; text-align:center; padding:9px 0; border-radius:9px; font-size:11.5px; font-weight:700; cursor:pointer;
+    border:1px solid var(--border); background:var(--well); color:var(--muted); letter-spacing:0.3px;
+  }
+  .range-tab.active{background:var(--flash-dim); color:var(--flash); border-color:var(--flash-shade);}
+  .pending-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:10px 0; border-top:1px dashed var(--border);
+  }
+  .pending-row:first-child{border-top:none;}
+  .pending-row .pr-name{font-size:13.5px; font-weight:700;}
+  .pending-row .pr-actions{display:flex; gap:6px;}
+  .pr-btn{border:none; border-radius:7px; padding:7px 11px; font-size:11px; font-weight:800; cursor:pointer;}
+  .pr-btn.approve{background:var(--cash); color:#052012; box-shadow:0 2px 0 var(--cash-shade);}
+  .pr-btn.remove{background:var(--card-2); color:var(--danger); border:1px solid #4a2323;}
+  .staff-card{background:var(--well); border:1px solid var(--border); border-radius:11px; padding:13px; margin-top:12px;}
+  .staff-card .sc-name{font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:space-between;}
+  .staff-card .sc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+  .staff-card .sc-cell{background:var(--card); border:1px solid var(--border); border-radius:7px; padding:6px 3px; text-align:center;}
+  .staff-card .sc-cell .v{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text);}
+  .staff-card .sc-cell .l{font-size:7.5px; color:var(--muted); margin-top:2px;}
+  .shift-list{margin-top:10px;}
+  .shift-block{padding:10px 0; border-top:1px dashed var(--border);}
+  .shift-block:first-child{border-top:none;}
+  .shift-row{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); font-family:var(--font-mono);}
+  .shift-toggle{font-size:10.5px; color:var(--flash); margin-top:9px; cursor:pointer; text-align:center;}
+
+  /* ---------- Footer / toast / modal ---------- */
+  .footer-actions{display:flex; gap:10px; margin-top:14px;}
+  .footer-actions:first-of-type{margin-top:18px;}
+  .footer-btn{
+    flex:1; padding:13px 0; border-radius:10px; text-align:center; font-weight:700; font-size:12px; cursor:pointer;
+    border:1px solid var(--border); background:var(--card-2); color:var(--text); box-shadow:0 2px 0 var(--border);
+    transition:transform .07s, box-shadow .07s;
+  }
+  .footer-btn:active{transform:translateY(2px); box-shadow:none;}
+  .footer-btn.danger{color:var(--danger); border-color:#4a2323; box-shadow:0 2px 0 #4a2323;}
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--flash); color:var(--bg);
+    padding:10px 18px; border-radius:9px; font-size:13px; font-weight:700; z-index:50; opacity:0; pointer-events:none;
+    transition:opacity .25s ease; box-shadow:0 8px 20px -6px rgba(0,0,0,0.6); max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1;}
+  .modal-bg{position:fixed; inset:0; background:rgba(10,7,14,0.78); z-index:60; display:none; align-items:flex-end; justify-content:center;}
+  .modal-bg.open{display:flex;}
+  .modal{
+    background:linear-gradient(180deg, var(--card-2), var(--card)); border:1px solid var(--border); border-top:1px solid var(--border-lt);
+    border-radius:16px 16px 0 0; max-width:480px; width:100%; padding:20px; max-height:80vh; overflow-y:auto;
+    box-shadow:0 -12px 30px -10px rgba(0,0,0,0.6);
+  }
+  .modal h3{font-family:var(--font-display); font-weight:900; font-size:15px; text-transform:uppercase; letter-spacing:0.6px; margin:0 0 10px; color:var(--flash);}
+  .modal pre{
+    white-space:pre-wrap; font-family:var(--font-mono); font-size:12px; background:var(--well); border:1px solid var(--border);
+    border-radius:9px; padding:12px; color:var(--text); line-height:1.7; box-shadow:inset 0 2px 5px rgba(0,0,0,0.5);
+  }
+  .modal-actions{display:flex; gap:10px; margin-top:14px;}
+  .loading{text-align:center; color:var(--muted); padding:60px 0; font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="filmstrip">
+  <div class="sprockets" id="sprockTop"></div>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <div class="bolt-wrap"><svg class="bolt" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#FFC93C"/></svg></div>
+      <div>
+        <h1>Booth Log</h1>
+        <small>shift tracker</small>
+      </div>
+    </div>
+    <div id="whoami"></div>
+  </div>
+  <div class="sprockets" id="sprockBot"></div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="loading">Loading…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="endShiftModalBg">
+  <div class="modal">
+    <h3>End shift</h3>
+    <div class="auth-sub" style="margin:0 0 14px; text-align:left;">Confirm the actual start and end time for this shift.</div>
+    <div class="name-form">
+      <div><label>Start time</label><input type="time" id="endShiftStartInput"></div>
+      <div><label>End time</label><input type="time" id="endShiftEndInput"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="footer-btn" style="flex:1" onclick="closeEndShiftModal()">Cancel</div>
+      <div class="footer-btn" style="flex:1;color:var(--flash);border-color:var(--flash)" onclick="confirmEndShift()">End shift</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="summaryModalBg">
+  <div class="modal">
+    <h3>Shift summary</h3>
+    <pre id="summaryText"></pre>
+    <div class="modal-actions">
+      <div class="footer-btn" style="flex:1" onclick="closeModal()">Close</div>
+      <div class="footer-btn" style="flex:1;color:var(--flash);border-color:var(--flash)" onclick="doCopyToClipboard()">Copy text</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import {
+  getAuth, onAuthStateChanged, signOut,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import {
+  getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot,
+  collection, addDoc, query, where, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
+/* =====================================================================
+   PASTE YOUR FIREBASE CONFIG BELOW (from the Firebase console setup).
+   Until this is filled in, the app shows setup instructions instead.
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDqLmQ300yyQPiveFZ5JVRSzygosNG5Z-c",
+  authDomain: "memoire-erp-d1f81.firebaseapp.com",
+  projectId: "memoire-erp-d1f81",
+  storageBucket: "memoire-erp-d1f81.firebasestorage.app",
+  messagingSenderId: "1023246301626",
+  appId: "1:1023246301626:web:0a267f252c674775298583"
+};
+
+const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+let app, auth, db;
+let currentUser = null;   // {uid, name, role, approved}
+let currentScreen = null;
+let userDocUnsub = null;
+let authMode = 'login';
+
+/* ---------------- pricing ---------------- */
+function autoSheetsPrice(s){
+  if(s <= 0) return 0;
+  return Math.round(s * 400); // every 0.5 sheet = 200 EGP
+}
+
+/* ---------------- utils ---------------- */
+function cryptoId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function fmtTime(iso){
+  if(!iso) return '--:--';
+  return new Date(iso).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDateTime(iso){
+  if(!iso) return '—';
+  return new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function buildSprockets(){
+  const html = Array.from({length:14}).map(()=>'<span></span>').join('');
+  document.getElementById('sprockTop').innerHTML = html;
+  document.getElementById('sprockBot').innerHTML = html;
+}
+function startOfWeek(d){
+  const day = d.getDay();
+  const diff = (day===0 ? -6 : 1-day);
+  const m = new Date(d);
+  m.setDate(d.getDate()+diff);
+  m.setHours(0,0,0,0);
+  return m;
+}
+function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1, 0,0,0,0); }
+
+/* ---------------- boot ---------------- */
+buildSprockets();
+if(!isConfigured){
+  renderScreen('setup');
+} else {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  onAuthStateChanged(auth, (user)=>{
+    if(!user){
+      currentUser = null;
+      renderScreen('auth');
+      return;
+    }
+    watchUserDoc(user.uid, user.email);
+  });
+}
+
+function watchUserDoc(uid, email){
+  if(userDocUnsub) userDocUnsub();
+  userDocUnsub = onSnapshot(doc(db,'users',uid), (snap)=>{
+    if(!snap.exists()){
+      // Auth account exists but profile doc doesn't yet (e.g. mid-signup) — create it.
+      currentUser = {uid, name:null, email, role:null, approved:false};
+      renderScreen('pending');
+    } else {
+      const d = snap.data();
+      currentUser = {uid, name:d.name, email:d.email, role:d.role, approved:d.approved};
+      updateWhoami();
+      if(!d.approved) renderScreen('pending');
+      else if(d.role==='admin') renderScreen('admin');
+      else renderScreen('staff');
+    }
+  }, (err)=>{
+    document.getElementById('app').innerHTML = '<div class="loading">Could not load your account:<br>'+escapeHtml(err.message)+'</div>';
+  });
+}
+function updateWhoami(){
+  const el = document.getElementById('whoami');
+  if(!currentUser || !currentUser.name){ el.innerHTML=''; return; }
+  el.innerHTML = (currentUser.role==='admin' ? 'ADMIN' : 'STAFF') + '<b>'+escapeHtml(currentUser.name)+'</b>'
+    + '<span class="logout-link" onclick="doLogout()">Log out</span>';
+}
+window.doLogout = async function(){
+  if(!confirm('Log out of this account?')) return;
+  try{ await signOut(auth); }catch(e){}
+};
+
+/* ---------------- screen router ---------------- */
+function renderScreen(name){
+  if(currentScreen === name && name !== 'pending') return;
+  currentScreen = name;
+  const app_ = document.getElementById('app');
+  if(name==='setup') app_.innerHTML = setupHTML();
+  if(name==='auth') app_.innerHTML = authHTML();
+  if(name==='pending') app_.innerHTML = pendingHTML();
+  if(name==='staff'){ app_.innerHTML = staffShellHTML(); initStaffMode(); }
+  if(name==='admin'){ app_.innerHTML = adminShellHTML(); initAdminMode(); }
+}
+
+/* ---------------- SETUP screen ---------------- */
+function setupHTML(){
+  return `
+  <div class="auth-wrap">
+    <div class="auth-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#FFC93C"/></svg></div>
+    <div class="auth-title">Almost there</div>
+    <div class="auth-sub">This app needs to be connected to your Firebase project before staff can log in. Send your firebaseConfig object to whoever set this up for you, and it'll be added to the file.</div>
+    <div class="setup-code">const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  ...
+};</div>
+  </div>`;
+}
+
+/* ---------------- AUTH screen (login / sign up toggle) ---------------- */
+function authHTML(){
+  const isLogin = authMode==='login';
+  return `
+  <div class="auth-wrap">
+    <div class="auth-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#FFC93C"/></svg></div>
+    <div class="auth-title">${isLogin ? 'Welcome back' : 'Create account'}</div>
+    <div class="auth-sub">${isLogin ? 'Log in with your email and password.' : 'Enter your details to request access. An admin will approve you, then this account works from any device, forever.'}</div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab ${isLogin?'active':''}" onclick="setAuthMode('login')">Log in</div>
+      <div class="auth-tab ${!isLogin?'active':''}" onclick="setAuthMode('signup')">Sign up</div>
+    </div>
+
+    <div class="name-form">
+      ${!isLogin ? `
+      <div><label>First name</label><input type="text" id="firstName" autocomplete="given-name"></div>
+      <div><label>Last name</label><input type="text" id="lastName" autocomplete="family-name"></div>
+      ` : ``}
+      <div><label>Email</label><input type="email" id="authEmail" autocomplete="email" inputmode="email"></div>
+      <div><label>Password</label><input type="password" id="authPassword" autocomplete="${isLogin?'current-password':'new-password'}"></div>
+      ${!isLogin ? `<div><label>Confirm password</label><input type="password" id="authPassword2" autocomplete="new-password"></div>` : ``}
+      <button class="primary-btn" style="margin-top:8px" onclick="${isLogin?'submitLogin()':'submitSignup()'}">${isLogin?'Log in':'Create account'}</button>
+      ${isLogin ? `<div class="reset-link" onclick="forgotPassword()">Forgot password?</div>` : ``}
+    </div>
+  </div>`;
+}
+window.setAuthMode = function(mode){
+  authMode = mode;
+  currentScreen = null; // force re-render
+  renderScreen('auth');
+};
+function authErrorMessage(e){
+  const code = e.code || '';
+  if(code.includes('email-already-in-use')) return 'That email already has an account — try logging in instead.';
+  if(code.includes('weak-password')) return 'Password should be at least 6 characters.';
+  if(code.includes('invalid-email')) return 'Enter a valid email address.';
+  if(code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) return 'Email or password is incorrect.';
+  if(code.includes('too-many-requests')) return 'Too many attempts — wait a bit and try again.';
+  return e.message || 'Something went wrong.';
+}
+window.submitSignup = async function(){
+  const fn = document.getElementById('firstName').value.trim();
+  const ln = document.getElementById('lastName').value.trim();
+  const email = document.getElementById('authEmail').value.trim();
+  const pw = document.getElementById('authPassword').value;
+  const pw2 = document.getElementById('authPassword2').value;
+  if(!fn || !ln){ showToast('Enter first and last name'); return; }
+  if(!email){ showToast('Enter your email'); return; }
+  if(pw.length < 6){ showToast('Password should be at least 6 characters'); return; }
+  if(pw !== pw2){ showToast("Passwords don't match"); return; }
+  try{
+    const cred = await createUserWithEmailAndPassword(auth, email, pw);
+    await setDoc(doc(db,'users',cred.user.uid), {
+      uid: cred.user.uid, name: fn+' '+ln, email, role:'staff', approved:false, createdAt: serverTimestamp()
+    });
+  }catch(e){ showToast(authErrorMessage(e)); }
+};
+window.submitLogin = async function(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pw = document.getElementById('authPassword').value;
+  if(!email || !pw){ showToast('Enter email and password'); return; }
+  try{
+    await signInWithEmailAndPassword(auth, email, pw);
+  }catch(e){ showToast(authErrorMessage(e)); }
+};
+window.forgotPassword = async function(){
+  const email = document.getElementById('authEmail').value.trim();
+  if(!email){ showToast('Enter your email above first'); return; }
+  try{
+    await sendPasswordResetEmail(auth, email);
+    showToast('Password reset email sent');
+  }catch(e){ showToast(authErrorMessage(e)); }
+};
+
+/* ---------------- PENDING screen ---------------- */
+function pendingHTML(){
+  return `
+  <div class="auth-wrap">
+    <div class="pulse-dot"></div>
+    <div class="auth-title">Waiting for approval</div>
+    <div class="auth-sub">${currentUser.name ? 'Hi '+escapeHtml(currentUser.name)+' — a' : 'A'}n admin needs to approve your account before you can start logging sales. This page will update automatically once you're approved.</div>
+    <div class="reset-link" onclick="doLogout()">Log out</div>
+  </div>`;
+}
+
+/* ============================================================
+   STAFF MODE
+   ============================================================ */
+let sheetsQty = 0, sheetsPriceManual = null;
+let hadrQtyMain = 0, hadrPrice = 0;
+let frameCounts = { Acrylic:0, Magnetic:0 };
+let frameUnitPrice = { Acrylic:400, Magnetic:200 };
+let customItems = [];
+let cashAmtVal = 0, visaAmtVal = 0;
+
+let activeShift = null;       // {id,startTime,endTime}
+let myShiftUnsub = null;
+let myEntriesUnsub = null;
+let myEntries = [];           // all of my own entries (any shift)
+
+function staffShellHTML(){
+  return `
+  <div class="card" id="shiftCard">
+    <h2>Your shift</h2>
+    <div id="shiftBarWrap"></div>
+    <div class="summary-grid" id="shiftSummaryGrid" style="margin-top:12px; display:none;"></div>
+  </div>
+
+  <div class="card" id="saleCard" style="display:none;">
+    <h2>New sale <span class="tag">SHEETS</span></h2>
+    <div class="stepper-row">
+      <div class="step-btn" onclick="changeSheets(-0.5)">−</div>
+      <div class="step-mid"><div class="qty" id="sheetsQty">0 <span>sheets</span></div></div>
+      <div class="step-btn" onclick="changeSheets(0.5)">+</div>
+    </div>
+    <div class="price-row">
+      <label>Price</label>
+      <input class="price-input" id="sheetsPriceInput" type="number" inputmode="decimal" oninput="onSheetsPriceEdit(this.value)">
+      <label>EGP</label>
+    </div>
+    <div class="presets">
+      <div class="preset-chip" onclick="setSheets(0.5)">0.5</div>
+      <div class="preset-chip" onclick="setSheets(1)">1</div>
+      <div class="preset-chip" onclick="setSheets(1.5)">1.5</div>
+      <div class="preset-chip" onclick="setSheets(2)">2</div>
+      <div class="preset-chip" onclick="setSheets(3)">3</div>
+      <div class="preset-chip" onclick="setSheets(0)">clear</div>
+    </div>
+
+    <h2 style="margin-top:18px;">Frames</h2>
+    <div class="frame-grid">
+      <div class="frame-btn" onclick="addFrame('Acrylic')">
+        <div class="fname">Acrylic</div><div class="fprice">400 EGP</div>
+        <div class="fqty">
+          <div class="mini-btn" onclick="event.stopPropagation(); adjFrame('Acrylic',-1)">−</div>
+          <span class="fq-num" id="acrQty">0</span>
+          <div class="mini-btn" onclick="event.stopPropagation(); adjFrame('Acrylic',1)">+</div>
+        </div>
+      </div>
+      <div class="frame-btn" onclick="addFrame('Magnetic')">
+        <div class="fname">Magnetic</div><div class="fprice">200 EGP</div>
+        <div class="fqty">
+          <div class="mini-btn" onclick="event.stopPropagation(); adjFrame('Magnetic',-1)">−</div>
+          <span class="fq-num" id="magQty">0</span>
+          <div class="mini-btn" onclick="event.stopPropagation(); adjFrame('Magnetic',1)">+</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="custom-toggle" onclick="toggleCustomForm()">+ Add custom item</div>
+    <div class="custom-form" id="customForm">
+      <input type="text" name="cname" id="cname" placeholder="Item name">
+      <input type="number" name="cprice" id="cprice" placeholder="EGP" inputmode="decimal">
+      <button class="custom-add-btn" onclick="addCustom()">Add</button>
+    </div>
+
+    <div class="cart-list" id="cartList"></div>
+
+    <div class="subtotal-ref">Items subtotal: <span id="cartSubtotalLabel">0 EGP</span></div>
+    <div class="payment-row">
+      <div class="pay-field cash"><label>CASH EGP</label><input class="pay-input" id="cashAmt" type="number" inputmode="decimal" value="0" oninput="onPaymentEdit()"></div>
+      <div class="pay-field visa"><label>VISA EGP</label><input class="pay-input" id="visaAmt" type="number" inputmode="decimal" value="0" oninput="onPaymentEdit()"></div>
+    </div>
+    <div class="pay-quick">
+      <div class="preset-chip" onclick="fillPayment('cash')">All cash</div>
+      <div class="preset-chip" onclick="fillPayment('visa')">All visa</div>
+      <div class="preset-chip" onclick="fillPayment('split')">Split 50/50</div>
+      <div class="preset-chip" onclick="fillPayment('clear')">Clear</div>
+    </div>
+    <div id="paymentHint" class="payment-hint"></div>
+
+    <div class="cart-total-row"><div class="ctl">Logging</div><div class="ctv" id="cartTotal">0 EGP</div></div>
+    <button class="log-sale-btn" id="logSaleBtn" onclick="logSale()">Log sale</button>
+  </div>
+
+  <div class="card" id="wasteCard" style="display:none;">
+    <h2>Hadr <span class="tag waste">WASTE</span></h2>
+    <div class="stepper-row">
+      <div class="step-btn" onclick="changeHadr(-0.5)">−</div>
+      <div class="step-mid"><div class="qty" id="hadrQty">0 <span>sheets</span></div></div>
+      <div class="step-btn" onclick="changeHadr(0.5)">+</div>
+    </div>
+    <div class="price-row">
+      <label>Cost (optional)</label>
+      <input class="price-input pink" id="hadrPriceInput" type="number" inputmode="decimal" value="0" oninput="setHadrPrice(this.value)">
+      <label>EGP</label>
+    </div>
+    <button class="log-waste-btn" id="logWasteBtn" onclick="logWaste()">Log waste</button>
+  </div>
+
+  <div class="card" id="myLogCard" style="display:none;">
+    <div class="log-header"><h2 style="margin:0;">This shift</h2><span style="font-size:11px;color:var(--muted)" id="entryCount">0 entries</span></div>
+    <div id="logList" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="footer-actions">
+    <div class="footer-btn" onclick="copySummary()">Copy shift summary</div>
+  </div>`;
+}
+
+function initStaffMode(){
+  renderSheetsPrice(); renderFrames(); renderCart();
+  watchMyShift();
+  watchMyEntries();
+}
+
+function watchMyShift(){
+  if(myShiftUnsub) myShiftUnsub();
+  const q = query(collection(db,'shifts'), where('uid','==',currentUser.uid), where('endTime','==',null));
+  myShiftUnsub = onSnapshot(q, (snap)=>{
+    activeShift = snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+    renderShiftBar();
+  }, (err)=>{ showToast('Shift sync error: '+err.message); });
+}
+function watchMyEntries(){
+  if(myEntriesUnsub) myEntriesUnsub();
+  const q = query(collection(db,'entries'), where('uid','==',currentUser.uid));
+  myEntriesUnsub = onSnapshot(q, (snap)=>{
+    myEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderMyLog();
+  }, (err)=>{ showToast('Log sync error: '+err.message); });
+}
+
+function renderShiftBar(){
+  const wrap = document.getElementById('shiftBarWrap');
+  if(!wrap) return;
+  if(!activeShift){
+    wrap.innerHTML = `<button class="primary-btn" onclick="startShift()">Start shift</button>`;
+    document.getElementById('saleCard').style.display = 'none';
+    document.getElementById('wasteCard').style.display = 'none';
+    document.getElementById('myLogCard').style.display = 'none';
+  } else {
+    wrap.innerHTML = `
+      <div class="shift-bar">
+        <div><div class="sb-label">Started</div><div class="sb-time">${fmtTime(activeShift.startTime)}</div></div>
+        <button class="sb-btn" onclick="endShiftNow()">End shift</button>
+      </div>`;
+    document.getElementById('saleCard').style.display = '';
+    document.getElementById('wasteCard').style.display = '';
+    document.getElementById('myLogCard').style.display = '';
+  }
+  renderMyLog();
+}
+
+window.startShift = async function(){
+  try{
+    await addDoc(collection(db,'shifts'), {
+      uid: currentUser.uid, staffName: currentUser.name,
+      startTime: new Date().toISOString(), endTime: null, createdAt: serverTimestamp()
+    });
+    showToast('Shift started');
+  }catch(e){ showToast('Could not start shift: '+e.message); }
+};
+function toTimeInputValue(d){
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function combineDateTime(baseDate, hhmm){
+  const [h,m] = hhmm.split(':').map(Number);
+  const d = new Date(baseDate);
+  d.setHours(h,m,0,0);
+  return d;
+}
+window.endShiftNow = function(){
+  if(!activeShift) return;
+  const startD = activeShift.startTime ? new Date(activeShift.startTime) : new Date();
+  document.getElementById('endShiftStartInput').value = toTimeInputValue(startD);
+  document.getElementById('endShiftEndInput').value = toTimeInputValue(new Date());
+  document.getElementById('endShiftModalBg').classList.add('open');
+};
+window.closeEndShiftModal = function(){
+  document.getElementById('endShiftModalBg').classList.remove('open');
+};
+window.confirmEndShift = async function(){
+  if(!activeShift) return;
+  const startVal = document.getElementById('endShiftStartInput').value;
+  const endVal = document.getElementById('endShiftEndInput').value;
+  if(!startVal || !endVal){ showToast('Enter both times'); return; }
+  const baseDate = activeShift.startTime ? new Date(activeShift.startTime) : new Date();
+  const start = combineDateTime(baseDate, startVal);
+  let end = combineDateTime(baseDate, endVal);
+  if(end <= start) end = new Date(end.getTime() + 24*60*60*1000); // shift crossed midnight
+  try{
+    await updateDoc(doc(db,'shifts',activeShift.id), { startTime: start.toISOString(), endTime: end.toISOString() });
+    document.getElementById('endShiftModalBg').classList.remove('open');
+    showToast('Shift ended — nice work');
+  }catch(e){ showToast('Could not end shift: '+e.message); }
+};
+
+/* ---------------- sheets ---------------- */
+window.changeSheets = function(delta){
+  sheetsQty = Math.max(0, Math.round((sheetsQty + delta)*10)/10);
+  sheetsPriceManual = null;
+  renderSheetsPrice(); renderCart();
+};
+window.setSheets = function(v){
+  sheetsQty = v; sheetsPriceManual = null;
+  renderSheetsPrice(); renderCart();
+};
+function renderSheetsPrice(){
+  const el = document.getElementById('sheetsQty'); if(!el) return;
+  el.innerHTML = sheetsQty + ' <span>sheets</span>';
+  const price = sheetsPriceManual !== null ? sheetsPriceManual : autoSheetsPrice(sheetsQty);
+  document.getElementById('sheetsPriceInput').value = price;
+}
+window.onSheetsPriceEdit = function(v){
+  sheetsPriceManual = v === '' ? 0 : parseFloat(v);
+  renderCart();
+};
+
+/* ---------------- hadr ---------------- */
+window.changeHadr = function(delta){
+  hadrQtyMain = Math.max(0, Math.round((hadrQtyMain + delta)*10)/10);
+  const el = document.getElementById('hadrQty'); if(el) el.innerHTML = hadrQtyMain + ' <span>sheets</span>';
+};
+window.setHadrPrice = function(v){ hadrPrice = parseFloat(v) || 0; };
+
+/* ---------------- frames ---------------- */
+window.addFrame = function(type){ frameCounts[type]++; renderFrames(); renderCart(); };
+window.adjFrame = function(type, delta){ frameCounts[type] = Math.max(0, frameCounts[type]+delta); renderFrames(); renderCart(); };
+function renderFrames(){
+  const a = document.getElementById('acrQty'), m = document.getElementById('magQty');
+  if(!a) return;
+  a.textContent = frameCounts.Acrylic; m.textContent = frameCounts.Magnetic;
+  const btns = document.querySelectorAll('.frame-btn');
+  if(btns[0]) btns[0].classList.toggle('lit', frameCounts.Acrylic>0);
+  if(btns[1]) btns[1].classList.toggle('lit', frameCounts.Magnetic>0);
+}
+
+/* ---------------- custom items ---------------- */
+window.toggleCustomForm = function(){ document.getElementById('customForm').classList.toggle('open'); };
+window.addCustom = function(){
+  const nameEl = document.getElementById('cname'), priceEl = document.getElementById('cprice');
+  const name = nameEl.value.trim(), price = parseFloat(priceEl.value);
+  if(!name || isNaN(price)){ showToast('Enter a name and price'); return; }
+  customItems.push({id:cryptoId(), name, price});
+  nameEl.value=''; priceEl.value='';
+  renderCart();
+};
+window.removeCustom = function(id){ customItems = customItems.filter(c=>c.id!==id); renderCart(); };
+
+/* ---------------- cart ---------------- */
+function cartTotalValue(){
+  const sp = sheetsQty>0 ? (sheetsPriceManual!==null?sheetsPriceManual:autoSheetsPrice(sheetsQty)) : 0;
+  const ft = frameCounts.Acrylic*frameUnitPrice.Acrylic + frameCounts.Magnetic*frameUnitPrice.Magnetic;
+  const ct = customItems.reduce((s,c)=>s+c.price,0);
+  return sp+ft+ct;
+}
+function renderCart(){
+  const list = document.getElementById('cartList'); if(!list) return;
+  let rows = '';
+  if(sheetsQty>0){
+    const sp = sheetsPriceManual!==null?sheetsPriceManual:autoSheetsPrice(sheetsQty);
+    rows += cartRow(`Sheets (${sheetsQty})`, sp, null);
+  }
+  if(frameCounts.Acrylic>0) rows += cartRow(`Acrylic frame x${frameCounts.Acrylic}`, frameCounts.Acrylic*frameUnitPrice.Acrylic, null);
+  if(frameCounts.Magnetic>0) rows += cartRow(`Magnetic frame x${frameCounts.Magnetic}`, frameCounts.Magnetic*frameUnitPrice.Magnetic, null);
+  customItems.forEach(c=>{ rows += cartRow(c.name, c.price, c.id); });
+  list.innerHTML = rows || '<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:8px 0;">Nothing added yet</div>';
+  document.getElementById('cartSubtotalLabel').textContent = cartTotalValue() + ' EGP';
+  updateLogSaleBtn();
+}
+function cartRow(label, price, customId){
+  const removeBtn = customId ? `<button class="cart-remove" onclick="removeCustom('${customId}')">✕</button>` : '';
+  return `<div class="cart-item"><span class="ci-label">${escapeHtml(label)}</span><span class="ci-right"><span class="ci-price">${price} EGP</span>${removeBtn}</span></div>`;
+}
+
+/* ---------------- payment ---------------- */
+window.fillPayment = function(mode){
+  const subtotal = cartTotalValue();
+  if(mode==='cash'){ cashAmtVal=subtotal; visaAmtVal=0; }
+  else if(mode==='visa'){ visaAmtVal=subtotal; cashAmtVal=0; }
+  else if(mode==='split'){ cashAmtVal=Math.round(subtotal/2); visaAmtVal=subtotal-cashAmtVal; }
+  else if(mode==='clear'){ cashAmtVal=0; visaAmtVal=0; }
+  document.getElementById('cashAmt').value = cashAmtVal;
+  document.getElementById('visaAmt').value = visaAmtVal;
+  updateLogSaleBtn();
+};
+window.onPaymentEdit = function(){
+  cashAmtVal = parseFloat(document.getElementById('cashAmt').value) || 0;
+  visaAmtVal = parseFloat(document.getElementById('visaAmt').value) || 0;
+  updateLogSaleBtn();
+};
+function updateLogSaleBtn(){
+  const btn = document.getElementById('logSaleBtn'); if(!btn) return;
+  const subtotal = cartTotalValue();
+  const paymentTotal = cashAmtVal+visaAmtVal;
+  const hasItems = sheetsQty>0 || frameCounts.Acrylic>0 || frameCounts.Magnetic>0 || customItems.length>0;
+  const ok = (hasItems && (subtotal===0 || paymentTotal>0)) || (!hasItems && paymentTotal>0);
+  btn.disabled = !ok;
+  const logTotal = paymentTotal>0 ? paymentTotal : subtotal;
+  document.getElementById('cartTotal').textContent = logTotal + ' EGP';
+  const hint = document.getElementById('paymentHint');
+  if(hasItems && paymentTotal>0 && paymentTotal!==subtotal){
+    hint.textContent = `Heads up: payment (${paymentTotal}) doesn't match items subtotal (${subtotal}) — that's fine if intentional`;
+    hint.className = 'payment-hint mismatch';
+  } else if(!hasItems && paymentTotal>0){
+    hint.textContent = 'Logging a payment with no items attached';
+    hint.className = 'payment-hint';
+  } else { hint.textContent=''; hint.className='payment-hint'; }
+}
+
+/* ---------------- log sale / waste ---------------- */
+window.logSale = async function(){
+  if(!activeShift){ showToast('Start your shift first'); return; }
+  const subtotal = cartTotalValue();
+  const paymentTotal = cashAmtVal+visaAmtVal;
+  const hasItems = sheetsQty>0 || frameCounts.Acrylic>0 || frameCounts.Magnetic>0 || customItems.length>0;
+  const ok = (hasItems && (subtotal===0 || paymentTotal>0)) || (!hasItems && paymentTotal>0);
+  if(!ok){ showToast(hasItems ? 'Enter a cash/visa amount' : 'Add items or enter an amount'); return; }
+  const total = paymentTotal>0 ? paymentTotal : subtotal;
+
+  const parts = [];
+  if(sheetsQty>0) parts.push(`Sheets (${sheetsQty})`);
+  if(frameCounts.Acrylic>0) parts.push(`Acrylic x${frameCounts.Acrylic}`);
+  if(frameCounts.Magnetic>0) parts.push(`Magnetic x${frameCounts.Magnetic}`);
+  customItems.forEach(c=>parts.push(c.name));
+  const desc = parts.length ? parts.join(', ') : 'Payment (no items)';
+
+  try{
+    await addDoc(collection(db,'entries'), {
+      uid: currentUser.uid, staffName: currentUser.name, shiftId: activeShift.id,
+      time: new Date().toISOString(), type:'sale',
+      sheets: sheetsQty, frames:{Acrylic:frameCounts.Acrylic, Magnetic:frameCounts.Magnetic},
+      custom: customItems.slice(), desc, total, cash: cashAmtVal, visa: visaAmtVal,
+      createdAt: serverTimestamp()
+    });
+  }catch(e){ showToast('Could not save: '+e.message); return; }
+
+  sheetsQty=0; sheetsPriceManual=null; frameCounts={Acrylic:0,Magnetic:0}; customItems=[];
+  cashAmtVal=0; visaAmtVal=0;
+  document.getElementById('cashAmt').value=0; document.getElementById('visaAmt').value=0;
+  renderSheetsPrice(); renderFrames(); renderCart();
+  showToast('Sale logged');
+};
+window.logWaste = async function(){
+  if(!activeShift){ showToast('Start your shift first'); return; }
+  if(hadrQtyMain<=0){ showToast('Set hadr amount first'); return; }
+  try{
+    await addDoc(collection(db,'entries'), {
+      uid: currentUser.uid, staffName: currentUser.name, shiftId: activeShift.id,
+      time: new Date().toISOString(), type:'waste', hadr: hadrQtyMain,
+      desc: `Hadr waste (${hadrQtyMain})`, total: hadrPrice||0, cash:0, visa:0,
+      createdAt: serverTimestamp()
+    });
+  }catch(e){ showToast('Could not save: '+e.message); return; }
+  hadrQtyMain=0; hadrPrice=0;
+  const q1=document.getElementById('hadrQty'); if(q1) q1.innerHTML='0 <span>sheets</span>';
+  const q2=document.getElementById('hadrPriceInput'); if(q2) q2.value=0;
+  showToast('Waste logged');
+};
+window.deleteEntry = async function(id){
+  if(!confirm('Delete this entry?')) return;
+  try{ await deleteDoc(doc(db,'entries',id)); }
+  catch(e){ showToast('Could not delete: '+e.message); }
+};
+
+/* ---------------- my shift log + summary ---------------- */
+function renderShiftSummary(){
+  const grid = document.getElementById('shiftSummaryGrid');
+  if(!grid) return;
+  if(!activeShift){ grid.style.display = 'none'; return; }
+  const shiftEntries = myEntries.filter(e=>e.shiftId===activeShift.id);
+  const st = aggregate(shiftEntries);
+  grid.style.display = '';
+  grid.innerHTML = `
+    <div class="sumcell total"><div class="v">${st.total}</div><div class="l">Total EGP</div></div>
+    <div class="sumcell cash"><div class="v">${st.cash}</div><div class="l">Cash</div></div>
+    <div class="sumcell visa"><div class="v">${st.visa}</div><div class="l">Visa</div></div>
+    <div class="sumcell"><div class="v">${st.sheets}</div><div class="l">Sheets sold</div></div>
+    <div class="sumcell"><div class="v">${st.hadr}</div><div class="l">Hadr wasted</div></div>
+    <div class="sumcell"><div class="v">${st.acrylic}</div><div class="l">Acrylic sold</div></div>
+    <div class="sumcell"><div class="v">${st.magnetic}</div><div class="l">Magnetic sold</div></div>`;
+}
+function renderMyLog(){
+  renderShiftSummary();
+  const el = document.getElementById('logList'); if(!el) return;
+  const shiftEntries = activeShift ? myEntries.filter(e=>e.shiftId===activeShift.id) : [];
+  const sorted = shiftEntries.slice().sort((a,b)=> new Date(b.time)-new Date(a.time));
+  document.getElementById('entryCount').textContent = sorted.length + (sorted.length===1?' entry':' entries');
+  if(sorted.length===0){
+    el.innerHTML = '<div class="empty-log">No entries yet this shift.</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(e=>{
+    let badge = '';
+    if(e.type==='waste'){ badge = '<span class="le-badge Waste">WASTE</span>'; }
+    else {
+      if(e.cash>0) badge += `<span class="le-badge Cash">CASH ${e.cash}</span>`;
+      if(e.visa>0) badge += `<span class="le-badge Visa">VISA ${e.visa}</span>`;
+    }
+    return `<div class="log-entry">
+      <div class="le-left"><div class="le-time">${fmtTime(e.time)}</div><div class="le-desc">${escapeHtml(e.desc)}</div>${badge}</div>
+      <div class="le-right"><div class="le-price">${e.total} EGP</div><button class="le-del" onclick="deleteEntry('${e.id}')">✕</button></div>
+    </div>`;
+  }).join('');
+}
+
+function buildShiftSummaryText(){
+  const shiftEntries = activeShift ? myEntries.filter(e=>e.shiftId===activeShift.id) : [];
+  const sales = shiftEntries.filter(e=>e.type==='sale');
+  const wastes = shiftEntries.filter(e=>e.type==='waste');
+  const total = sales.reduce((s,e)=>s+e.total,0);
+  const cash = sales.reduce((s,e)=>s+(e.cash||0),0);
+  const visa = sales.reduce((s,e)=>s+(e.visa||0),0);
+  const sheets = sales.reduce((s,e)=>s+(e.sheets||0),0);
+  const hadr = wastes.reduce((s,e)=>s+(e.hadr||0),0);
+  const acrylic = sales.reduce((s,e)=>s+(e.frames?e.frames.Acrylic:0),0);
+  const magnetic = sales.reduce((s,e)=>s+(e.frames?e.frames.Magnetic:0),0);
+  let txt = `SHIFT SUMMARY — ${currentUser.name}\n`;
+  txt += `Started: ${activeShift?fmtDateTime(activeShift.startTime):'—'}\n`;
+  txt += `------------------------------\n`;
+  txt += `Total: ${total} EGP  (Cash ${cash} / Visa ${visa})\n`;
+  txt += `Sheets sold: ${sheets}\n`;
+  txt += `Hadr wasted: ${hadr}\n`;
+  txt += `Acrylic frames: ${acrylic}\n`;
+  txt += `Magnetic frames: ${magnetic}\n`;
+  txt += `------------------------------\n`;
+  shiftEntries.slice().sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(e=>{
+    const bits=[]; if(e.cash>0) bits.push(`Cash ${e.cash}`); if(e.visa>0) bits.push(`Visa ${e.visa}`);
+    const tag = e.type==='waste' ? 'WASTE' : (bits.join(' + ')||'-');
+    txt += `${fmtTime(e.time)}  ${e.desc}  —  ${e.total} EGP  [${tag}]\n`;
+  });
+  return txt;
+}
+window.copySummary = function(){
+  document.getElementById('summaryText').textContent = buildShiftSummaryText();
+  document.getElementById('summaryModalBg').classList.add('open');
+};
+window.closeModal = function(){ document.getElementById('summaryModalBg').classList.remove('open'); };
+window.doCopyToClipboard = function(){
+  const txt = document.getElementById('summaryText').textContent;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>showToast('Copied!')).catch(()=>fallbackCopy(txt));
+  } else fallbackCopy(txt);
+};
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); showToast('Copied!'); }catch(e){ showToast('Could not copy'); }
+  document.body.removeChild(ta);
+}
+
+/* ============================================================
+   ADMIN MODE
+   ============================================================ */
+let adminUsersUnsub = null, adminEntriesUnsub = null, adminShiftsUnsub = null;
+let adminUsers = [], adminEntries = [], adminShifts = [];
+let adminRange = 'week';
+let expandedStaff = {};
+
+function adminShellHTML(){
+  return `
+  <div class="card" id="pendingCard" style="display:none;">
+    <h2>Pending approvals <span class="tag admin">ADMIN</span></h2>
+    <div id="pendingList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <div class="range-tabs">
+      <div class="range-tab" id="rtWeek" onclick="setAdminRange('week')">This week</div>
+      <div class="range-tab" id="rtMonth" onclick="setAdminRange('month')">This month</div>
+      <div class="range-tab" id="rtAll" onclick="setAdminRange('all')">All time</div>
+    </div>
+    <div class="summary-grid" id="overallGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Staff</h2>
+    <div id="staffList"></div>
+  </div>`;
+}
+
+function initAdminMode(){
+  document.getElementById('rt'+adminRange[0].toUpperCase()+adminRange.slice(1)).classList.add('active');
+  if(adminUsersUnsub) adminUsersUnsub();
+  if(adminEntriesUnsub) adminEntriesUnsub();
+  if(adminShiftsUnsub) adminShiftsUnsub();
+  adminUsersUnsub = onSnapshot(collection(db,'users'), (snap)=>{
+    adminUsers = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderAdminPanel();
+  }, (err)=>showToast('Users sync error: '+err.message));
+  adminEntriesUnsub = onSnapshot(collection(db,'entries'), (snap)=>{
+    adminEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderAdminPanel();
+  }, (err)=>showToast('Entries sync error: '+err.message));
+  adminShiftsUnsub = onSnapshot(collection(db,'shifts'), (snap)=>{
+    adminShifts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderAdminPanel();
+  }, (err)=>showToast('Shifts sync error: '+err.message));
+}
+
+window.setAdminRange = function(r){
+  adminRange = r;
+  ['Week','Month','All'].forEach(x=>document.getElementById('rt'+x).classList.remove('active'));
+  document.getElementById('rt'+r[0].toUpperCase()+r.slice(1)).classList.add('active');
+  renderAdminPanel();
+};
+
+function rangeStart(){
+  const now = new Date();
+  if(adminRange==='week') return startOfWeek(now);
+  if(adminRange==='month') return startOfMonth(now);
+  return null; // all time
+}
+function inRange(iso){
+  const start = rangeStart();
+  if(!start) return true;
+  return new Date(iso) >= start;
+}
+function aggregate(entries){
+  const sales = entries.filter(e=>e.type==='sale');
+  const wastes = entries.filter(e=>e.type==='waste');
+  return {
+    total: sales.reduce((s,e)=>s+e.total,0),
+    cash: sales.reduce((s,e)=>s+(e.cash||0),0),
+    visa: sales.reduce((s,e)=>s+(e.visa||0),0),
+    sheets: sales.reduce((s,e)=>s+(e.sheets||0),0),
+    hadr: wastes.reduce((s,e)=>s+(e.hadr||0),0),
+    acrylic: sales.reduce((s,e)=>s+(e.frames?e.frames.Acrylic:0),0),
+    magnetic: sales.reduce((s,e)=>s+(e.frames?e.frames.Magnetic:0),0)
+  };
+}
+
+function renderAdminPanel(){
+  if(currentScreen!=='admin') return;
+
+  // pending
+  const pending = adminUsers.filter(u=>!u.approved);
+  const pendingCard = document.getElementById('pendingCard');
+  if(pending.length>0){
+    pendingCard.style.display = '';
+    document.getElementById('pendingList').innerHTML = pending.map(u=>`
+      <div class="pending-row">
+        <div class="pr-name">${escapeHtml(u.name||'(no name)')}</div>
+        <div class="pr-actions">
+          <button class="pr-btn approve" onclick="approveUser('${u.id}')">Approve</button>
+          <button class="pr-btn remove" onclick="removeUser('${u.id}')">Remove</button>
+        </div>
+      </div>`).join('');
+  } else {
+    pendingCard.style.display = 'none';
+  }
+
+  // overall stats
+  const filteredEntries = adminEntries.filter(e=>inRange(e.time));
+  const overall = aggregate(filteredEntries);
+  const grid = document.getElementById('overallGrid');
+  grid.innerHTML = `
+    <div class="sumcell total"><div class="v">${overall.total}</div><div class="l">Total EGP</div></div>
+    <div class="sumcell cash"><div class="v">${overall.cash}</div><div class="l">Cash</div></div>
+    <div class="sumcell visa"><div class="v">${overall.visa}</div><div class="l">Visa</div></div>
+    <div class="sumcell"><div class="v">${overall.sheets}</div><div class="l">Sheets sold</div></div>
+    <div class="sumcell"><div class="v">${overall.hadr}</div><div class="l">Hadr wasted</div></div>
+    <div class="sumcell"><div class="v">${overall.acrylic}</div><div class="l">Acrylic sold</div></div>
+    <div class="sumcell"><div class="v">${overall.magnetic}</div><div class="l">Magnetic sold</div></div>`;
+
+  // staff list
+  const staff = adminUsers.filter(u=>u.approved && u.role==='staff');
+  const staffListEl = document.getElementById('staffList');
+  if(staff.length===0){
+    staffListEl.innerHTML = '<div class="empty-log">No approved staff yet.</div>';
+    return;
+  }
+  staffListEl.innerHTML = staff.map(u=>{
+    const theirEntries = filteredEntries.filter(e=>e.uid===u.id);
+    const stats = aggregate(theirEntries);
+    const theirShifts = adminShifts.filter(s=>s.uid===u.id && inRange(s.startTime)).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+    const expanded = !!expandedStaff[u.id];
+    const shiftRows = theirShifts.slice(0, expanded ? theirShifts.length : 3).map(s=>{
+      const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
+      const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
+      const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
+      return `<div class="shift-block">
+        <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span><span>${durTxt}</span></div>
+        <div class="sc-grid" style="margin-top:6px;">
+          <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
+          <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
+          <div class="sc-cell"><div class="v">${st.visa}</div><div class="l">VISA</div></div>
+          <div class="sc-cell"><div class="v">${st.sheets}</div><div class="l">SHEETS</div></div>
+          <div class="sc-cell"><div class="v">${st.hadr}</div><div class="l">HADR</div></div>
+          <div class="sc-cell"><div class="v">${st.acrylic}</div><div class="l">ACRYLIC</div></div>
+          <div class="sc-cell"><div class="v">${st.magnetic}</div><div class="l">MAGNETIC</div></div>
+        </div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="staff-card">
+      <div class="sc-name"><span>${escapeHtml(u.name)}</span><span style="font-family:var(--font-mono);color:var(--flash);font-size:12.5px">${stats.total} EGP</span></div>
+      <div class="sc-grid">
+        <div class="sc-cell"><div class="v">${stats.cash}</div><div class="l">CASH</div></div>
+        <div class="sc-cell"><div class="v">${stats.visa}</div><div class="l">VISA</div></div>
+        <div class="sc-cell"><div class="v">${stats.sheets}</div><div class="l">SHEETS</div></div>
+        <div class="sc-cell"><div class="v">${stats.hadr}</div><div class="l">HADR</div></div>
+        <div class="sc-cell"><div class="v">${stats.acrylic}</div><div class="l">ACRYLIC</div></div>
+        <div class="sc-cell"><div class="v">${stats.magnetic}</div><div class="l">MAGNETIC</div></div>
+      </div>
+      <div class="shift-list">${shiftRows || '<div style="color:var(--muted);font-size:11px;">No shifts yet</div>'}</div>
+      ${theirShifts.length>3 ? `<div class="shift-toggle" onclick="toggleStaffExpand('${u.id}')">${expanded?'Show less':'Show all '+theirShifts.length+' shifts'}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.toggleStaffExpand = function(uid){
+  expandedStaff[uid] = !expandedStaff[uid];
+  renderAdminPanel();
+};
+window.approveUser = async function(uid){
+  try{ await updateDoc(doc(db,'users',uid), {approved:true}); showToast('Approved'); }
+  catch(e){ showToast('Could not approve: '+e.message); }
+};
+window.removeUser = async function(uid){
+  if(!confirm('Remove this pending request?')) return;
+  try{ await deleteDoc(doc(db,'users',uid)); }
+  catch(e){ showToast('Could not remove: '+e.message); }
+};
+</script>
+</body>
+</html>
