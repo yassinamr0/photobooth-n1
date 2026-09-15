@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function isAdmin() {
+      return isSignedIn() && myDoc().data.role == 'admin' && myDoc().data.approved == true;
+    }
+    function isApprovedStaff() {
+      return isSignedIn() && myDoc().data.approved == true;
+    }
+
+    // Everyone can request an account for themselves (starts as unapproved staff).
+    // Only an existing admin can approve/promote/demote someone, or a user can
+    // touch their own doc as long as they don't change their own role/approved fields.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId
+                    && request.resource.data.role == 'staff'
+                    && request.resource.data.approved == false;
+      allow update: if isAdmin() || (
+                      isSignedIn() && request.auth.uid == userId
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.approved == resource.data.approved
+                    );
+      allow delete: if isAdmin();
+    }
+
+    // Only approved users can write entries, and only as themselves.
+    match /entries/{entryId} {
+      allow read: if isSignedIn();
+      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
+    }
+
+    // Same for shifts (clock in/out).
+    match /shifts/{shiftId} {
+      allow read: if isSignedIn();
+      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+  }
+}
