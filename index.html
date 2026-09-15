@@ -335,17 +335,27 @@
   .pr-btn{border:none; border-radius:7px; padding:7px 11px; font-size:11px; font-weight:800; cursor:pointer;}
   .pr-btn.approve{background:var(--cash); color:#052012; box-shadow:0 2px 0 var(--cash-shade);}
   .pr-btn.remove{background:var(--card-2); color:var(--danger); border:1px solid #4a2323;}
-  .staff-card{background:var(--well); border:1px solid var(--border); border-radius:11px; padding:13px; margin-top:12px;}
+  .staff-card{background:var(--well); border:1px solid var(--border); border-radius:11px; padding:13px; margin-top:12px; cursor:pointer;}
+  .staff-card-hint{margin-top:9px; font-size:10.5px; color:var(--muted); text-align:right;}
+  .remove-account-btn{font-size:10px; font-weight:800; color:var(--danger); border:1px solid #4a2323; border-radius:6px; padding:4px 8px; cursor:pointer; letter-spacing:0.3px;}
+  .removed-tag{color:var(--muted); font-weight:400; font-size:10.5px;}
+  .date-group{margin-top:12px;}
+  .date-heading{
+    display:flex; justify-content:space-between; align-items:center; padding:12px 14px;
+    background:var(--well); border:1px solid var(--border); border-radius:10px; cursor:pointer;
+    font-family:var(--font-display); font-weight:800; font-size:13.5px;
+  }
+  .date-heading .dh-right{display:flex; align-items:center; gap:9px; font-family:var(--font-mono); color:var(--flash); font-weight:700; font-size:12.5px;}
+  .date-body{padding:10px 2px 0;}
+  .shift-delete-row{margin-top:9px; text-align:center; font-size:11px; color:var(--danger); cursor:pointer; text-decoration:underline;}
   .staff-card .sc-name{font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:space-between;}
   .staff-card .sc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
   .staff-card .sc-cell{background:var(--card); border:1px solid var(--border); border-radius:7px; padding:6px 3px; text-align:center;}
   .staff-card .sc-cell .v{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text);}
   .staff-card .sc-cell .l{font-size:7.5px; color:var(--muted); margin-top:2px;}
-  .shift-list{margin-top:10px;}
   .shift-block{padding:10px 0; border-top:1px dashed var(--border);}
   .shift-block:first-child{border-top:none;}
   .shift-row{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); font-family:var(--font-mono);}
-  .shift-del{color:var(--danger); cursor:pointer; font-weight:800; font-size:12px; line-height:1; padding:2px 3px;}
   .shift-toggle{font-size:10.5px; color:var(--flash); margin-top:9px; cursor:pointer; text-align:center;}
 
   /* ---------- Footer / toast / modal ---------- */
@@ -402,6 +412,16 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="staffHistoryModalBg">
+  <div class="modal">
+    <h3 id="staffHistoryTitle">History</h3>
+    <div id="staffHistoryBody"></div>
+    <div class="modal-actions">
+      <div class="footer-btn" style="flex:1" onclick="closeStaffHistory()">Close</div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-bg" id="endShiftModalBg">
   <div class="modal">
@@ -1125,7 +1145,9 @@ function fallbackCopy(txt){
 let adminUsersUnsub = null, adminEntriesUnsub = null, adminShiftsUnsub = null;
 let adminUsers = [], adminEntries = [], adminShifts = [];
 let adminRange = 'week';
-let expandedStaff = {};
+let expandedDates = {};
+let expandedShifts = {};
+let historyStaffUid = null;
 
 function adminShellHTML(){
   return `
@@ -1147,6 +1169,11 @@ function adminShellHTML(){
   <div class="card">
     <h2>Staff</h2>
     <div id="staffList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Shifts</h2>
+    <div id="shiftsByDateList"></div>
   </div>`;
 }
 
@@ -1253,35 +1280,13 @@ function renderAdminPanel(){
   staffListEl.innerHTML = staff.map(u=>{
     const theirEntries = filteredEntries.filter(e=>e.uid===u.id);
     const stats = aggregate(theirEntries);
-    const theirShifts = adminShifts.filter(s=>s.uid===u.id && inRange(s.startTime)).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
-    const expanded = !!expandedStaff[u.id];
-    const shiftRows = theirShifts.slice(0, expanded ? theirShifts.length : 3).map(s=>{
-      const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
-      const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
-      const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
-      return `<div class="shift-block">
-        <div class="shift-row">
-          <span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span>
-          <span style="display:flex; align-items:center; gap:8px;">${durTxt}<span class="shift-del" onclick="deleteShift('${s.id}')" title="Delete this shift">✕</span></span>
-        </div>
-        <div class="sc-grid" style="margin-top:6px;">
-          <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
-          <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
-          <div class="sc-cell"><div class="v">${st.visa}</div><div class="l">VISA</div></div>
-          <div class="sc-cell"><div class="v">${st.sheets}</div><div class="l">SHEETS</div></div>
-          <div class="sc-cell"><div class="v">${st.hadr}</div><div class="l">HADR</div></div>
-          <div class="sc-cell"><div class="v">${st.acrylic}</div><div class="l">ACRYLIC</div></div>
-          <div class="sc-cell"><div class="v">${st.magnetic}</div><div class="l">MAGNETIC</div></div>
-        </div>
-      </div>`;
-    }).join('');
     return `
-    <div class="staff-card">
+    <div class="staff-card" onclick="openStaffHistory('${u.id}')">
       <div class="sc-name">
-        <span>${escapeHtml(u.name)}${u.removed?' <span style="color:var(--muted);font-weight:400;font-size:10.5px;">(removed)</span>':''}</span>
+        <span>${escapeHtml(u.name)}${u.removed?' <span class="removed-tag">(removed)</span>':''}</span>
         <span style="display:flex; align-items:center; gap:9px;">
           <span style="font-family:var(--font-mono);color:var(--flash);font-size:12.5px">${stats.total} EGP</span>
-          ${u.removed?'':`<span class="shift-del" onclick="removeStaffAccount('${u.id}')" title="Remove this staff account">✕</span>`}
+          ${u.removed?'':`<span class="remove-account-btn" onclick="event.stopPropagation(); removeStaffAccount('${u.id}')">Remove</span>`}
         </span>
       </div>
       <div class="sc-grid">
@@ -1292,8 +1297,102 @@ function renderAdminPanel(){
         <div class="sc-cell"><div class="v">${stats.acrylic}</div><div class="l">ACRYLIC</div></div>
         <div class="sc-cell"><div class="v">${stats.magnetic}</div><div class="l">MAGNETIC</div></div>
       </div>
-      <div class="shift-list">${shiftRows || '<div style="color:var(--muted);font-size:11px;">No shifts yet</div>'}</div>
-      ${theirShifts.length>3 ? `<div class="shift-toggle" onclick="toggleStaffExpand('${u.id}')">${expanded?'Show less':'Show all '+theirShifts.length+' shifts'}</div>` : ''}
+      <div class="staff-card-hint">Tap to view shift history →</div>
+    </div>`;
+  }).join('');
+
+  renderShiftsByDate();
+  if(historyStaffUid) renderStaffHistoryModal();
+}
+
+function shiftStatBlockHTML(st){
+  return `
+    <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
+    <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
+    <div class="sc-cell"><div class="v">${st.visa}</div><div class="l">VISA</div></div>
+    <div class="sc-cell"><div class="v">${st.sheets}</div><div class="l">SHEETS</div></div>
+    <div class="sc-cell"><div class="v">${st.hadr}</div><div class="l">HADR</div></div>
+    <div class="sc-cell"><div class="v">${st.acrylic}</div><div class="l">ACRYLIC</div></div>
+    <div class="sc-cell"><div class="v">${st.magnetic}</div><div class="l">MAGNETIC</div></div>`;
+}
+
+function localDateKey(iso){
+  const d = new Date(iso);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDateHeading(key){
+  const [y,m,d] = key.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'});
+}
+
+function renderShiftsByDate(){
+  const el = document.getElementById('shiftsByDateList'); if(!el) return;
+  const shiftsInRange = adminShifts.filter(s=>inRange(s.startTime));
+  if(shiftsInRange.length===0){ el.innerHTML = '<div class="empty-log">No shifts in this range.</div>'; return; }
+
+  const groups = {};
+  shiftsInRange.forEach(s=>{ (groups[localDateKey(s.startTime)] = groups[localDateKey(s.startTime)]||[]).push(s); });
+  const dateKeys = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
+
+  el.innerHTML = dateKeys.map(key=>{
+    const dayShifts = groups[key].sort((a,b)=> new Date(a.startTime)-new Date(b.startTime));
+    const dayTotal = aggregate(adminEntries.filter(e=> dayShifts.some(s=>s.id===e.shiftId)));
+    const isOpen = !!expandedDates[key];
+    const shiftItems = dayShifts.map(s=>{
+      const staffMember = adminUsers.find(u=>u.id===s.uid);
+      const staffName = (staffMember && staffMember.name) || s.staffName || 'Unknown';
+      const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
+      const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
+      const shiftOpen = !!expandedShifts[s.id];
+      const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
+      return `<div class="shift-block">
+        <div class="shift-row" style="cursor:pointer;" onclick="toggleShiftExpand('${s.id}')">
+          <span>${fmtTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'} · ${escapeHtml(staffName)}</span>
+          <span style="display:flex; align-items:center; gap:8px;">${durTxt}<span style="color:var(--muted);">${shiftOpen?'▲':'▼'}</span></span>
+        </div>
+        ${shiftOpen ? `
+        <div class="sc-grid" style="margin-top:6px;">${shiftStatBlockHTML(st)}</div>
+        <div class="shift-delete-row" onclick="deleteShift('${s.id}')">Delete this shift</div>
+        ` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="date-group">
+      <div class="date-heading" onclick="toggleDateExpand('${key}')">
+        <span>${fmtDateHeading(key)}</span>
+        <span class="dh-right"><span>${dayTotal.total} EGP</span><span>${isOpen?'▲':'▼'}</span></span>
+      </div>
+      ${isOpen ? `<div class="date-body">${shiftItems}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+window.toggleDateExpand = function(key){ expandedDates[key] = !expandedDates[key]; renderShiftsByDate(); };
+window.toggleShiftExpand = function(id){ expandedShifts[id] = !expandedShifts[id]; renderShiftsByDate(); };
+
+window.openStaffHistory = function(uid){
+  historyStaffUid = uid;
+  renderStaffHistoryModal();
+  document.getElementById('staffHistoryModalBg').classList.add('open');
+};
+window.closeStaffHistory = function(){
+  document.getElementById('staffHistoryModalBg').classList.remove('open');
+  historyStaffUid = null;
+};
+function renderStaffHistoryModal(){
+  if(!historyStaffUid) return;
+  const u = adminUsers.find(x=>x.id===historyStaffUid);
+  const sample = !u && (adminShifts.find(s=>s.uid===historyStaffUid) || adminEntries.find(e=>e.uid===historyStaffUid));
+  const name = u ? u.name : ((sample && sample.staffName) || 'Removed staff');
+  document.getElementById('staffHistoryTitle').textContent = name + '’s history';
+  const theirShifts = adminShifts.filter(s=>s.uid===historyStaffUid && inRange(s.startTime)).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  const body = document.getElementById('staffHistoryBody');
+  if(theirShifts.length===0){ body.innerHTML = '<div class="empty-log">No shifts in this range.</div>'; return; }
+  body.innerHTML = theirShifts.map(s=>{
+    const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
+    const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
+    const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
+    return `<div class="shift-block">
+      <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span><span>${durTxt}</span></div>
+      <div class="sc-grid" style="margin-top:6px;">${shiftStatBlockHTML(st)}</div>
     </div>`;
   }).join('');
 }
@@ -1317,10 +1416,6 @@ window.removeStaffAccount = async function(uid){
     await deleteDoc(doc(db,'users',uid));
     showToast('Account removed — history kept');
   }catch(e){ showToast('Could not remove account: '+e.message); }
-};
-window.toggleStaffExpand = function(uid){
-  expandedStaff[uid] = !expandedStaff[uid];
-  renderAdminPanel();
 };
 window.approveUser = async function(uid){
   try{ await updateDoc(doc(db,'users',uid), {approved:true}); showToast('Approved'); }
