@@ -337,7 +337,6 @@
   .pr-btn.remove{background:var(--card-2); color:var(--danger); border:1px solid #4a2323;}
   .staff-card{background:var(--well); border:1px solid var(--border); border-radius:11px; padding:13px; margin-top:12px; cursor:pointer;}
   .staff-card-hint{margin-top:9px; font-size:10.5px; color:var(--muted); text-align:right;}
-  .remove-account-btn{font-size:10px; font-weight:800; color:var(--danger); border:1px solid #4a2323; border-radius:6px; padding:4px 8px; cursor:pointer; letter-spacing:0.3px;}
   .removed-tag{color:var(--muted); font-weight:400; font-size:10.5px;}
   .date-group{margin-top:12px;}
   .date-heading{
@@ -349,10 +348,10 @@
   .date-body{padding:10px 2px 0;}
   .shift-delete-row{margin-top:9px; text-align:center; font-size:11px; color:var(--danger); cursor:pointer; text-decoration:underline;}
   .staff-card .sc-name{font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:space-between;}
-  .staff-card .sc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
-  .staff-card .sc-cell{background:var(--card); border:1px solid var(--border); border-radius:7px; padding:6px 3px; text-align:center;}
-  .staff-card .sc-cell .v{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text);}
-  .staff-card .sc-cell .l{font-size:7.5px; color:var(--muted); margin-top:2px;}
+  .sc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+  .sc-cell{background:var(--card); border:1px solid var(--border); border-radius:7px; padding:6px 3px; text-align:center;}
+  .sc-cell .v{font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--text);}
+  .sc-cell .l{font-size:7.5px; color:var(--muted); margin-top:2px;}
   .shift-block{padding:10px 0; border-top:1px dashed var(--border);}
   .shift-block:first-child{border-top:none;}
   .shift-row{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); font-family:var(--font-mono);}
@@ -1299,7 +1298,6 @@ function renderAdminPanel(){
         <span>${escapeHtml(u.name)}${u.removed?' <span class="removed-tag">(removed)</span>':''}</span>
         <span style="display:flex; align-items:center; gap:9px;">
           <span style="font-family:var(--font-mono);color:var(--flash);font-size:12.5px">${stats.total} EGP</span>
-          ${u.removed?'':`<span class="remove-account-btn" onclick="event.stopPropagation(); removeStaffAccount('${u.id}')">Remove</span>`}
         </span>
       </div>
       <div class="sc-grid">
@@ -1420,15 +1418,6 @@ window.deleteShift = async function(shiftId){
     await batch.commit();
     showToast('Shift deleted');
   }catch(e){ showToast('Could not delete shift: '+e.message); }
-};
-window.removeStaffAccount = async function(uid){
-  const u = adminUsers.find(x=>x.id===uid);
-  const name = u ? u.name : 'this staff member';
-  if(!confirm(`Remove ${name}'s account? They'll no longer be able to log in or use the app, but their sales history stays on this dashboard.\n\nNote: this only removes their in-app profile. To fully delete their login credentials too, remove them manually in the Firebase console under Authentication → Users.`)) return;
-  try{
-    await deleteDoc(doc(db,'users',uid));
-    showToast('Account removed — history kept');
-  }catch(e){ showToast('Could not remove account: '+e.message); }
 };
 window.approveUser = async function(uid){
   try{ await updateDoc(doc(db,'users',uid), {approved:true}); showToast('Approved'); }
