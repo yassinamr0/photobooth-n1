@@ -345,6 +345,7 @@
   .shift-block{padding:10px 0; border-top:1px dashed var(--border);}
   .shift-block:first-child{border-top:none;}
   .shift-row{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); font-family:var(--font-mono);}
+  .shift-del{color:var(--danger); cursor:pointer; font-weight:800; font-size:12px; line-height:1; padding:2px 3px;}
   .shift-toggle{font-size:10.5px; color:var(--flash); margin-top:9px; cursor:pointer; text-align:center;}
 
   /* ---------- Footer / toast / modal ---------- */
@@ -436,7 +437,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
   getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot,
-  collection, addDoc, query, where, serverTimestamp
+  collection, addDoc, query, where, serverTimestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 /* =====================================================================
@@ -1233,8 +1234,17 @@ function renderAdminPanel(){
     <div class="sumcell"><div class="v">${overall.acrylic}</div><div class="l">Acrylic sold</div></div>
     <div class="sumcell"><div class="v">${overall.magnetic}</div><div class="l">Magnetic sold</div></div>`;
 
-  // staff list
-  const staff = adminUsers.filter(u=>u.approved && u.role==='staff');
+  // staff list — current approved staff, plus anyone removed who still has historical data
+  const approvedStaffDocs = adminUsers.filter(u=>u.approved && u.role==='staff');
+  const knownUids = new Set(approvedStaffDocs.map(u=>u.id));
+  const removedUids = new Set();
+  adminShifts.forEach(s=>{ if(!knownUids.has(s.uid)) removedUids.add(s.uid); });
+  adminEntries.forEach(e=>{ if(!knownUids.has(e.uid)) removedUids.add(e.uid); });
+  const removedStaff = Array.from(removedUids).map(uid=>{
+    const sample = adminShifts.find(s=>s.uid===uid) || adminEntries.find(e=>e.uid===uid);
+    return { id: uid, name: (sample && sample.staffName) || 'Removed staff', removed:true };
+  });
+  const staff = [...approvedStaffDocs, ...removedStaff];
   const staffListEl = document.getElementById('staffList');
   if(staff.length===0){
     staffListEl.innerHTML = '<div class="empty-log">No approved staff yet.</div>';
@@ -1250,7 +1260,10 @@ function renderAdminPanel(){
       const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
       const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
       return `<div class="shift-block">
-        <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span><span>${durTxt}</span></div>
+        <div class="shift-row">
+          <span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span>
+          <span style="display:flex; align-items:center; gap:8px;">${durTxt}<span class="shift-del" onclick="deleteShift('${s.id}')" title="Delete this shift">✕</span></span>
+        </div>
         <div class="sc-grid" style="margin-top:6px;">
           <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
           <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
@@ -1264,7 +1277,13 @@ function renderAdminPanel(){
     }).join('');
     return `
     <div class="staff-card">
-      <div class="sc-name"><span>${escapeHtml(u.name)}</span><span style="font-family:var(--font-mono);color:var(--flash);font-size:12.5px">${stats.total} EGP</span></div>
+      <div class="sc-name">
+        <span>${escapeHtml(u.name)}${u.removed?' <span style="color:var(--muted);font-weight:400;font-size:10.5px;">(removed)</span>':''}</span>
+        <span style="display:flex; align-items:center; gap:9px;">
+          <span style="font-family:var(--font-mono);color:var(--flash);font-size:12.5px">${stats.total} EGP</span>
+          ${u.removed?'':`<span class="shift-del" onclick="removeStaffAccount('${u.id}')" title="Remove this staff account">✕</span>`}
+        </span>
+      </div>
       <div class="sc-grid">
         <div class="sc-cell"><div class="v">${stats.cash}</div><div class="l">CASH</div></div>
         <div class="sc-cell"><div class="v">${stats.visa}</div><div class="l">VISA</div></div>
@@ -1279,6 +1298,26 @@ function renderAdminPanel(){
   }).join('');
 }
 
+window.deleteShift = async function(shiftId){
+  if(!confirm('Delete this entire shift and all its logged entries? This cannot be undone.')) return;
+  try{
+    const entriesToDelete = adminEntries.filter(e=>e.shiftId===shiftId);
+    const batch = writeBatch(db);
+    entriesToDelete.forEach(e=> batch.delete(doc(db,'entries',e.id)));
+    batch.delete(doc(db,'shifts',shiftId));
+    await batch.commit();
+    showToast('Shift deleted');
+  }catch(e){ showToast('Could not delete shift: '+e.message); }
+};
+window.removeStaffAccount = async function(uid){
+  const u = adminUsers.find(x=>x.id===uid);
+  const name = u ? u.name : 'this staff member';
+  if(!confirm(`Remove ${name}'s account? They'll no longer be able to log in or use the app, but their sales history stays on this dashboard.\n\nNote: this only removes their in-app profile. To fully delete their login credentials too, remove them manually in the Firebase console under Authentication → Users.`)) return;
+  try{
+    await deleteDoc(doc(db,'users',uid));
+    showToast('Account removed — history kept');
+  }catch(e){ showToast('Could not remove account: '+e.message); }
+};
 window.toggleStaffExpand = function(uid){
   expandedStaff[uid] = !expandedStaff[uid];
   renderAdminPanel();
