@@ -315,6 +315,7 @@
     background:var(--pink); color:#2a0512; border:none; border-radius:8px; padding:9px 14px; font-weight:800; font-size:11.5px;
     cursor:pointer; box-shadow:0 3px 0 var(--pink-shade); letter-spacing:0.3px; text-transform:uppercase;
   }
+  .shift-bar .sb-btn.secondary{background:var(--card-2); color:var(--flash); box-shadow:0 3px 0 var(--border);}
   .shift-bar .sb-btn:active{transform:translateY(2px); box-shadow:none;}
   .locked-note{text-align:center; color:var(--muted); font-size:12px; padding:6px 0 2px;}
 
@@ -338,6 +339,16 @@
   .staff-card{background:var(--well); border:1px solid var(--border); border-radius:11px; padding:13px; margin-top:12px; cursor:pointer;}
   .staff-card-hint{margin-top:9px; font-size:10.5px; color:var(--muted); text-align:right;}
   .removed-tag{color:var(--muted); font-weight:400; font-size:10.5px;}
+  .mismatch-banner{
+    margin-top:12px; background:var(--pink-dim); border:1px solid var(--pink-shade); color:var(--pink);
+    border-radius:9px; padding:10px 12px; font-size:12px; font-weight:700; text-align:center;
+  }
+  .mismatch-flag{color:var(--danger); margin-left:6px; font-weight:900;}
+  .paper-block{
+    margin-top:8px; font-size:11px; color:var(--muted); font-family:var(--font-mono);
+    background:var(--well); border:1px solid var(--border); border-radius:8px; padding:8px 10px; line-height:1.6;
+  }
+  .paper-block.bad{border-color:var(--danger); color:var(--danger); background:rgba(255,92,92,0.08);}
   .date-group{margin-top:12px;}
   .date-heading{
     display:flex; justify-content:space-between; align-items:center; padding:12px 14px;
@@ -422,13 +433,28 @@
   </div>
 </div>
 
+<div class="modal-bg" id="startShiftModalBg">
+  <div class="modal">
+    <h3>Start shift</h3>
+    <div class="auth-sub" style="margin:0 0 14px; text-align:left;">How many sheets are currently loaded in the printer?</div>
+    <div class="name-form">
+      <div><label>Sheets in printer</label><input type="number" inputmode="numeric" id="startPaperInput" min="0"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="footer-btn" style="flex:1" onclick="closeStartShiftModal()">Cancel</div>
+      <div class="footer-btn" style="flex:1;color:var(--flash);border-color:var(--flash)" onclick="confirmStartShift()">Start shift</div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="endShiftModalBg">
   <div class="modal">
     <h3>End shift</h3>
-    <div class="auth-sub" style="margin:0 0 14px; text-align:left;">Confirm the actual start and end time for this shift.</div>
+    <div class="auth-sub" style="margin:0 0 14px; text-align:left;">Confirm the actual start and end time for this shift, and how many sheets are left in the printer.</div>
     <div class="name-form">
       <div><label>Start time</label><input type="time" id="endShiftStartInput"></div>
       <div><label>End time</label><input type="time" id="endShiftEndInput"></div>
+      <div><label>Sheets left in printer</label><input type="number" inputmode="numeric" id="endShiftPaperInput" min="0"></div>
     </div>
     <div class="modal-actions">
       <div class="footer-btn" style="flex:1" onclick="closeEndShiftModal()">Cancel</div>
@@ -486,6 +512,8 @@ function autoSheetsPrice(s){
   return Math.round(s * 400); // every 0.5 sheet = 200 EGP
 }
 
+const PAPER_PACKET_SIZE = 18;
+
 /* ---------------- utils ---------------- */
 function cryptoId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -522,6 +550,7 @@ function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1, 0,0,
 
 /* ---------------- boot ---------------- */
 function unsubscribeAllListeners(){
+  if(missingProfileTimer){ clearTimeout(missingProfileTimer); missingProfileTimer = null; }
   if(userDocUnsub){ userDocUnsub(); userDocUnsub = null; }
   if(myShiftUnsub){ myShiftUnsub(); myShiftUnsub = null; }
   if(myEntriesUnsub){ myEntriesUnsub(); myEntriesUnsub = null; }
@@ -548,14 +577,23 @@ if(!isConfigured){
   });
 }
 
+let missingProfileTimer = null;
 function watchUserDoc(uid, email){
   if(userDocUnsub) userDocUnsub();
+  if(missingProfileTimer){ clearTimeout(missingProfileTimer); missingProfileTimer = null; }
   userDocUnsub = onSnapshot(doc(db,'users',uid), (snap)=>{
     if(!snap.exists()){
-      // Auth account exists but profile doc doesn't yet (e.g. mid-signup) — create it.
       currentUser = {uid, name:null, email, role:null, approved:false};
-      renderScreen('pending');
+      if(!missingProfileTimer){
+        document.getElementById('app').innerHTML = '<div class="loading">Setting up your account…</div>';
+        missingProfileTimer = setTimeout(()=>{
+          missingProfileTimer = null;
+          currentScreen = null;
+          renderScreen('completeProfile');
+        }, 4000);
+      }
     } else {
+      if(missingProfileTimer){ clearTimeout(missingProfileTimer); missingProfileTimer = null; }
       const d = snap.data();
       currentUser = {uid, name:d.name, email:d.email, role:d.role, approved:d.approved};
       updateWhoami();
@@ -589,6 +627,7 @@ function renderScreen(name){
   if(name==='setup') app_.innerHTML = setupHTML();
   if(name==='auth') app_.innerHTML = authHTML();
   if(name==='pending') app_.innerHTML = pendingHTML();
+  if(name==='completeProfile') app_.innerHTML = completeProfileHTML();
   if(name==='staff'){ app_.innerHTML = staffShellHTML(); initStaffMode(); }
   if(name==='admin'){ app_.innerHTML = adminShellHTML(); initAdminMode(); }
 }
@@ -695,6 +734,32 @@ function pendingHTML(){
   </div>`;
 }
 
+/* ---------------- COMPLETE PROFILE screen ---------------- */
+function completeProfileHTML(){
+  return `
+  <div class="auth-wrap">
+    <div class="auth-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#FFC93C"/></svg></div>
+    <div class="auth-title">Finish setting up</div>
+    <div class="auth-sub">Your account was created but your profile didn't finish saving. Enter your name to complete it.</div>
+    <div class="name-form">
+      <div><label>First name</label><input type="text" id="cpFirstName" autocomplete="given-name"></div>
+      <div><label>Last name</label><input type="text" id="cpLastName" autocomplete="family-name"></div>
+      <button class="primary-btn" style="margin-top:8px" onclick="submitCompleteProfile()">Finish setup</button>
+    </div>
+    <div class="reset-link" onclick="doLogout()">Log out</div>
+  </div>`;
+}
+window.submitCompleteProfile = async function(){
+  const fn = document.getElementById('cpFirstName').value.trim();
+  const ln = document.getElementById('cpLastName').value.trim();
+  if(!fn || !ln){ showToast('Enter first and last name'); return; }
+  try{
+    await setDoc(doc(db,'users',currentUser.uid), {
+      uid: currentUser.uid, name: fn+' '+ln, email: currentUser.email, role:'staff', approved:false, createdAt: serverTimestamp()
+    });
+  }catch(e){ showToast(e.message || 'Could not save — try again'); }
+};
+
 /* ============================================================
    STAFF MODE
    ============================================================ */
@@ -705,7 +770,7 @@ let frameUnitPrice = { Acrylic:400, Magnetic:200 };
 let customItems = [];
 let cashAmtVal = 0, visaAmtVal = 0;
 
-let activeShift = null;       // {id,startTime,endTime}
+let activeShift = null;       // {id,startTime,endTime,startPaperCount,paperChanges,endPaperCount}
 let myShiftUnsub = null;
 let myEntriesUnsub = null;
 let myEntries = [];           // all of my own entries (any shift)
@@ -843,8 +908,11 @@ function renderShiftBar(){
     document.getElementById('myLogCard').style.display = 'none';
   } else {
     wrap.innerHTML = `
-      <div class="shift-bar">
+      <div class="shift-bar" style="flex-wrap:wrap; row-gap:10px;">
         <div><div class="sb-label">Started</div><div class="sb-time">${fmtTime(activeShift.startTime)}</div></div>
+        <div><div class="sb-label">Paper loaded</div><div class="sb-time">${activeShift.startPaperCount ?? '—'}</div></div>
+        <div><div class="sb-label">Changed</div><div class="sb-time">${activeShift.paperChanges||0}×</div></div>
+        <button class="sb-btn secondary" onclick="logPaperChange()">+ Paper change</button>
         <button class="sb-btn" onclick="endShiftNow()">End shift</button>
       </div>`;
     document.getElementById('saleCard').style.display = '';
@@ -854,14 +922,34 @@ function renderShiftBar(){
   renderMyLog();
 }
 
-window.startShift = async function(){
+window.startShift = function(){
+  document.getElementById('startPaperInput').value = '';
+  document.getElementById('startShiftModalBg').classList.add('open');
+};
+window.closeStartShiftModal = function(){
+  document.getElementById('startShiftModalBg').classList.remove('open');
+};
+window.confirmStartShift = async function(){
+  const val = document.getElementById('startPaperInput').value;
+  const startPaperCount = parseInt(val,10);
+  if(isNaN(startPaperCount) || startPaperCount<0){ showToast('Enter how many sheets are in the printer'); return; }
   try{
     await addDoc(collection(db,'shifts'), {
       uid: currentUser.uid, staffName: currentUser.name,
-      startTime: new Date().toISOString(), endTime: null, createdAt: serverTimestamp()
+      startTime: new Date().toISOString(), endTime: null,
+      startPaperCount, paperChanges: 0, endPaperCount: null,
+      createdAt: serverTimestamp()
     });
+    document.getElementById('startShiftModalBg').classList.remove('open');
     showToast('Shift started');
   }catch(e){ showToast('Could not start shift: '+e.message); }
+};
+window.logPaperChange = async function(){
+  if(!activeShift) return;
+  try{
+    await updateDoc(doc(db,'shifts',activeShift.id), { paperChanges: (activeShift.paperChanges||0)+1 });
+    showToast('Paper change logged');
+  }catch(e){ showToast('Could not log: '+e.message); }
 };
 function toTimeInputValue(d){
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
@@ -877,6 +965,7 @@ window.endShiftNow = function(){
   const startD = activeShift.startTime ? new Date(activeShift.startTime) : new Date();
   document.getElementById('endShiftStartInput').value = toTimeInputValue(startD);
   document.getElementById('endShiftEndInput').value = toTimeInputValue(new Date());
+  document.getElementById('endShiftPaperInput').value = '';
   document.getElementById('endShiftModalBg').classList.add('open');
 };
 window.closeEndShiftModal = function(){
@@ -886,13 +975,16 @@ window.confirmEndShift = async function(){
   if(!activeShift) return;
   const startVal = document.getElementById('endShiftStartInput').value;
   const endVal = document.getElementById('endShiftEndInput').value;
+  const paperVal = document.getElementById('endShiftPaperInput').value;
+  const endPaperCount = parseInt(paperVal,10);
   if(!startVal || !endVal){ showToast('Enter both times'); return; }
+  if(isNaN(endPaperCount) || endPaperCount<0){ showToast('Enter how many sheets are left in the printer'); return; }
   const baseDate = activeShift.startTime ? new Date(activeShift.startTime) : new Date();
   const start = combineDateTime(baseDate, startVal);
   let end = combineDateTime(baseDate, endVal);
   if(end <= start) end = new Date(end.getTime() + 24*60*60*1000); // shift crossed midnight
   try{
-    await updateDoc(doc(db,'shifts',activeShift.id), { startTime: start.toISOString(), endTime: end.toISOString() });
+    await updateDoc(doc(db,'shifts',activeShift.id), { startTime: start.toISOString(), endTime: end.toISOString(), endPaperCount });
     document.getElementById('endShiftModalBg').classList.remove('open');
     showToast('Shift ended — nice work');
   }catch(e){ showToast('Could not end shift: '+e.message); }
@@ -1176,6 +1268,7 @@ function adminShellHTML(){
       <div class="range-tab" id="rtAll" onclick="setAdminRange('all')">All time</div>
     </div>
     <div class="summary-grid" id="overallGrid"></div>
+    <div id="mismatchBanner"></div>
   </div>
 
   <div class="card">
@@ -1240,6 +1333,32 @@ function aggregate(entries){
   };
 }
 
+// Paper reconciliation for one shift: compares what the printer says was used
+// against what was actually logged as sold + wasted.
+function paperCheck(s, shiftEntries){
+  if(s.startPaperCount==null || s.endPaperCount==null) return null; // shift predates this feature or is still open
+  const expectedUsed = s.startPaperCount + (s.paperChanges||0)*PAPER_PACKET_SIZE - s.endPaperCount;
+  const st = aggregate(shiftEntries);
+  const actualUsed = st.sheets + st.hadr;
+  return { expectedUsed, actualUsed, diff: actualUsed - expectedUsed, mismatch: actualUsed !== expectedUsed };
+}
+function shiftStatBlockHTML(st){
+  return `
+    <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
+    <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
+    <div class="sc-cell"><div class="v">${st.visa}</div><div class="l">VISA</div></div>
+    <div class="sc-cell"><div class="v">${st.sheets}</div><div class="l">SHEETS</div></div>
+    <div class="sc-cell"><div class="v">${st.hadr}</div><div class="l">HADR</div></div>
+    <div class="sc-cell"><div class="v">${st.acrylic}</div><div class="l">ACRYLIC</div></div>
+    <div class="sc-cell"><div class="v">${st.magnetic}</div><div class="l">MAGNETIC</div></div>`;
+}
+function paperBlockHTML(s, pc){
+  if(!pc) return '';
+  const cls = pc.mismatch ? 'paper-block bad' : 'paper-block';
+  const diffTxt = pc.mismatch ? (pc.diff>0 ? `${pc.diff} more sold/wasted than paper used` : `${Math.abs(pc.diff)} fewer sold/wasted than paper used`) : 'Matches ✓';
+  return `<div class="${cls}">Paper: ${s.startPaperCount} loaded + ${s.paperChanges||0}× changed (+${(s.paperChanges||0)*PAPER_PACKET_SIZE}) − ${s.endPaperCount} left = ${pc.expectedUsed} expected used<br>Logged sold+wasted: ${pc.actualUsed} — ${diffTxt}</div>`;
+}
+
 function renderAdminPanel(){
   if(currentScreen!=='admin') return;
 
@@ -1272,6 +1391,16 @@ function renderAdminPanel(){
     <div class="sumcell"><div class="v">${overall.hadr}</div><div class="l">Hadr wasted</div></div>
     <div class="sumcell"><div class="v">${overall.acrylic}</div><div class="l">Acrylic sold</div></div>
     <div class="sumcell"><div class="v">${overall.magnetic}</div><div class="l">Magnetic sold</div></div>`;
+
+  // paper mismatch banner — the closest thing to a "notification" a static site can do
+  const shiftsInRangeForBanner = adminShifts.filter(s=>inRange(s.startTime));
+  const mismatchCount = shiftsInRangeForBanner.filter(s=>{
+    const pc = paperCheck(s, adminEntries.filter(e=>e.shiftId===s.id));
+    return pc && pc.mismatch;
+  }).length;
+  document.getElementById('mismatchBanner').innerHTML = mismatchCount>0
+    ? `<div class="mismatch-banner">⚠️ ${mismatchCount} shift${mismatchCount>1?'s':''} in this range ${mismatchCount>1?"don't":"doesn't"} match paper counts — check the Shifts section</div>`
+    : '';
 
   // staff list — current approved staff, plus anyone removed who still has historical data
   const approvedStaffDocs = adminUsers.filter(u=>u.approved && u.role==='staff');
@@ -1316,17 +1445,6 @@ function renderAdminPanel(){
   if(historyStaffUid) renderStaffHistoryModal();
 }
 
-function shiftStatBlockHTML(st){
-  return `
-    <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
-    <div class="sc-cell"><div class="v">${st.cash}</div><div class="l">CASH</div></div>
-    <div class="sc-cell"><div class="v">${st.visa}</div><div class="l">VISA</div></div>
-    <div class="sc-cell"><div class="v">${st.sheets}</div><div class="l">SHEETS</div></div>
-    <div class="sc-cell"><div class="v">${st.hadr}</div><div class="l">HADR</div></div>
-    <div class="sc-cell"><div class="v">${st.acrylic}</div><div class="l">ACRYLIC</div></div>
-    <div class="sc-cell"><div class="v">${st.magnetic}</div><div class="l">MAGNETIC</div></div>`;
-}
-
 function localDateKey(iso){
   const d = new Date(iso);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -1349,27 +1467,34 @@ function renderShiftsByDate(){
     const dayShifts = groups[key].sort((a,b)=> new Date(a.startTime)-new Date(b.startTime));
     const dayTotal = aggregate(adminEntries.filter(e=> dayShifts.some(s=>s.id===e.shiftId)));
     const isOpen = !!expandedDates[key];
+    let dayHasMismatch = false;
     const shiftItems = dayShifts.map(s=>{
       const staffMember = adminUsers.find(u=>u.id===s.uid);
       const staffName = (staffMember && staffMember.name) || s.staffName || 'Unknown';
       const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
       const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
       const shiftOpen = !!expandedShifts[s.id];
-      const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
+      const shiftEntries = adminEntries.filter(e=>e.shiftId===s.id);
+      const st = aggregate(shiftEntries);
+      const pc = paperCheck(s, shiftEntries);
+      if(pc && pc.mismatch) dayHasMismatch = true;
+      const flag = (pc && pc.mismatch) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
       return `<div class="shift-block">
         <div class="shift-row" style="cursor:pointer;" onclick="toggleShiftExpand('${s.id}')">
-          <span>${fmtTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'} · ${escapeHtml(staffName)}</span>
+          <span>${fmtTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'} · ${escapeHtml(staffName)}${flag}</span>
           <span style="display:flex; align-items:center; gap:8px;">${durTxt}<span style="color:var(--muted);">${shiftOpen?'▲':'▼'}</span></span>
         </div>
         ${shiftOpen ? `
         <div class="sc-grid" style="margin-top:6px;">${shiftStatBlockHTML(st)}</div>
+        ${paperBlockHTML(s, pc)}
         <div class="shift-delete-row" onclick="deleteShift('${s.id}')">Delete this shift</div>
         ` : ''}
       </div>`;
     }).join('');
+    const dateFlag = dayHasMismatch ? '<span class="mismatch-flag" title="At least one shift this day has a paper mismatch">⚠️</span>' : '';
     return `<div class="date-group">
       <div class="date-heading" onclick="toggleDateExpand('${key}')">
-        <span>${fmtDateHeading(key)}</span>
+        <span>${fmtDateHeading(key)}${dateFlag}</span>
         <span class="dh-right"><span>${dayTotal.total} EGP</span><span>${isOpen?'▲':'▼'}</span></span>
       </div>
       ${isOpen ? `<div class="date-body">${shiftItems}</div>` : ''}
@@ -1400,10 +1525,14 @@ function renderStaffHistoryModal(){
   body.innerHTML = theirShifts.map(s=>{
     const dur = s.endTime ? Math.round((new Date(s.endTime)-new Date(s.startTime))/60000) : null;
     const durTxt = dur!==null ? (Math.floor(dur/60)+'h '+(dur%60)+'m') : 'ongoing';
-    const st = aggregate(adminEntries.filter(e=>e.shiftId===s.id));
+    const shiftEntries = adminEntries.filter(e=>e.shiftId===s.id);
+    const st = aggregate(shiftEntries);
+    const pc = paperCheck(s, shiftEntries);
+    const flag = (pc && pc.mismatch) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
     return `<div class="shift-block">
-      <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}</span><span>${durTxt}</span></div>
+      <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}${flag}</span><span>${durTxt}</span></div>
       <div class="sc-grid" style="margin-top:6px;">${shiftStatBlockHTML(st)}</div>
+      ${paperBlockHTML(s, pc)}
     </div>`;
   }).join('');
 }
