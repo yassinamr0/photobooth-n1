@@ -349,6 +349,7 @@
     background:var(--well); border:1px solid var(--border); border-radius:8px; padding:8px 10px; line-height:1.6;
   }
   .paper-block.bad{border-color:var(--danger); color:var(--danger); background:rgba(255,92,92,0.08);}
+  .paper-link{display:inline-block; margin-left:2px; text-decoration:underline; cursor:pointer; font-weight:700; color:inherit;}
   .date-group{margin-top:12px;}
   .date-heading{
     display:flex; justify-content:space-between; align-items:center; padding:12px 14px;
@@ -1342,6 +1343,10 @@ function paperCheck(s, shiftEntries){
   const actualUsed = st.sheets + st.hadr;
   return { expectedUsed, actualUsed, diff: actualUsed - expectedUsed, mismatch: actualUsed !== expectedUsed };
 }
+// Whether a shift should still show a warning — true mismatches that haven't been checked off yet.
+function shouldWarnPaper(s, pc){
+  return !!(pc && pc.mismatch && !s.paperVerified);
+}
 function shiftStatBlockHTML(st){
   return `
     <div class="sc-cell"><div class="v">${st.total}</div><div class="l">TOTAL</div></div>
@@ -1354,10 +1359,29 @@ function shiftStatBlockHTML(st){
 }
 function paperBlockHTML(s, pc){
   if(!pc) return '';
-  const cls = pc.mismatch ? 'paper-block bad' : 'paper-block';
-  const diffTxt = pc.mismatch ? (pc.diff>0 ? `${pc.diff} more sold/wasted than paper used` : `${Math.abs(pc.diff)} fewer sold/wasted than paper used`) : 'Matches ✓';
-  return `<div class="${cls}">Paper: ${s.startPaperCount} loaded + ${s.paperChanges||0}× changed (+${(s.paperChanges||0)*PAPER_PACKET_SIZE}) − ${s.endPaperCount} left = ${pc.expectedUsed} expected used<br>Logged sold+wasted: ${pc.actualUsed} — ${diffTxt}</div>`;
+  const warn = shouldWarnPaper(s, pc);
+  const cls = warn ? 'paper-block bad' : 'paper-block';
+  const addedBack = (s.paperChanges||0)*PAPER_PACKET_SIZE;
+  const expectedLine = `Printer: started with ${s.startPaperCount}, refilled ${s.paperChanges||0}× (+${addedBack} sheets), ${s.endPaperCount} left over → expected ${pc.expectedUsed} used`;
+  const actualLine = `Logged as sold + wasted: ${pc.actualUsed}`;
+  let statusLine;
+  if(!pc.mismatch){
+    statusLine = `Matches ✓`;
+  } else if(!warn){
+    statusLine = `Off by ${Math.abs(pc.diff)} — checked off by admin ✓ <span class="paper-link" onclick="event.stopPropagation(); unmarkPaperVerified('${s.id}')">Unmark</span>`;
+  } else {
+    statusLine = `Off by ${Math.abs(pc.diff)} (${pc.diff>0?'more sold/wasted than the paper accounts for':'less sold/wasted than the paper accounts for'}) <span class="paper-link" onclick="event.stopPropagation(); markPaperVerified('${s.id}')">Mark as checked</span>`;
+  }
+  return `<div class="${cls}">${expectedLine}<br>${actualLine}<br>${statusLine}</div>`;
 }
+window.markPaperVerified = async function(shiftId){
+  try{ await updateDoc(doc(db,'shifts',shiftId), { paperVerified: true }); showToast('Marked as checked'); }
+  catch(e){ showToast('Could not update: '+e.message); }
+};
+window.unmarkPaperVerified = async function(shiftId){
+  try{ await updateDoc(doc(db,'shifts',shiftId), { paperVerified: false }); showToast('Unmarked'); }
+  catch(e){ showToast('Could not update: '+e.message); }
+};
 
 function renderAdminPanel(){
   if(currentScreen!=='admin') return;
@@ -1396,7 +1420,7 @@ function renderAdminPanel(){
   const shiftsInRangeForBanner = adminShifts.filter(s=>inRange(s.startTime));
   const mismatchCount = shiftsInRangeForBanner.filter(s=>{
     const pc = paperCheck(s, adminEntries.filter(e=>e.shiftId===s.id));
-    return pc && pc.mismatch;
+    return shouldWarnPaper(s, pc);
   }).length;
   document.getElementById('mismatchBanner').innerHTML = mismatchCount>0
     ? `<div class="mismatch-banner">⚠️ ${mismatchCount} shift${mismatchCount>1?'s':''} in this range ${mismatchCount>1?"don't":"doesn't"} match paper counts — check the Shifts section</div>`
@@ -1477,8 +1501,8 @@ function renderShiftsByDate(){
       const shiftEntries = adminEntries.filter(e=>e.shiftId===s.id);
       const st = aggregate(shiftEntries);
       const pc = paperCheck(s, shiftEntries);
-      if(pc && pc.mismatch) dayHasMismatch = true;
-      const flag = (pc && pc.mismatch) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
+      if(shouldWarnPaper(s, pc)) dayHasMismatch = true;
+      const flag = shouldWarnPaper(s, pc) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
       return `<div class="shift-block">
         <div class="shift-row" style="cursor:pointer;" onclick="toggleShiftExpand('${s.id}')">
           <span>${fmtTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'} · ${escapeHtml(staffName)}${flag}</span>
@@ -1528,7 +1552,7 @@ function renderStaffHistoryModal(){
     const shiftEntries = adminEntries.filter(e=>e.shiftId===s.id);
     const st = aggregate(shiftEntries);
     const pc = paperCheck(s, shiftEntries);
-    const flag = (pc && pc.mismatch) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
+    const flag = shouldWarnPaper(s, pc) ? '<span class="mismatch-flag" title="Paper count mismatch">⚠️</span>' : '';
     return `<div class="shift-block">
       <div class="shift-row"><span>${fmtDateTime(s.startTime)} → ${s.endTime?fmtTime(s.endTime):'now'}${flag}</span><span>${durTxt}</span></div>
       <div class="sc-grid" style="margin-top:6px;">${shiftStatBlockHTML(st)}</div>
