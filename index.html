@@ -911,9 +911,14 @@ function renderShiftBar(){
     wrap.innerHTML = `
       <div class="shift-bar" style="flex-wrap:wrap; row-gap:10px;">
         <div><div class="sb-label">Started</div><div class="sb-time">${fmtTime(activeShift.startTime)}</div></div>
-        <div><div class="sb-label">Paper loaded</div><div class="sb-time">${activeShift.startPaperCount ?? '—'}</div></div>
+        <div style="cursor:pointer;" onclick="editStartPaperCount()">
+          <div class="sb-label">Paper loaded ✎</div><div class="sb-time">${activeShift.startPaperCount ?? '—'}</div>
+        </div>
         <div><div class="sb-label">Changed</div><div class="sb-time">${activeShift.paperChanges||0}×</div></div>
-        <button class="sb-btn secondary" onclick="logPaperChange()">+ Paper change</button>
+        <div style="display:flex; gap:6px;">
+          <button class="sb-btn secondary" style="padding:9px 12px;" onclick="adjustPaperChange(-1)">−</button>
+          <button class="sb-btn secondary" onclick="adjustPaperChange(1)">+ Paper change</button>
+        </div>
         <button class="sb-btn" onclick="endShiftNow()">End shift</button>
       </div>`;
     document.getElementById('saleCard').style.display = '';
@@ -945,12 +950,26 @@ window.confirmStartShift = async function(){
     showToast('Shift started');
   }catch(e){ showToast('Could not start shift: '+e.message); }
 };
-window.logPaperChange = async function(){
+window.adjustPaperChange = async function(delta){
   if(!activeShift) return;
+  const next = Math.max(0, (activeShift.paperChanges||0) + delta);
+  if(next === (activeShift.paperChanges||0)) return; // already at 0, nothing to subtract
   try{
-    await updateDoc(doc(db,'shifts',activeShift.id), { paperChanges: (activeShift.paperChanges||0)+1 });
-    showToast('Paper change logged');
-  }catch(e){ showToast('Could not log: '+e.message); }
+    await updateDoc(doc(db,'shifts',activeShift.id), { paperChanges: next });
+    showToast(delta>0 ? 'Paper change logged' : 'Paper change removed');
+  }catch(e){ showToast('Could not update: '+e.message); }
+};
+window.editStartPaperCount = async function(){
+  if(!activeShift) return;
+  const current = activeShift.startPaperCount ?? '';
+  const val = prompt('Sheets loaded at the start of this shift:', current);
+  if(val===null) return; // cancelled
+  const n = parseInt(val,10);
+  if(isNaN(n) || n<0){ showToast('Enter a valid number'); return; }
+  try{
+    await updateDoc(doc(db,'shifts',activeShift.id), { startPaperCount: n });
+    showToast('Updated');
+  }catch(e){ showToast('Could not update: '+e.message); }
 };
 function toTimeInputValue(d){
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
