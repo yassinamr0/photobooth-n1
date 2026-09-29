@@ -5,6 +5,8 @@ export type RailItem = {
   label: string;
   icon: ReactNode;
   href?: string;
+  /** In-app navigation (renders a button instead of a link). */
+  onClick?: () => void;
   active?: boolean;
 };
 
@@ -27,24 +29,30 @@ export function SidebarRail({
       className="relative hidden w-[72px] shrink-0 flex-col items-center gap-2 border-r border-line py-5 md:flex"
     >
       {logo && <div className="mb-4">{logo}</div>}
-      {items.map((item) => (
-        <a
-          key={item.label}
-          href={item.href ?? "#"}
-          aria-label={item.label}
-          title={item.label}
-          aria-current={item.active ? "page" : undefined}
-          className={cn(
-            "grid size-11 place-items-center rounded-full transition-colors [&_svg]:size-5",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60",
-            item.active
-              ? "bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgb(217_70_239/0.8)]"
-              : "text-ink-faint hover:bg-surface-2 hover:text-ink",
-          )}
-        >
-          {item.icon}
-        </a>
-      ))}
+      {items.map((item) => {
+        const className = cn(
+          "grid size-11 place-items-center rounded-full transition-colors [&_svg]:size-5",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60",
+          item.active
+            ? "bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgb(217_70_239/0.8)]"
+            : "text-ink-faint hover:bg-surface-2 hover:text-ink",
+        );
+        const common = {
+          "aria-label": item.label,
+          title: item.label,
+          "aria-current": item.active ? ("page" as const) : undefined,
+          className,
+        };
+        return item.onClick ? (
+          <button key={item.label} type="button" onClick={item.onClick} {...common}>
+            {item.icon}
+          </button>
+        ) : (
+          <a key={item.label} href={item.href ?? "#"} {...common}>
+            {item.icon}
+          </a>
+        );
+      })}
       {footer && <div className="mt-auto">{footer}</div>}
     </nav>
   );

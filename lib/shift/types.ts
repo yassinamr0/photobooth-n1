@@ -13,6 +13,8 @@ export type Shift = {
   /** Number of PACKS (settings/paper.sheetsPerPack sheets each) swapped in. Never boxes. */
   paperChanges: number;
   endPaperCount: number | null;
+  /** Pack size snapshotted when the shift started (older/legacy shifts don't have it). */
+  sheetsPerPack?: number | null;
   paperVerified?: boolean;
   createdAt?: Timestamp | null;
 };

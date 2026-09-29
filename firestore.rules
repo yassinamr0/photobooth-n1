@@ -11,6 +11,16 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && myDoc().data.role == 'admin' && myDoc().data.approved == true;
     }
+    // Current pack size (settings/paper.sheetsPerPack), default 18 when the doc doesn't exist.
+    // PACK — never the box size (sheetsPerBox), which is only for inventory restocks.
+    function paperSettingsPath() {
+      return /databases/$(database)/documents/settings/paper;
+    }
+    function packSizeMatchesSettings(v) {
+      return (!exists(paperSettingsPath()) && v == 18)
+          || (exists(paperSettingsPath()) && v == get(paperSettingsPath()).data.get('sheetsPerPack', 18));
+    }
+
     // Any approved user (staff or admin). Pending signups are NOT approved.
     function isApproved() {
       return isSignedIn() && myDoc().data.approved == true;
@@ -44,7 +54,7 @@ service cloud.firestore {
     //   assignedEventId at this moment (missing/null on both sides = no event, which is what
     //   legacy-app shifts look like). paperVerified can't be pre-set.
     // - Update: admin always; staff only their own shift and never uid / eventId /
-    //   paperVerified / createdAt (eventId is never re-derived; paperVerified is admin's call).
+    //   paperVerified / createdAt / sheetsPerPack (eventId is never re-derived; paperVerified is admin's call).
     // - Delete: admin only (deleting a shift would orphan its entries).
     match /shifts/{shiftId} {
       allow read: if isApproved();
@@ -52,11 +62,15 @@ service cloud.firestore {
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.get('eventId', null)
                          == myDoc().data.get('assignedEventId', null)
-                    && request.resource.data.get('paperVerified', false) == false;
+                    && request.resource.data.get('paperVerified', false) == false
+                    // Pack-size snapshot (Phase 4): if present it must be the current setting.
+                    // Absent is allowed (legacy app) — reconciliation then uses the setting.
+                    && (request.resource.data.get('sheetsPerPack', null) == null
+                        || packSizeMatchesSettings(request.resource.data.sheetsPerPack));
       allow update: if isAdmin() || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && !request.resource.data.diff(resource.data).affectedKeys()
-                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt'])
+                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack'])
                     );
       allow delete: if isAdmin();
     }
@@ -78,6 +92,11 @@ service cloud.firestore {
                             .hasAny(['uid', 'shiftId', 'createdAt'])
                     );
       allow delete: if isAdmin() || (isApproved() && resource.data.uid == request.auth.uid);
+    }
+
+    // /events/{id} — booth locations. Admin-only: staff never see or choose events.
+    match /events/{eventId} {
+      allow read, write: if isAdmin();
     }
 
     // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.

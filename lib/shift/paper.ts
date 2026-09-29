@@ -28,3 +28,67 @@ export function expectedPaperUsed(
   if (shift.startPaperCount == null || shift.endPaperCount == null) return null;
   return shift.startPaperCount + (shift.paperChanges || 0) * sheetsPerPack - shift.endPaperCount;
 }
+
+/** Pack size for a shift: its own snapshot if recorded, else the current setting (legacy shifts). */
+export function packSizeFor(shift: { sheetsPerPack?: number | null }, currentSheetsPerPack: number) {
+  return typeof shift.sheetsPerPack === "number" && shift.sheetsPerPack > 0
+    ? shift.sheetsPerPack
+    : currentSheetsPerPack;
+}
+
+export type Reconciliation = {
+  packSize: number;
+  addedSheets: number; // paperChanges × packSize
+  expectedUsed: number;
+  actualUsed: number; // sheets sold + hadr wasted, from this shift's own entries
+  diff: number; // actual − expected
+  mismatch: boolean;
+  /** Mismatch that an admin hasn't checked off yet → drives every warning icon/count. */
+  warn: boolean;
+};
+
+type ReconcilableShift = {
+  startPaperCount: number | null;
+  paperChanges: number;
+  endPaperCount: number | null;
+  sheetsPerPack?: number | null;
+  paperVerified?: boolean;
+};
+
+/**
+ * Per-shift paper reconciliation (PACKS, never boxes). null unless the shift has BOTH a start
+ * and an end paper count (open shifts and pre-feature legacy shifts are never flagged).
+ */
+export function reconcileShift(
+  shift: ReconcilableShift,
+  totals: { sheets: number; hadr: number },
+  currentSheetsPerPack: number,
+): Reconciliation | null {
+  const packSize = packSizeFor(shift, currentSheetsPerPack);
+  const expectedUsed = expectedPaperUsed(shift, packSize);
+  if (expectedUsed === null) return null;
+  // Sheets are in 0.5 steps; round to 1 decimal to keep float noise out of the comparison.
+  const actualUsed = Math.round((totals.sheets + totals.hadr) * 10) / 10;
+  const diff = Math.round((actualUsed - expectedUsed) * 10) / 10;
+  const mismatch = diff !== 0;
+  return {
+    packSize,
+    addedSheets: (shift.paperChanges || 0) * packSize,
+    expectedUsed,
+    actualUsed,
+    diff,
+    mismatch,
+    warn: mismatch && shift.paperVerified !== true,
+  };
+}
+
+/** Plain-language breakdown lines for the admin's expanded shift view. */
+export function describeReconciliation(shift: ReconcilableShift, r: Reconciliation) {
+  return {
+    printer: `Printer: started with ${shift.startPaperCount}, refilled ${shift.paperChanges || 0}× (+${r.addedSheets} sheets), ${shift.endPaperCount} left over → expected ${r.expectedUsed} used`,
+    logged: `Logged as sold + wasted: ${r.actualUsed}`,
+    status: !r.mismatch
+      ? "Matches ✓"
+      : `Off by ${Math.abs(r.diff)} (${r.diff > 0 ? "more" : "less"} sold/wasted than the paper accounts for)`,
+  };
+}

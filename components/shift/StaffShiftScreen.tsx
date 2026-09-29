@@ -146,7 +146,7 @@ function ShiftScreenInner() {
         open={dialog === "start"}
         onClose={() => setDialog(null)}
         onConfirm={async (count) => {
-          await startShift(profile, count);
+          await startShift(profile, count, sheetsPerPack);
           setDialog(null);
           toast("Shift started", "success");
         }}

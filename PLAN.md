@@ -1,209 +1,174 @@
-# PLAN — Phase 3: Staff Shift Flow
+# PLAN — Phase 4: Admin Dashboard Shell
 
-> Phases 1–2 are built and pushed (`6ee8e0d`, `81bd895`). Once you approve, this file replaces
-> `PLAN.md`.
+> Phases 1–3 are built and pushed (`6ee8e0d`, `81bd895`, `f9a9efd`). Once you approve, this
+> file replaces `PLAN.md`.
 
 ## Context
-Approved staff need the live shift screen: start a shift, log sales and waste, track paper
-packs, and end the shift. Several details feed money and paper reconciliation, so they must
-be exact:
-- the pricing formula;
-- packs, never boxes;
-- the one-time eventId snapshot;
-- midnight rollover.
+Admins currently land on a placeholder. Phase 4 gives them the dashboard:
+- Overview
+- Pending approvals
+- Staff, with a separate read-only history view
+- Shifts, with paper reconciliation
 
-The screen layout is **locked** to the legacy app's order (SPEC Phase 3). The logic is ported
-from `legacy/index.html`, lines 779–1262, which the owner already uses.
+The **global event scope switcher** re-scopes everything except Pending approvals. Events are
+created in Phase 5; for now you create one test event by hand in the console (§7).
 
 **Decisions you made:**
-1. Reuse the legacy `/shifts` and `/entries` collections, so the two apps interoperate.
-2. Only admins can delete shifts.
-3. The rules enforce the eventId snapshot.
-4. `/settings/*`: approved users read, admins write.
+1. **Pack size is snapshotted per shift.** New shifts store the `sheetsPerPack` in effect when
+   they start. Reconciliation uses that value, and falls back to the current setting for
+   legacy or existing shifts that don't have it.
+2. **Reject** deletes the `/users` profile doc only. No Admin SDK yet.
+3. **Date ranges** go by the shift's start date. Every entry counts toward the range its shift
+   started in, so Overview, Staff and Shifts always agree.
 
-Out of scope: admin views and reconciliation display (Phase 4), events and inventory
-(Phase 5). Admins keep the Phase 2 placeholder.
+## 1. Scope is built in from the start (the core design)
+Sections never read raw Firestore data; they only receive already-scoped data. That way no
+section can accidentally ignore the switcher.
 
-## 1. Business logic — pure functions in `lib/shift/`, unit-tested
-- `pricing.ts`
-  - `SHEET_PRICE_PER_SHEET = 400`, `FRAME_PRICES = { Acrylic: 400, Magnetic: 200 }`
-  - `autoSheetsPrice(q) = q <= 0 ? 0 : Math.round(q * 400)`, so 0.5→200, 1→400, 1.5→600, 2→800
-  - `cartSubtotal(cart)` = sheets price (the manual override if set, else auto) + frames ×
-    unit price + sum of custom item prices
-- `sale.ts` — `buildSaleEntry(cart, payment)`, ported exactly from the legacy `logSale`:
-  - you can log if (items exist and either subtotal is 0 or payment > 0), or (no items and
-    payment > 0);
-  - `total = cash + visa` if that's > 0, else subtotal;
-  - `desc` is e.g. "Sheets (1.5), Acrylic x1, Keychain", or "Payment (no items)";
-  - a mismatch warning (not a block) when payment ≠ subtotal: "Heads up: payment (X) doesn't
-    match items subtotal (Y) — that's fine if intentional".
-- `summary.ts` — `aggregate(entries)`, identical to legacy:
-  - total, cash, visa, sheets and frames are summed from **sale** entries only;
-  - hadr is summed from **waste** entries;
-  - waste cost is NOT added to revenue.
-  - `buildShiftSummaryText(name, shift, entries)` produces the legacy's plain-text format.
-- `time.ts` — `resolveShiftTimes(baseDateISO, startHHMM, endHHMM)`:
-  - both times are placed on the shift's start date, in device local time;
-  - **if end < start, add 24h** to end (CLAUDE.md).
-  - Note: the legacy code used `<=`, which turned end == start into a 24h shift. I'm following
-    CLAUDE.md's strict `<`, so equal times give a 0-minute duration.
-- `paper.ts`:
-  - `DEFAULT_SHEETS_PER_PACK = 18`, `DEFAULT_SHEETS_PER_BOX = 108`;
-  - `usePaperSettings()` listens to `/settings/paper` and falls back to the defaults.
-  - Staff code only ever touches `sheetsPerPack`; `sheetsPerBox` is only exported for Phase 5.
-  - `expectedPaperUsed(shift, sheetsPerPack)` is defined now, for Phase 4:
-    `start + changes × sheetsPerPack − end`.
-- **Tests:** add `vitest` with `lib/shift/*.test.ts`, covering:
-  - the price table from 0.5 to 5;
-  - override vs auto price;
-  - `total` and log-ability for every legacy case;
-  - aggregate sums;
-  - midnight: 18:00→02:00 is 8h, 09:00→17:00 is 8h, 10:00→10:00 is 0h;
-  - summary text snapshot.
+- **`DashboardScopeProvider`** (context) holds:
+  - `scope`: `"global"` or an event id;
+  - `range`: `"week"`, `"month"` or `"all"` (the week starts Monday, as in legacy).
+  - Both persist in `localStorage`. If the selected event no longer exists, it falls back to
+    Global.
+- **`useDashboardData()`** holds one set of live listeners (all through `listen()`, so logout
+  is still safe): `users`, `shifts`, `entries`, `events`, `settings/paper`.
+- **Pure function `scopeDashboard(raw, scope, range, now)`** in `lib/admin/scope.ts`,
+  unit-tested, returns:
+  - `shifts`: in range by `startTime` AND (`scope === "global"` or `shift.eventId === scope`);
+  - `entries`: entries whose shift is in `shifts`. Entries store no eventId, so their event
+    always comes from their shift. Under Global only, orphan entries (their shift is gone)
+    are included by their own time;
+  - `overview`: `aggregate(entries)` (reuses `lib/shift/summary.ts`), plus the unverified
+    mismatch count;
+  - `staffRows`:
+    - **Global:** every approved staff member, plus anyone with shifts in range but no
+      approved profile (removed users, or admins who worked shifts), each with their totals;
+    - **Event:** only people with at least one shift in that event in range, with totals from
+      those shifts only. That includes people no longer assigned there.
+  - `dateGroups`: shifts grouped by local start date, newest first, each group carrying its
+    total and a `hasMismatch` flag.
+- **`useScopedDashboard()`** = raw data + scope → `scopeDashboard` (memoised). This is the
+  **only** thing Overview, Staff, Shifts and Staff history consume. Pending approvals uses
+  `raw.users` directly (always global) and says so in a comment.
 
-## 2. Data layer (`lib/shift/firestore.ts`) — all live data through `listen()` (Phase 2 registry)
-- **Active shift:** `query(shifts, where uid == me, where endTime == null)`, the same as the
-  legacy query.
-- **My entries this shift:** `query(entries, where uid == me, where shiftId == activeId)`.
-  Equality-only, so no composite index is needed.
-- **`startShift(profile, startPaperCount)`:**
-  - `addDoc` with `{ uid, staffName, eventId: profile.assignedEventId, startTime: now ISO,
-    endTime: null, startPaperCount, paperChanges: 0, endPaperCount: null, createdAt }`;
-  - `profile` is the live value from the Phase 2 profile listener, so it holds the current
-    assignedEventId at that instant;
-  - the rules also check it (§4), and it's written once and never recomputed.
-- `setStartPaperCount(id, n)` and `adjustPaperChanges(id, current, ±1)`: the value is clamped
-  at 0 and nothing is written if it's already 0.
-- `endShift(id, startISO, endISO, endPaperCount)`.
-- `logSale`, `logWaste` (`{ type: "waste", hadr, desc: "Hadr waste (n)", total: cost || 0,
-  cash: 0, visa: 0 }`), and `deleteEntry`.
-- Entries store no eventId, per spec.
+## 2. Paper reconciliation (`lib/shift/paper.ts`, extended and unit-tested)
+- **Formula:** `expectedUsed = startPaperCount + paperChanges × packSize − endPaperCount`.
+  `packSize = shift.sheetsPerPack ?? settings.sheetsPerPack`. Packs only; `sheetsPerBox` is
+  never referenced.
+- **Actual:** `actualUsed = sheets sold + hadr wasted`, from that shift's own entries.
+- **When it checks:** `null` unless both `startPaperCount` and `endPaperCount` exist, so open
+  or legacy shifts are never flagged.
+- **Result:** `mismatch = actual ≠ expected`, and `warn = mismatch && !paperVerified`.
+  `diff = actual − expected`.
+- **Wording** (as in spec and legacy):
+  - "Printer: started with 40, refilled 2× (+36 sheets), 5 left over → expected 71 used"
+  - "Logged as sold + wasted: 65"
+  - "Off by 6 (less sold/wasted than the paper accounts for)", or "…more…" when diff > 0
+  - "Matches ✓" when equal.
+- **Mark as checked** sets `paperVerified: true`, and the warning is removed from:
+  - the shift row icon;
+  - the date heading icon;
+  - the Overview banner count.
+  The numbers stay, with "Checked off by admin ✓" and an **Unmark** link.
+- **Snapshot:** Phase 3's `startShift` adds `sheetsPerPack` (the live settings value) to new
+  shift docs.
 
-## 3. Staff shift screen — `components/shift/` (mobile `PanelFrame`, Phase 1 components)
-**LOCKED order, as separate stacked cards, top to bottom:**
-1. **Your shift** (`ShiftCard`):
-   - with no active shift, a big "Start shift" `ActionButton`;
-   - when active, the status bar in this order:
-     - Started time;
-     - Paper loaded (tap to edit inline, 0 or more);
-     - pack counter "Changed N×" with **−** and **+ Paper change**, sublabel "1 pack =
-       {sheetsPerPack} sheets";
-     - **End shift**;
-   - **directly followed, in the same card**, by the summary grid: Total EGP (gold), Cash
-     (green), Visa (blue), Sheets sold, Hadr wasted, Acrylic sold, Magnetic sold. Current
-     shift only, updating live.
-2. **New sale** (`SaleCard`):
-   - sheets stepper (±0.5) with presets 0.5/1/1.5/2/3/clear;
-   - editable price that auto-fills from the formula and resets to auto when quantity changes;
-   - Acrylic (400) and Magnetic (200) frame buttons with −/+;
-   - "+ Add custom item" (name + price);
-   - cart list, items subtotal;
-   - Cash/Visa inputs with All cash / All visa / Split 50/50 / Clear;
-   - mismatch heads-up, "Logging X EGP", and **Log sale**.
-3. **Waste** (`WasteCard`): hadr stepper (±0.5), optional cost, **Log waste**.
-4. **This shift** (`ShiftLog`):
-   - entry count;
-   - newest first, each row with time, description, badges (CASH n / VISA n / WASTE), total,
-     and a delete button with a confirm step.
-5. **Footer**: "Copy shift summary", which opens a sheet with the text and a Copy button
-   (clipboard API, with a textarea fallback).
+## 3. Dashboard UI — `components/admin/` (PanelFrame "dashboard" + SidebarRail from Phase 1)
+- **Top bar**, always visible on every section:
+  - greeting;
+  - the **event switcher** (pill dropdown: "Global" + each event by name);
+  - the **date-range tabs** (This week / This month / All time).
+  The range lives in the top bar rather than only on Overview, because Staff and Shifts
+  depend on the "selected date range" too.
+  A scope chip reads "Showing: City Stars · This month".
+- **Navigation:** the sidebar rail has Overview, Pending (count badge), Staff and Shifts. On
+  phone widths a compact pill row replaces it.
+- **Overview:**
+  - mismatch banner ("⚠ N shifts in this range don't match paper counts", links to Shifts)
+    when N > 0;
+  - a pending-approvals nudge when there are any;
+  - KPI grid in Phase 1 style: Total EGP (gold), Cash, Visa, Sheets sold, Hadr wasted,
+    Acrylic, Magnetic.
+- **Pending approvals** (always global; says "All locations"): name, email, signup time,
+  **Approve** (`approved: true`) and **Reject** (two-step confirm, deletes the profile doc).
+- **Staff** — management only:
+  - each row: avatar, name, role tag, scope totals (total EGP gold, cash/visa, sheets, hadr,
+    frames), and an **Assigned event** dropdown ("No event" + events) that sets
+    `assignedEventId`, with a note that it only affects future shifts;
+  - the **View history →** button opens a **separate view**.
+- **Staff history** (separate, read-only view, with a back button):
+  - that person's shifts in the current scope and range, newest first;
+  - same shift rows as the Shifts section, but read-only: no delete, and no mark-checked.
+- **Shifts** accordion:
+  - **Date heading:** date, day total EGP, and ⚠ if any shift inside has an unverified
+    mismatch.
+  - **Shift row, collapsed:** time range, staff name, duration or "ongoing", ⚠ if mismatched,
+    and under Global a small event label ("City Stars" / "No event").
+  - **Expanded shift:**
+    - the 7-stat grid;
+    - the paper reconciliation block with Mark as checked / Unmark;
+    - **Delete shift**: a two-step confirm stating "Deletes this shift and its N entries.
+      This can't be undone."
+    - Deletion is a batched delete of the entries plus the shift, chunked at 450.
+- `ApprovedHome`: admins get `AdminDashboard`, staff keep `StaffShiftScreen`.
 
-- Cards 2–4 are hidden until a shift is active, like the legacy app. The footer is always
-  shown.
-- **Start dialog:** "How many sheets are currently loaded in the printer?" A whole number,
-  0 or more, is required.
-- **End dialog:**
-  - actual start time, defaulting to the stored start;
-  - actual end time, defaulting to now;
-  - sheets left in the printer, required;
-  - a live preview line, e.g. "Shift length: 8h 00m (ends next day)", so a rollover is visible
-    before confirming.
-- A small `Toast` component gives feedback ("Sale logged", "Paper change logged", …).
-- Double-submit is blocked (buttons disabled while writing).
-- Staff never see anything about events.
-- `ApprovedHome`: staff get the `StaffShiftScreen`; admins keep the placeholder.
-
-## 4. Security rules — `firestore.rules`, replacing the `/entries` and `/shifts` blocks; adding `/settings`
-Helper: `isApproved()` = signed in, has a user doc, and `approved == true`. The existing
-`isApprovedStaff()` is renamed to this; admins are approved too.
-```
-match /shifts/{shiftId} {
-  allow read: if isApproved();
-  allow create: if isApproved()
-    && request.resource.data.uid == request.auth.uid
-    && request.resource.data.get('eventId', null)
-         == myDoc().data.get('assignedEventId', null)          // snapshot enforced
-    && request.resource.data.get('paperVerified', false) == false;
-  allow update: if isAdmin() || (isApproved()
-    && resource.data.uid == request.auth.uid
-    && !request.resource.data.diff(resource.data).affectedKeys()
-         .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt']));
-  allow delete: if isAdmin();                                   // your choice
-}
-match /entries/{entryId} {
-  allow read: if isApproved();
-  allow create: if isApproved()
-    && request.resource.data.uid == request.auth.uid
-    && get(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId))
-         .data.uid == request.auth.uid;                         // only into your own shift
-  allow update, delete: if isAdmin() || (isApproved()
-    && resource.data.uid == request.auth.uid
-    && !request.resource.data.diff(resource.data).affectedKeys()   // (update only)
-         .hasAny(['uid', 'shiftId', 'createdAt']));
-}
-match /settings/{docId} {
-  allow read: if isApproved();
-  allow write: if isAdmin();
-}
-```
-- Entry update and delete are written as separate `allow` lines, because the `diff` check only
-  applies to updates.
-- **Legacy-compatible:**
-  - legacy shifts have no `eventId`, which `get('eventId', null)` treats as null;
-  - legacy entries already store the shift's uid;
-  - the legacy admin "mark paper checked" still works, because it's admin-only.
-- **Tightened beyond the spec wording**, flagged per CLAUDE.md:
-  - staff can't change `uid`, `eventId`, `paperVerified` or `createdAt` on their own shift;
-  - entries can only be created in your own shift;
-  - staff can't move an entry to another shift or user.
-  - Payment and price values are deliberately NOT validated in rules, since overrides and
-    discounts are allowed.
-- `/users` rules from Phase 2 are unchanged.
+## 4. Security rules (`firestore.rules`)
+- **New `/events/{id}`:** read and write by admin only. Staff never see events, per spec.
+  Phase 5 can widen this if needed.
+- **`/shifts` create** adds:
+  `request.resource.data.get('sheetsPerPack', null) == null || request.resource.data.sheetsPerPack == currentPack()`.
+  `currentPack()` is the `settings/paper` value if that doc exists, else 18. A missing field
+  is still allowed, so the legacy app keeps working.
+- **`/shifts` update:** `sheetsPerPack` is added to the keys staff can't change.
+- **Unchanged:** admins can already update users (approve / `assignedEventId`), delete user
+  docs, set `paperVerified`, and delete shifts and entries.
 
 ## 5. Files
 New:
-- `lib/shift/{pricing,sale,summary,time,paper,firestore}.ts` with tests
-- `components/shift/{StaffShiftScreen,ShiftCard,SaleCard,WasteCard,ShiftLog,StartShiftDialog,EndShiftDialog,SummarySheet,Stepper}.tsx`
-- `components/ui/{Toast,Sheet}.tsx`
-- `vitest.config.ts`
+- `lib/admin/scope.ts` + `scope.test.ts`
+- `lib/admin/firestore.ts`: listeners, approve/reject, assign event, mark/unmark, delete
+  shift + entries
+- `components/admin/{AdminDashboard,DashboardScope,TopBar,EventSwitcher,Overview,PendingApprovals,StaffSection,StaffHistory,ShiftsSection,ShiftRow,PaperBlock,StatGrid}.tsx`
 
 Modified:
+- `lib/shift/paper.ts` (+ tests): `reconcileShift`, `describeReconciliation`
+- `lib/shift/types.ts`: `sheetsPerPack?`
+- `lib/shift/firestore.ts`: snapshot `sheetsPerPack` on start
+- `components/shift/StaffShiftScreen.tsx`: pass the pack size to `startShift`
+- `components/auth/StatusScreens.tsx`
 - `firestore.rules`
-- `components/auth/StatusScreens.tsx` (staff → shift screen)
-- `package.json` (vitest, `test` script)
-- `README.md` (rules re-paste + test walkthrough)
+- `README.md`
 
-## Verification
-- `npm test` (pricing, midnight, aggregate and sale-builder unit tests), `npm run lint`,
-  `npm run build`.
-- Emulator rules tests:
-  - pending user can't read shifts or entries;
-  - staff creates own shift; wrong eventId is denied; eventId matching assignment is allowed;
-  - staff can't change eventId, uid or paperVerified;
-  - staff can't delete a shift; admin can;
-  - staff can't create an entry in someone else's shift; can delete own entry, not others';
-  - legacy-shaped shift create (no eventId) works when unassigned;
-  - `/settings` read by approved users; write by admin only.
-- Playwright against the emulators, full shift:
-  1. Start with 50 sheets.
-  2. Sale of 1.5 sheets + 1 Acrylic, all cash → 1000 EGP.
-  3. Waste of 0.5.
-  4. + Paper change twice, then − once → 1.
-  5. Check the summary grid.
-  6. Delete an entry.
-  7. Copy summary.
-  8. End shift at 18:00→02:00 with 20 left → endTime next day, `endPaperCount` 20.
-  9. The doc has `eventId` from the profile.
-  10. Screenshot each step; confirm the card order in the DOM.
-- Commit, push, and give you the rule-paste instructions and a manual walkthrough. Stop
-  before Phase 4.
+## 6. Verification
+- **Unit tests** (`scopeDashboard`):
+  - global vs event filtering;
+  - entries follow their shift's event;
+  - orphan entries appear only under Global;
+  - week/month/all boundaries by shift start;
+  - staff-row rules, including a reassigned staff member still listed under the old event;
+  - mismatch counts respect scope and `paperVerified`.
+- **Unit tests** (reconciliation): the spec example (40 + 2×18 − 5 = 71 vs 65 → "Off by 6
+  (less…)"), a snapshot pack size, and the `null` cases.
+- **Emulator rules tests:**
+  - events are admin-only;
+  - a correct `sheetsPerPack` snapshot is allowed and a wrong one denied; a missing one is
+    allowed;
+  - staff can't change `sheetsPerPack`;
+  - regression runs of the Phase 2 and 3 suites.
+- **Playwright against the emulators:**
+  - seed two events, two staff, and shifts in each (one mismatched);
+  - switch Global → Event A → Event B, and check the Overview numbers, banner count, staff
+    list and shift list change each time;
+  - Global shows event labels;
+  - Mark as checked removes the ⚠ and the banner count, and Unmark brings them back;
+  - approve and reject a pending user;
+  - reassign staff and confirm old shifts keep their event;
+  - delete a shift removes its entries;
+  - screenshots at 1440 px and 390 px.
+- `npm test`, lint, build. Commit and push, then tell you the exact `/events` doc to create
+  and the verification steps. Stop before Phase 5.
+
+## 7. The test event to create by hand (the user gets this in the final summary too)
+Firestore → Start collection `events` → Document ID `citystars` → field `name` (string) =
+`City Stars Mall`. Optionally add a second (`mallofegypt` / `Mall of Egypt`) to see switching
+between two events. Only `name` is read in Phase 4; Phase 5 may add fields.

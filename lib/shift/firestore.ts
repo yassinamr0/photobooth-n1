@@ -29,7 +29,7 @@ const entriesCol = () => collection(firebase().db, "entries");
 const num = (v: unknown, d = 0) => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
-function parseShift(id: string, d: DocumentData): Shift {
+export function parseShift(id: string, d: DocumentData): Shift {
   return {
     id,
     uid: d.uid,
@@ -40,12 +40,13 @@ function parseShift(id: string, d: DocumentData): Shift {
     startPaperCount: numOrNull(d.startPaperCount),
     paperChanges: num(d.paperChanges),
     endPaperCount: numOrNull(d.endPaperCount),
+    sheetsPerPack: numOrNull(d.sheetsPerPack),
     paperVerified: d.paperVerified === true,
     createdAt: d.createdAt ?? null,
   };
 }
 
-function parseEntry(id: string, d: DocumentData): Entry {
+export function parseEntry(id: string, d: DocumentData): Entry {
   const common = {
     id,
     uid: d.uid,
@@ -111,7 +112,7 @@ export function watchPaperSettings(onChange: (s: PaperSettings) => void) {
  * (CLAUDE.md). It is written once here and never recomputed; security rules also require it
  * to equal the user's assignedEventId at creation time.
  */
-export function startShift(profile: UserProfile, startPaperCount: number) {
+export function startShift(profile: UserProfile, startPaperCount: number, sheetsPerPack: number) {
   return addDoc(shiftsCol(), {
     uid: profile.uid,
     staffName: profile.name,
@@ -121,6 +122,9 @@ export function startShift(profile: UserProfile, startPaperCount: number) {
     startPaperCount,
     paperChanges: 0,
     endPaperCount: null,
+    // Snapshot of the pack size in force now, so later settings changes never rewrite this
+    // shift's reconciliation. Rules require it to equal settings/paper.sheetsPerPack.
+    sheetsPerPack,
     createdAt: serverTimestamp(),
   });
 }

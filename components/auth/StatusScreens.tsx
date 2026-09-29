@@ -9,6 +9,7 @@ import { AuthShell } from "./AuthShell";
 import { LogoutButton } from "./LogoutButton";
 import { useAuth } from "./AuthProvider";
 import { StaffShiftScreen } from "@/components/shift/StaffShiftScreen";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
 export function LoadingScreen({ message }: { message?: string }) {
   return (
@@ -51,27 +52,11 @@ export function PendingApproval() {
   );
 }
 
-/** Approved users: staff get the shift screen; admins a placeholder until Phase 4. */
+/** Approved users: admins get the dashboard, staff the shift screen. */
 export function ApprovedHome() {
   const { profile } = useAuth();
   if (!profile) return null;
-  const isAdmin = profile.role === "admin";
-  if (!isAdmin) return <StaffShiftScreen />;
-  return (
-    <AuthShell
-      title={`Hi, ${profile.name.split(" ")[0] || "there"}`}
-      subtitle={profile.email}
-    >
-      <div className="flex justify-center gap-2">
-        <Tag tone={isAdmin ? "accent" : "neutral"}>{isAdmin ? "Admin" : "Staff"}</Tag>
-        <Tag tone="success" dot>Approved</Tag>
-      </div>
-      <Card className="text-center text-sm text-ink-muted">
-        The admin dashboard arrives in Phase 4.
-      </Card>
-      <LogoutButton className="self-center" />
-    </AuthShell>
-  );
+  return profile.role === "admin" ? <AdminDashboard /> : <StaffShiftScreen />;
 }
 
 export function AuthErrorScreen() {

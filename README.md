@@ -1,7 +1,7 @@
 # Booth Log
 
 > **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
-> `PLAN.md`). Current state: Phase 3 — staff shift flow. The original single-file app lives in
+> `PLAN.md`). Current state: Phase 4 — admin dashboard. The original single-file app lives in
 > `legacy/`; its instructions (further down) still apply to it.
 
 ## Rebuild — setup
@@ -35,6 +35,12 @@ Firebase console → Authentication → Settings → Authorized domains → add 
 4. The app switches over by itself — no reload needed. Approve everyone else from inside the
    app once the admin dashboard exists (Phase 4); until then, approve via the console or the
    legacy app's admin panel.
+
+### 5. Test event (until Phase 5 adds event management)
+Firestore → Start collection `events` → Document ID `citystars` → field `name` (string) =
+`City Stars Mall`. Add a second one (e.g. `mallofegypt` / `Mall of Egypt`) to switch between
+two. Admins then see these in the dashboard's event switcher and in each staff member's
+"Assigned event" dropdown.
 
 ### Testing tips
 - `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,
