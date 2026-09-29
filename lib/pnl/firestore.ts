@@ -17,7 +17,7 @@ const recurringCol = () => collection(db(), "recurringExpenses");
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
-function parseExpense(id: string, d: DocumentData): Expense {
+export function parseExpense(id: string, d: DocumentData): Expense {
   return {
     id,
     eventId: typeof d.eventId === "string" ? d.eventId : null,
@@ -29,7 +29,7 @@ function parseExpense(id: string, d: DocumentData): Expense {
   };
 }
 
-function parseRecurring(id: string, d: DocumentData): RecurringExpense {
+export function parseRecurring(id: string, d: DocumentData): RecurringExpense {
   const amounts: AmountStep[] = Array.isArray(d.amounts)
     ? d.amounts.filter((a: DocumentData) => typeof a?.from === "string").map((a: DocumentData) => ({ from: a.from, amount: num(a.amount) }))
     : [];
@@ -110,26 +110,30 @@ const feesDoc = () => doc(db(), "settings", "fees");
 const costsDoc = () => doc(db(), "settings", "costs");
 const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
+export function parseFeeSteps(d: DocumentData | undefined): FeeStep[] {
+  const raw = d?.steps;
+  return Array.isArray(raw)
+    ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
+        from: x.from, mode: x.mode === "percentPlusFixed" ? "percentPlusFixed" : "percent", percent: num(x.percent), fixed: num(x.fixed),
+      } as FeeStep))
+    : [];
+}
+
+export function parseCostSteps(d: DocumentData | undefined): CostStep[] {
+  const raw = d?.steps;
+  return Array.isArray(raw)
+    ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
+        from: x.from, paperBox: numOrNull(x.paperBox), inkCartridge: numOrNull(x.inkCartridge), acrylic: numOrNull(x.acrylic), magnetic: numOrNull(x.magnetic),
+      }))
+    : [];
+}
+
 export function watchFees(onChange: (steps: FeeStep[]) => void, onError: (e: Error) => void) {
-  return listen(feesDoc(), (s) => {
-    const raw = s.data()?.steps;
-    onChange(Array.isArray(raw)
-      ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
-          from: x.from, mode: x.mode === "percentPlusFixed" ? "percentPlusFixed" : "percent", percent: num(x.percent), fixed: num(x.fixed),
-        } as FeeStep))
-      : []);
-  }, onError);
+  return listen(feesDoc(), (s) => onChange(parseFeeSteps(s.data())), onError);
 }
 
 export function watchCosts(onChange: (steps: CostStep[]) => void, onError: (e: Error) => void) {
-  return listen(costsDoc(), (s) => {
-    const raw = s.data()?.steps;
-    onChange(Array.isArray(raw)
-      ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
-          from: x.from, paperBox: numOrNull(x.paperBox), inkCartridge: numOrNull(x.inkCartridge), acrylic: numOrNull(x.acrylic), magnetic: numOrNull(x.magnetic),
-        }))
-      : []);
-  }, onError);
+  return listen(costsDoc(), (s) => onChange(parseCostSteps(s.data())), onError);
 }
 
 /** Save a new card fee that applies from `step.from` until changed again. */

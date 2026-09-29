@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, CreditCard, Info, Package } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, Info, Mail, Package } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { NumberInput } from "@/components/shift/Stepper";
 import { cn } from "@/lib/cn";
+import { firebase } from "@/lib/firebase/client";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { dayKey, parseDay } from "@/lib/admin/range";
 import { fmtNum, formatEGP } from "@/lib/format";
@@ -88,8 +89,9 @@ function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total:
           <div className={cn("h-full rounded-full", ok ? "bg-success" : "bg-danger")} style={{ width: `${(ratio / 1.5) * 100}%` }} />
           <div aria-hidden className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(1 / 1.5) * 100}%` }} />
         </div>
-        <span className={cn("flex w-40 shrink-0 items-center justify-end gap-1 text-xs font-semibold", ok ? "text-success" : "text-danger")}>
-          {ok ? <><CheckCircle2 className="size-3.5" /> Covering costs</> : need != null && (
+        <span className={cn("flex w-40 shrink-0 items-center justify-end gap-1 text-xs font-semibold",
+          be.covered === null ? "text-ink-faint" : ok ? "text-success" : "text-danger")}>
+          {be.covered === null ? "No costs or sales yet" : ok ? <><CheckCircle2 className="size-3.5" /> Covering costs</> : need != null && (
             <><AlertTriangle className="size-3.5" /> Short {egp(need - be.avgPerDay)}/day</>
           )}
         </span>
@@ -158,7 +160,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
           <span className="text-ink-muted">{fmtNum(p.waste.sheets)} sheets wasted — set paper and ink costs to see what that cost.</span>
         ) : (
           <span className="text-ink-muted">
-            Waste cost you <b className="text-ink">{egp(p.waste.cost)}</b> ({fmtNum(p.waste.sheets)} sheets of paper + ink)
+            Waste cost you <b className="text-ink">{egp(p.waste.cost)}</b> ({fmtNum(p.waste.sheets)} sheet{p.waste.sheets === 1 ? "" : "s"} of paper + ink)
           </span>
         )}
       </div>
@@ -300,6 +302,45 @@ export function CostsCard() {
             </li>
           ))}
         </ul>
+      )}
+    </Card>
+  );
+}
+
+/* ─────────────── Daily summary email ─────────────── */
+export function EmailCard() {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <Card padding="lg" data-testid="email-card">
+      <CardHeader title="Daily summary email" subtitle="Every morning at 9:00 (Cairo): yesterday's revenue & profit, shifts, month so far and alerts"
+        action={<Mail className="size-5 text-ink-faint" />} />
+      <p className="text-sm text-ink-muted">
+        Sent automatically once it&apos;s set up in Vercel (see the README). Use the button to check it works — it sends the
+        summary right now.
+      </p>
+      <Button className="mt-4" size="sm" variant="secondary" loading={busy} data-testid="email-test"
+        onClick={async () => {
+          setBusy(true);
+          setResult(null);
+          try {
+            const token = await firebase().auth.currentUser?.getIdToken();
+            const res = await fetch("/api/daily-summary", { method: "POST", headers: { Authorization: `Bearer ${token ?? ""}` } });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(body.error || `Failed (${res.status})`);
+            setResult({ ok: true, text: `Sent to ${body.to} — summary of ${dayText(body.about)}` });
+            toast("Test email sent", "success");
+          } catch (e) {
+            setResult({ ok: false, text: (e as Error).message });
+          } finally {
+            setBusy(false);
+          }
+        }}>
+        Send test email now
+      </Button>
+      {result && (
+        <p data-testid="email-result" className={cn("mt-3 text-sm", result.ok ? "text-success" : "text-danger")}>{result.text}</p>
       )}
     </Card>
   );

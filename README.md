@@ -54,6 +54,40 @@ range. Add one-off expenses or monthly ones like rent (spread evenly over each m
 Costs not tied to one booth go under **General**. Re-paste `firestore.rules` after updating —
 the expense collections are admin-only.
 
+### 7. Card fees, product costs, break-even
+In **P&L → Card machine fees** pick "Percentage only" or "Percentage + fixed" (per card sale)
+and save — it stays in force until you change it, and a change never rewrites earlier days.
+**What things cost you** (box of paper, ink cartridge, frames) powers "Profit per product",
+"Waste cost you …" and break-even. Events you **Mark as ended** stop raising alerts.
+
+### 8. Offline mode (staff)
+Nothing to set up. If a booth loses signal, staff keep logging; the header shows
+"Offline · N changes waiting to sync" and everything syncs when the connection returns. The
+installed app also opens with no signal (service worker, production builds only).
+
+### 9. Daily summary email (Resend, 9:00 AM Cairo)
+One-time setup (about 10 minutes):
+1. **Resend:** sign up at resend.com with the email that should receive the summary →
+   API Keys → Create → copy the key. (Without your own domain Resend can only send to the
+   address you signed up with — that's fine for this. To send to other people, add and verify
+   a domain in Resend and set `SUMMARY_EMAIL_FROM`, e.g. `Booth Log <summary@yourdomain.com>`.)
+2. **Firebase service account:** Firebase console → ⚙ Project settings → Service accounts →
+   **Generate new private key** → a JSON file downloads. Keep it private — it has full access
+   to the database. Never commit it.
+3. **Vercel → your project → Settings → Environment Variables** (Production), add:
+   - `RESEND_API_KEY` = the Resend key
+   - `SUMMARY_EMAIL_TO` = your email (comma-separate for several)
+   - `FIREBASE_SERVICE_ACCOUNT` = the WHOLE contents of the JSON file (paste it as-is)
+   - `CRON_SECRET` = any long random string (Vercel sends it with the scheduled call)
+   - optional `APP_URL` = your site's address (adds an "Open Booth Log" button)
+4. **Redeploy** (Deployments → ⋯ → Redeploy) so the new variables and the schedule in
+   `vercel.json` take effect.
+5. Open **P&L → Daily summary email → Send test email now**. It tells you exactly which
+   variable is missing if something isn't set.
+
+The schedule runs at 06:00 and 07:00 UTC; the app sends only once the Cairo clock reaches
+9:00 (so it's right in both summer and winter time) and never twice in a day.
+
 ### Testing tips
 - `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,
   midnight rollover, shift totals, paper-pack math).

@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
+import { queued } from "@/lib/firebase/offline";
 import type { Entry, Shift } from "@/lib/shift/types";
 import { boxesToSheets, shiftActualUsed, shiftFramesSold } from "./units";
 import {
@@ -56,7 +57,7 @@ export function parseEvent(id: string, d: DocumentData): EventRecord {
   };
 }
 
-function parseStock(type: StockType, d: DocumentData): StockDoc {
+export function parseStock(type: StockType, d: DocumentData): StockDoc {
   return {
     type,
     currentQuantity: num(d.currentQuantity),
@@ -277,6 +278,7 @@ export async function applyShiftDeduction(shift: Shift, entries: Entry[], by: Ac
       byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
     });
   }
-  await b.commit();
+  // Queued: at shift end with no signal, the deduction syncs with the shift when back online.
+  await queued(b.commit());
   return deduction;
 }

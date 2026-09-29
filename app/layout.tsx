@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import "./globals.css";
+import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -37,7 +38,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${sora.variable}`}>
-      <body className="bg-canvas">{children}</body>
+      <body className="bg-canvas">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }
