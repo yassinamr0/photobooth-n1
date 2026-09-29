@@ -1,7 +1,8 @@
 # PLAN — P&L additions: card fees, product costs & profit per product, break-even
 
-> Custom range + P&L are built and pushed (`73b3a1d`). This plan needs approval before any
-> code is written.
+> Approved. Discount decision: **frames always count at full price (400 / 200), custom items
+> at their own price; prints take any difference.** Sections 4–6 were added from the owner's
+> answers (Resend, 9:00 Cairo, header pill, "mark event as ended").
 
 ## 1. Card fees (editable, stays until you change it)
 - **Setting:** new admin-only `settings/fees` card inside P&L, called **"Card machine fees"**.
@@ -70,21 +71,59 @@
 - **Missing information:** if product costs aren't set yet, it says so and leaves out
   materials (shown as "costs not set").
 
-## Needs your OK — one money decision
-Sales store the **total paid**, not a price per item. When staff give a discount (payment
-lower than the item prices) or change the sheets price, "Profit per product" has to decide
-which product loses that money. Options:
-- **(Recommended) Spread it proportionally** — a 10% discount on a print + frame sale
-  lowers both by 10%.
-- **Put it all on prints** — frames always count at full price (400 / 200) and prints take
-  any difference.
+## 4. Mark an event as ended (temporary events)
+- **Wording:** Events → "Deactivate" becomes **"Mark as ended"**, and the badge reads
+  **"Ended"**. This reuses the existing `inactive` status, so no data changes. **"Reopen"**
+  undoes it.
+- **What an ended event stops showing:**
+  - low-stock alerts (site banners, the Overview alerts column, the email);
+  - break-even;
+  - "runs out soon" warnings.
+- **What it keeps:** its history. Revenue, P&L, shifts, the location tables and the
+  switcher still include it; the switcher labels it "(ended)".
+- **Staff:** ended events can't be assigned, same as today's inactive rule.
 
-This only affects the per-product split. Totals, Revenue and Profit are the same either way.
+## 5. Offline mode for staff
+- **Local saving:** Firestore's persistent local cache is turned on. Sales, waste, paper/ink
+  taps and ending a shift save on the phone first and sync when the connection is back.
+  Staff screens don't wait for the server any more, so nothing hangs on "Logging…" offline.
+- **Reopening offline:** a small service worker caches the app itself, so it still opens
+  when there's no signal. Already signed-in staff stay signed in.
+- **What staff see:** a small pill in the header, next to Log out — an amber
+  **"Offline · 3 changes waiting to sync"**, then a brief "Synced ✓".
+  **No section of the locked shift screen is moved or changed.**
+- **Shift end offline:** the stock deduction is queued. If it can't be applied (e.g. the
+  staff member was reassigned while offline), the shift shows as "not yet deducted" and
+  the admin's "Apply now" handles it, as today.
+- **Admins:** nothing changes for admins; the dashboard needs a connection.
+
+## 6. Daily summary email (Resend, 9:00 AM Cairo, about the previous day)
+- **Sections:**
+  - **Revenue & profit** — per location + total, vs the day before (with card fees).
+  - **Shifts** — who worked where, hours, each shift's total.
+  - **Month so far** — revenue, profit and break-even per location.
+  - **Alerts** — low stock (not marked as read) and paper mismatches; ended events are
+    skipped.
+- **How it's sent:** a Vercel cron job calls a server route, `/api/daily-summary`. That
+  route reads Firestore with the Firebase **Admin SDK** and sends through Resend. The P&L
+  maths is shared with the site's code, so the numbers match exactly.
+- **What you set up once in Vercel** (the README gets step-by-step instructions):
+  - `RESEND_API_KEY`;
+  - `SUMMARY_EMAIL_TO` (your email);
+  - `FIREBASE_SERVICE_ACCOUNT` — a key from Firebase console → Project settings → Service
+    accounts;
+  - `CRON_SECRET` — so only Vercel can trigger it.
+- **Testing:** a **"Send test email now"** button in P&L (admin only) sends today's summary
+  immediately.
+- **WhatsApp:** later, once you have a number (needs a WhatsApp Business account).
 
 ## Security
 - `settings/fees` and `settings/costs`: **admins only**, read and write. Staff can't see
   your costs or fees.
 - Other `settings/*` docs (like paper units) keep their current rules.
+- The summary route checks the cron secret, or for the test button a signed-in admin's ID
+  token. The service-account key only ever lives in Vercel env vars, never in the repo or
+  the browser.
 - Rules tests cover it. Re-paste `firestore.rules` afterwards.
 
 ## Verification
