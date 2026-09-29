@@ -94,17 +94,19 @@ export function Bars({
         })}
       </svg>
       {tooltip}
-      <table className="sr-only">
-        <caption>{ariaLabel}</caption>
-        <tbody>
-          {data.map((d) => (
-            <tr key={d.key}>
-              <th scope="row">{d.label}</th>
-              {series.map((s) => <td key={s.key}>{`${s.label}: ${format(d.values[s.key] || 0)}`}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="sr-only">
+        <table>
+          <caption>{ariaLabel}</caption>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.key}>
+                <th scope="row">{d.label}</th>
+                {series.map((s) => <td key={s.key}>{`${s.label}: ${format(d.values[s.key] || 0)}`}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

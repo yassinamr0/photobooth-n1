@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { approveUser, assignEvent, rejectUser, removeUser } from "@/lib/admin/firestore";
 import type { StaffRow } from "@/lib/admin/scope";
+import { rangeLabel } from "@/lib/admin/range";
 import { fmtDateTime, fmtTime } from "@/lib/shift/summary";
 import { fmtNum, formatEGP } from "@/lib/format";
 import { useIsDesktop } from "@/lib/hooks/useIsDesktop";
@@ -22,15 +23,13 @@ import { LowStockBanner } from "./InventorySection";
 import { LocationComparison, RevenueTrend } from "./stats/RevenueCards";
 import { TagShiftsTool } from "./TagShiftsTool";
 
-export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events" | "statistics";
+export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events" | "statistics" | "pnl";
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
 }
 
-function rangeWords(range: string) {
-  return range === "week" ? "this week" : range === "month" ? "this month" : "all time";
-}
+const rangeWords = rangeLabel;
 
 /* ─────────────────────────── Overview (scoped) ─────────────────────────── */
 /*

@@ -127,14 +127,16 @@ function TrendChart({ points, baseline }: { points: TrendPoint[]; baseline: numb
           <AlertTriangle className="size-3.5" /> Amber points are unusually high for this range
         </p>
       )}
-      <table className="sr-only">
-        <caption>Waste rate by period</caption>
-        <tbody>
-          {points.map((p) => (
-            <tr key={p.key}><th scope="row">{p.label}</th><td>{pct(p.usage.rate)}</td><td>{fmtNum(p.usage.hadr)} of {fmtNum(p.usage.used)} sheets</td></tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="sr-only">
+        <table>
+          <caption>Waste rate by period</caption>
+          <tbody>
+            {points.map((p) => (
+              <tr key={p.key}><th scope="row">{p.label}</th><td>{pct(p.usage.rate)}</td><td>{fmtNum(p.usage.hadr)} of {fmtNum(p.usage.used)} sheets</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -351,6 +351,20 @@ Owner-approved changes (after Phase 6):
 - **Thousands separators** on every displayed number (1,000 · 14,400), incl. the staff
   screen and the copied shift summary. Inputs stay plain.
 - Memoire logo in the sidebar's top-left square.
+- **Custom date range**: the range switcher adds **Custom** — a single day, a Mon–Sun week
+  (‹ › to step), or any from–to span (inclusive). A shift counts when its start day is in the
+  range. It applies wherever the date range applies (Overview, Staff, Shifts, history,
+  Statistics, P&L). "vs last period" compares with the same number of days just before.
+- **P&L** (own sidebar item): revenue (= Overview) − expenses = net profit/loss + margin,
+  vs last period, expenses by category, revenue vs expenses per period with a profit line,
+  and (Global) a per-location table + "General" row that adds up to the total.
+  - Expenses (admin-only `/expenses`, `/recurringExpenses`): one-off (counted on its date) or
+    monthly recurring (rent, salaries…), **spread evenly over the days of each month**.
+    Changing a monthly amount applies from a chosen month; earlier months keep theirs.
+    "Stop after this month" ends it; Delete removes it from every month.
+  - Location = an event, or **General** (not tied to a booth; only counted under Global).
+  - Stock purchases and staff pay are entered as expenses by hand.
+  - Everything counts up to today. The optional hadr "cost" field isn't counted.
 
 ---
 

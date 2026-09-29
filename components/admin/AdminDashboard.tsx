@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BarChart3, Boxes, CalendarClock, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
+import { Wallet, BarChart3, Boxes, CalendarClock, CalendarDays, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Spinner } from "@/components/ui/Button";
@@ -10,12 +10,14 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/cn";
-import type { DateRange } from "@/lib/admin/scope";
+import { isCustom, rangeChip, rangeLabel, type RangePreset } from "@/lib/admin/range";
+import { CustomRangePicker } from "./CustomRangePicker";
 import { DashboardDataProvider, useDashboardScope, usePendingUsers, useScopedDashboard } from "./DashboardData";
 import { OverviewSection, PendingSection, ShiftsSection, StaffHistoryView, StaffSection, type Section } from "./Sections";
 import { InventorySection } from "./InventorySection";
 import { EventsSection } from "./EventsSection";
 import { StatisticsSection } from "./stats/StatisticsSection";
+import { PnlSection } from "./pnl/PnlSection";
 
 export function AdminDashboard() {
   return (
@@ -34,6 +36,7 @@ const NAV: { id: Section; label: string; caption: string; icon: React.ReactNode 
   { id: "shifts", label: "Shifts", caption: "Shifts", icon: <CalendarClock /> },
   { id: "inventory", label: "Inventory", caption: "Inventory", icon: <Boxes /> },
   { id: "statistics", label: "Statistics", caption: "Statistics", icon: <BarChart3 /> },
+  { id: "pnl", label: "Profit & loss", caption: "P&L", icon: <Wallet /> },
   { id: "events", label: "Events", caption: "Events", icon: <MapPin /> },
 ];
 
@@ -97,7 +100,7 @@ function DashboardInner() {
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-full border px-4 text-sm font-semibold",
                   section === n.id && !historyUid ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted")}>
-                {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.label}
+                {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.id === "pnl" ? "P&L" : n.label}
               </button>
             ))}
           </nav>
@@ -121,6 +124,8 @@ function DashboardInner() {
           <EventsSection />
         ) : section === "statistics" ? (
           <StatisticsSection />
+        ) : section === "pnl" ? (
+          <PnlSection />
         ) : (
           <ShiftsSection />
         )}
@@ -129,15 +134,17 @@ function DashboardInner() {
   );
 }
 
-const RANGES: { id: DateRange; label: string }[] = [
-  { id: "week", label: "This week" },
-  { id: "month", label: "This month" },
-  { id: "all", label: "All time" },
+const RANGES: { id: RangePreset; label: string; short: string }[] = [
+  { id: "week", label: "This week", short: "Week" },
+  { id: "month", label: "This month", short: "Month" },
+  { id: "all", label: "All time", short: "All" },
 ];
 
 /** Event scope switcher + date range. Pending approvals ignores both (always global). */
 function ScopeBar({ section }: { section: Section }) {
   const { scope, setScope, range, setRange, events, scopeName } = useDashboardScope();
+  const [picking, setPicking] = useState(false);
+  const custom = isCustom(range);
   const note =
     section === "pending"
       ? "Pending approvals always show all locations"
@@ -147,7 +154,7 @@ function ScopeBar({ section }: { section: Section }) {
           ? null
           : undefined;
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 lg:py-2" data-testid="scope-bar">
+    <div className="relative flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 lg:py-2" data-testid="scope-bar">
       <label className="relative flex items-center">
         <span className="sr-only">Event scope</span>
         <MapPin className="pointer-events-none absolute left-3 size-4 text-magenta" />
@@ -168,18 +175,29 @@ function ScopeBar({ section }: { section: Section }) {
       </label>
       <div role="tablist" aria-label="Date range" className="flex w-full gap-1 rounded-full border border-line bg-surface-2 p-1 sm:w-auto">
         {RANGES.map((r) => (
-          <button key={r.id} type="button" role="tab" aria-selected={range === r.id} onClick={() => setRange(r.id)}
-            className={cn("h-8 flex-1 rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors sm:flex-none",
+          <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
+            className={cn("h-8 flex-1 rounded-full px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
               range === r.id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
-            {r.label}
+            <span className="sm:hidden">{r.short}</span>
+            <span className="hidden sm:inline">{r.label}</span>
           </button>
         ))}
+        <button type="button" role="tab" aria-selected={custom} data-testid="range-custom" onClick={() => setPicking((p) => !p)}
+          className={cn("flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-full px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
+            custom ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+          <CalendarDays className="size-3.5" />
+          <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
+        </button>
       </div>
+      {picking && (
+        <CustomRangePicker range={range} onClose={() => setPicking(false)}
+          onApply={(r) => { setRange(r); setPicking(false); }} />
+      )}
       <span data-testid="scope-chip" className="ml-auto text-xs text-ink-faint">
         {note ?? (
           <>
             Showing: <span className="text-ink-muted">{scopeName}</span>
-            {note === null ? " · current stock (date range doesn't apply)" : ` · ${RANGES.find((r) => r.id === range)?.label}`}
+            {note === null ? " · current stock (date range doesn't apply)" : ` · ${custom ? rangeLabel(range) : RANGES.find((r) => r.id === range)?.label}`}
           </>
         )}
       </span>

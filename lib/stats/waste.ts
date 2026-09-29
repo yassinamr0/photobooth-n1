@@ -1,5 +1,5 @@
 import type { DateRange, ScopedShift } from "@/lib/admin/scope";
-import { rangeStart, startOfWeek } from "@/lib/admin/scope";
+import { addDays as addCalDays, customDays, isCustom, parseDay, rangeStart, rangeWindow, startOfWeek } from "@/lib/admin/range";
 
 /*
  * Stat 2 — Waste rate = hadr ÷ (sheets sold + hadr). Input is already event/date-range scoped
@@ -51,8 +51,13 @@ export type TrendPoint = {
 
 export type Granularity = "day" | "week" | "month";
 
-export const granularityFor = (range: DateRange): Granularity =>
-  range === "week" ? "day" : range === "month" ? "week" : "month";
+export const granularityFor = (range: DateRange): Granularity => {
+  if (isCustom(range)) {
+    const n = customDays(range);
+    return n <= 31 ? "day" : n <= 186 ? "week" : "month";
+  }
+  return range === "week" ? "day" : range === "month" ? "week" : "month";
+};
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
@@ -64,6 +69,24 @@ const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), 
  */
 export function trendBuckets(range: DateRange, now: Date, firstDataMs: number | null): { start: Date; label: string }[] {
   const g = granularityFor(range);
+  if (isCustom(range)) {
+    // Custom: from the first picked day to the last; buckets start on the first day, then on
+    // each Monday (weekly) or 1st of the month (monthly).
+    const { until } = rangeWindow(range, now);
+    const out: { start: Date; label: string }[] = [];
+    const short = customDays(range) <= 7;
+    for (let d = parseDay(range.from); d < until!; ) {
+      const label =
+        g === "month"
+          ? d.toLocaleDateString(undefined, { month: "short", year: "2-digit" })
+          : g === "day" && short
+            ? d.toLocaleDateString(undefined, { weekday: "short" })
+            : `${d.toLocaleDateString(undefined, { month: "short" })} ${d.getDate()}`;
+      out.push({ start: d, label });
+      d = g === "day" ? addCalDays(d, 1) : g === "week" ? addCalDays(startOfWeek(d), 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    }
+    return out;
+  }
   const out: { start: Date; label: string }[] = [];
   if (g === "day") {
     for (let d = startOfWeek(now); d <= now; d = addDays(d, 1))

@@ -48,6 +48,12 @@ legacy-app shifts to an event without touching its stock.
 Events created by hand in the console (just a `name` field) work too — their stock is set up
 the first time an admin opens the dashboard.
 
+### 6. Profit & loss
+The **P&L** section (admins only) shows revenue − expenses for the selected location and date
+range. Add one-off expenses or monthly ones like rent (spread evenly over each month's days).
+Costs not tied to one booth go under **General**. Re-paste `firestore.rules` after updating —
+the expense collections are admin-only.
+
 ### Testing tips
 - `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,
   midnight rollover, shift totals, paper-pack math).
