@@ -78,7 +78,7 @@ export function TagShiftsTool({ close }: { close: () => void }) {
             className="h-10 min-w-[200px] rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink normal-case outline-none focus:border-magenta/70">
             <option value="">Choose an event…</option>
             {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>
+              <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (ended)" : ""}</option>
             ))}
           </select>
         </label>

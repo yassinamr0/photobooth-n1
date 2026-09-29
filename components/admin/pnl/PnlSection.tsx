@@ -14,7 +14,8 @@ import { authErrorMessage } from "@/lib/auth/errors";
 import { dayKey, parseDay, rangeLabel } from "@/lib/admin/range";
 import { formatEGP } from "@/lib/format";
 import { pct } from "@/lib/stats/waste";
-import { pnlByLocation, pnlSummary, pnlTrend, type PnlSummary } from "@/lib/pnl/pnl";
+import { pnlByLocation, pnlSummary, pnlTrend, type PnlCategory, type PnlSummary } from "@/lib/pnl/pnl";
+import { BreakEvenCard, CostsCard, FeesCard, ProductsCard } from "./PnlExtras";
 import { currentAmount, isActive, monthKey } from "@/lib/pnl/recurring";
 import {
   addExpense, addRecurring, changeRecurringAmount, deleteExpense, deleteRecurring, setRecurringEnd, updateExpense,
@@ -40,7 +41,10 @@ export function PnlSection() {
   const p = usePnl();
   const { scopeName } = useDashboardScope();
   const [now] = useState(() => new Date());
-  const inp = useMemo(() => ({ raw: p.raw, expenses: p.expenses, recurring: p.recurring }), [p.raw, p.expenses, p.recurring]);
+  const inp = useMemo(
+    () => ({ raw: p.raw, expenses: p.expenses, recurring: p.recurring, fees: p.fees, costs: p.costs, sheetsPerBox: p.paper.sheetsPerBox }),
+    [p.raw, p.expenses, p.recurring, p.fees, p.costs, p.paper.sheetsPerBox],
+  );
   const summary = useMemo(() => pnlSummary(inp, p.scope, p.range, now), [inp, p.scope, p.range, now]);
   const trend = useMemo(() => pnlTrend(inp, p.scope, p.range, now), [inp, p.scope, p.range, now]);
   const rows = useMemo(() => (p.scope === "global" ? pnlByLocation(inp, p.range, now) : []), [inp, p.scope, p.range, now]);
@@ -60,8 +64,15 @@ export function PnlSection() {
           )}
         </Card>
       </div>
+      <BreakEvenCard inp={inp} now={now} label={label} />
+      <ProductsCard inp={inp} now={now} label={label} />
       {p.scope === "global" && <LocationTable rows={rows} rangeText={rangeLabel(p.range)} />}
       <ExpenseManager s={summary} label={label} />
+      <div className="grid gap-5 xl:grid-cols-2">
+        {/* Remount when the saved settings arrive/change so the forms start from them. */}
+        <FeesCard key={`fees-${JSON.stringify(p.fees)}`} />
+        <CostsCard key={`costs-${JSON.stringify(p.costs)}-${p.paper.sheetsPerBox}`} />
+      </div>
       <p className="flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />
         Monthly expenses are spread evenly over the days of each month, so any range gets its fair share. Everything counts up to
@@ -128,7 +139,10 @@ function Compare({ s }: { s: PnlSummary }) {
 
 /* ─────────────── Expenses by category ─────────────── */
 function Categories({ s }: { s: PnlSummary }) {
-  const cats = EXPENSE_CATEGORIES.map((c) => ({ c, v: s.expenses.byCategory[c] })).filter((x) => x.v > 0.004).sort((a, b) => b.v - a.v);
+  const cats = ([...EXPENSE_CATEGORIES, "cardFees"] as PnlCategory[])
+    .map((c) => ({ c, v: s.expenses.byCategory[c] }))
+    .filter((x) => x.v > 0.004)
+    .sort((a, b) => b.v - a.v);
   const max = Math.max(1, ...cats.map((x) => x.v));
   return (
     <Card padding="lg" data-testid="pnl-categories">
@@ -140,7 +154,9 @@ function Categories({ s }: { s: PnlSummary }) {
           {cats.map(({ c, v }) => (
             <li key={c} data-testid="pnl-category">
               <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="text-ink">{CATEGORY_LABEL[c]}</span>
+                <span className="text-ink">
+                  {c === "cardFees" ? <>Card fees <span className="text-xs text-ink-faint">(automatic)</span></> : CATEGORY_LABEL[c]}
+                </span>
                 <span className="tabular-nums text-ink-muted">
                   <b className="font-semibold text-ink">{egp(v)}</b> · {pct(v / s.expenses.total)}
                 </span>
@@ -263,7 +279,7 @@ function LocationSelect({ id, value, onChange }: { id: string; value: string; on
   return (
     <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={input}>
       <option value="">Choose…</option>
-      {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>)}
+      {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (ended)" : ""}</option>)}
       <option value="general">General (not tied to one booth)</option>
     </select>
   );

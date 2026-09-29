@@ -211,7 +211,7 @@ function ComparisonTable({ rows }: { rows: InventoryRow[] }) {
                 <tr key={r.event.id} data-testid="inventory-row">
                   <td className="py-3">
                     <span className="font-semibold text-ink">{r.event.name}</span>
-                    {r.event.status === "inactive" && <Tag tone="neutral" className="ml-2">Inactive</Tag>}
+                    {r.event.status === "inactive" && <Tag tone="neutral" className="ml-2">Ended</Tag>}
                     {!r.tracked && <span className="ml-2 text-xs text-ink-faint">setting up…</span>}
                   </td>
                   <QtyCell row={r} type="paper" />

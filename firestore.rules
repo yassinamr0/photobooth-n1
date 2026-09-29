@@ -240,8 +240,10 @@ service cloud.firestore {
     }
 
     // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.
+    // settings/fees (card machine fees) and settings/costs (what things cost the owner) are
+    // money data → admins only. Other settings (e.g. paper units) are readable by staff.
     match /settings/{docId} {
-      allow read: if isApproved();
+      allow read: if isAdmin() || (isApproved() && !(docId in ['fees', 'costs']));
       allow write: if isAdmin();
     }
   }

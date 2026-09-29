@@ -166,7 +166,7 @@ function ScopeBar({ section }: { section: Section }) {
         >
           <option value="global">Global — all locations</option>
           {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>
+            <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (ended)" : ""}</option>
           ))}
           {/* Saved event while the events list is still loading — avoids flashing "Global". */}
           {scope !== "global" && !events.some((ev) => ev.id === scope) && <option value={scope}>Loading…</option>}

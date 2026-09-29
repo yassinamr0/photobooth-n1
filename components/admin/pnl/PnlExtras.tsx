@@ -1,0 +1,306 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, CreditCard, Info, Package } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { FormError } from "@/components/ui/Field";
+import { useToast } from "@/components/ui/Toast";
+import { NumberInput } from "@/components/shift/Stepper";
+import { cn } from "@/lib/cn";
+import { authErrorMessage } from "@/lib/auth/errors";
+import { dayKey, parseDay } from "@/lib/admin/range";
+import { fmtNum, formatEGP } from "@/lib/format";
+import { pct } from "@/lib/stats/waste";
+import { breakEvenByLocation, pnlBreakEven, pnlProducts, type PnlInputs } from "@/lib/pnl/pnl";
+import { costsOn, paperPerSheet, type CostStep } from "@/lib/pnl/costs";
+import { describeFee, feeOn, type FeeMode } from "@/lib/pnl/fees";
+import { saveCosts, saveFee } from "@/lib/pnl/firestore";
+import type { BreakEven } from "@/lib/pnl/breakeven";
+import { usePnl } from "../DashboardData";
+
+const egp = (n: number) => formatEGP(Math.round(n));
+const dayText = (k: string) => parseDay(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const input =
+  "h-11 w-full min-w-0 rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
+const lbl = "mb-1.5 block text-xs font-medium tracking-wide text-ink-faint uppercase";
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
+}
+
+/* ─────────────── Break-even ─────────────── */
+export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; label: string }) {
+  const { scope, range, events } = usePnl();
+  const ended = useMemo(() => new Set(events.filter((e) => e.status === "inactive").map((e) => e.id)), [events]);
+  const items = useMemo(() => {
+    if (scope !== "global") {
+      if (ended.has(scope)) return [];
+      return [{ id: scope, name: events.find((e) => e.id === scope)?.name ?? "This location", ...pnlBreakEven(inp, scope, range, now) }];
+    }
+    return [
+      ...breakEvenByLocation(inp, range, now, ended),
+      { id: null, name: "All locations (incl. General costs)", ...pnlBreakEven(inp, "global", range, now) },
+    ];
+  }, [inp, scope, range, now, events, ended]);
+  const missing = items.some((i) => i.materialsMissing);
+  return (
+    <Card padding="lg" data-testid="pnl-breakeven">
+      <CardHeader title="Break-even" subtitle={`What each location needs a day to cover its costs · ${label}`} />
+      {items.length === 0 ? (
+        <Empty>{scope !== "global" && ended.has(scope) ? "This event has ended — break-even isn't shown." : "No active locations."}</Empty>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {items.map((i) => <BreakEvenRow key={i.id ?? "all"} name={i.name} be={i.be} total={i.id === null} />)}
+        </ul>
+      )}
+      <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
+        <Info className="mt-px size-3.5 shrink-0" />
+        Fixed costs = your expenses (monthly ones spread per day) averaged over the days in this range up to today. Materials and
+        card fees grow with sales, so they&apos;re counted as a share of revenue.
+        {missing && " Product costs aren't fully set yet, so materials are left out where missing."}
+      </p>
+    </Card>
+  );
+}
+
+function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total: boolean }) {
+  const need = be.breakEvenPerDay;
+  const ratio = need && need > 0 ? Math.min(1.5, be.avgPerDay / need) : be.avgPerDay > 0 ? 1.5 : 0;
+  const ok = be.covered === true;
+  return (
+    <li data-testid="breakeven-row" data-covered={ok || undefined} className={cn("py-3", total && "font-medium")}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+        <span className="font-semibold text-ink">{name}</span>
+        <span className="text-ink-muted">
+          {need == null ? (
+            <span className="text-danger">Materials + card fees take all revenue — can&apos;t break even</span>
+          ) : (
+            <>
+              needs <b data-testid="breakeven-need" className="text-ink tabular-nums">{egp(need)}</b>/day · averaging{" "}
+              <b className="text-ink tabular-nums">{egp(be.avgPerDay)}</b>/day
+            </>
+          )}
+        </span>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
+        <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-chart-track">
+          <div className={cn("h-full rounded-full", ok ? "bg-success" : "bg-danger")} style={{ width: `${(ratio / 1.5) * 100}%` }} />
+          <div aria-hidden className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(1 / 1.5) * 100}%` }} />
+        </div>
+        <span className={cn("flex w-40 shrink-0 items-center justify-end gap-1 text-xs font-semibold", ok ? "text-success" : "text-danger")}>
+          {ok ? <><CheckCircle2 className="size-3.5" /> Covering costs</> : need != null && (
+            <><AlertTriangle className="size-3.5" /> Short {egp(need - be.avgPerDay)}/day</>
+          )}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-ink-faint">
+        Fixed {egp(be.fixedPerDay)}/day · materials + card fees {be.variableShare == null ? "—" : pct(be.variableShare)} of sales
+        {be.printsPerDay != null && ` · ≈ ${fmtNum(Math.ceil(be.printsPerDay))} prints' worth a day`} · {fmtNum(be.days)} day{be.days === 1 ? "" : "s"}
+      </p>
+    </li>
+  );
+}
+
+/* ─────────────── Profit per product ─────────────── */
+export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; label: string }) {
+  const { scope, range } = usePnl();
+  const p = useMemo(() => pnlProducts(inp, scope, range, now), [inp, scope, range, now]);
+  const th = "py-2 pl-4 text-right font-medium whitespace-nowrap";
+  const td = "py-3 pl-4 text-right tabular-nums whitespace-nowrap";
+  const perUnit = (r: (typeof p.rows)[number]) =>
+    r.units > 0 && r.key !== "adjust" ? `${egp(r.revenue / r.units)} → ${r.profit == null ? "?" : egp(r.profit / r.units)}` : "—";
+  return (
+    <Card padding="lg" data-testid="pnl-products">
+      <CardHeader title="Profit per product" subtitle={`After materials and card fees · ${label}`} />
+      {p.rows.length === 0 ? (
+        <Empty>No sales in this range.</Empty>
+      ) : (
+        <div className="-mx-2 overflow-x-auto px-2">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="text-xs text-ink-faint uppercase">
+              <tr>
+                <th className="py-2 font-medium">Product</th>
+                <th className={th}>Sold</th>
+                <th className={th}>Revenue</th>
+                <th className={th}>Materials</th>
+                <th className={th}>Card fees</th>
+                <th className={th}>Profit</th>
+                <th className={th}>Per unit (price → profit)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {p.rows.map((r) => (
+                <tr key={r.key} data-testid={`product-${r.key}`}>
+                  <td className="py-3 font-semibold text-ink">
+                    {r.label}
+                    {r.key === "adjust" && <span className="ml-1 text-xs font-normal text-ink-faint">(discounts on sales without prints)</span>}
+                  </td>
+                  <td className={td}>{r.key === "adjust" ? "—" : fmtNum(r.units)}</td>
+                  <td className={cn(td, "text-gold")}>{egp(r.revenue)}</td>
+                  <td className={td}>{r.materials == null ? <span className="text-ink-faint">cost not set</span> : egp(r.materials)}</td>
+                  <td className={td}>{egp(r.fees)}</td>
+                  <td data-testid="product-profit" className={cn(td, "font-semibold", r.profit == null ? "text-ink-faint" : r.profit < 0 ? "text-danger" : "text-success")}>
+                    {r.profit == null ? "—" : `${r.profit < 0 ? "−" : ""}${egp(Math.abs(r.profit))}`}
+                  </td>
+                  <td className={cn(td, "text-ink-muted")}>{perUnit(r)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-inner border border-line bg-surface-2 px-4 py-3 text-sm" data-testid="waste-cost">
+        <Package className="size-4 text-pink" />
+        {p.waste.sheets === 0 ? (
+          <span className="text-ink-muted">No hadr waste in this range.</span>
+        ) : p.waste.cost == null ? (
+          <span className="text-ink-muted">{fmtNum(p.waste.sheets)} sheets wasted — set paper and ink costs to see what that cost.</span>
+        ) : (
+          <span className="text-ink-muted">
+            Waste cost you <b className="text-ink">{egp(p.waste.cost)}</b> ({fmtNum(p.waste.sheets)} sheets of paper + ink)
+          </span>
+        )}
+      </div>
+      <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
+        <Info className="mt-px size-3.5 shrink-0" />
+        Frames count at full price; prints take any discount. Ink per sheet comes from the ink changes staff logged. This is an
+        analysis — your headline profit already includes stock purchases as expenses, so materials aren&apos;t subtracted twice.
+        {p.missingCosts && " Set your costs in “What things cost you” below to fill in the blanks."}
+      </p>
+    </Card>
+  );
+}
+
+/* ─────────────── Settings: card fees ─────────────── */
+export function FeesCard() {
+  const { fees } = usePnl();
+  const toast = useToast();
+  const today = dayKey(new Date());
+  const current = feeOn(fees, today);
+  const [mode, setMode] = useState<FeeMode>(current?.mode ?? "percent");
+  const [percent, setPercent] = useState<number | null>(current?.percent ?? null);
+  const [fixed, setFixed] = useState<number | null>(current?.fixed ?? null);
+  const [from, setFrom] = useState(today);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await saveFee(fees, { from, mode, percent: percent ?? 0, fixed: mode === "percentPlusFixed" ? fixed ?? 0 : 0 });
+      toast(`Card fee saved — applies from ${dayText(from)}`, "success");
+    } catch (e) {
+      setError(authErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const history = [...fees].sort((a, b) => b.from.localeCompare(a.from));
+  return (
+    <Card padding="lg" data-testid="fees-card">
+      <CardHeader title="Card machine fees" subtitle={<>Now: <b className="text-ink" data-testid="fee-now">{describeFee(current)}</b></>}
+        action={<CreditCard className="size-5 text-ink-faint" />} />
+      <div role="tablist" aria-label="Fee type" className="mb-4 flex gap-1 rounded-full border border-line bg-surface-2 p-1">
+        {([["percent", "Percentage only"], ["percentPlusFixed", "Percentage + fixed"]] as const).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={mode === k} data-testid={`fee-mode-${k}`} onClick={() => setMode(k)}
+            className={cn("h-8 flex-1 rounded-full px-3 text-sm font-semibold", mode === k ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor="fee-percent" className={lbl}>% of card amount</label>
+          <NumberInput id="fee-percent" value={percent} onChange={setPercent} className="h-11 text-base" step="0.01" />
+        </div>
+        {mode === "percentPlusFixed" && (
+          <div>
+            <label htmlFor="fee-fixed" className={lbl}>+ EGP per card sale</label>
+            <NumberInput id="fee-fixed" value={fixed} onChange={setFixed} className="h-11 text-base" step="0.01" />
+          </div>
+        )}
+        <div>
+          <label htmlFor="fee-from" className={lbl}>Applies from</label>
+          <input id="fee-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input} />
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-ink-faint">
+        Charged on the Visa part of each sale; a split cash + card sale counts as one card sale. It stays in force until you change
+        it — earlier days keep the fee they had.
+      </p>
+      <div className="mt-3"><FormError>{error}</FormError></div>
+      <Button className="mt-3" size="sm" loading={busy} onClick={save} data-testid="fee-save">Save fee</Button>
+      {history.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-1 border-t border-line pt-3 text-xs text-ink-muted" data-testid="fee-history">
+          {history.map((h) => <li key={h.from}>From {dayText(h.from)}: {describeFee(h)}</li>)}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/* ─────────────── Settings: product costs ─────────────── */
+export function CostsCard() {
+  const { costs, paper } = usePnl();
+  const toast = useToast();
+  const today = dayKey(new Date());
+  const current = costsOn(costs, today);
+  const [v, setV] = useState<Omit<CostStep, "from">>({
+    paperBox: current?.paperBox ?? null, inkCartridge: current?.inkCartridge ?? null, acrylic: current?.acrylic ?? null, magnetic: current?.magnetic ?? null,
+  });
+  const [from, setFrom] = useState(today);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perSheet = paperPerSheet({ from, ...v }, paper.sheetsPerBox);
+  const field = (k: keyof typeof v, label: string, testid: string) => (
+    <div>
+      <label htmlFor={`cost-${k}`} className={lbl}>{label}</label>
+      <NumberInput id={`cost-${k}`} data-testid={testid} value={v[k]} onChange={(x) => setV({ ...v, [k]: x })} className="h-11 text-base" />
+    </div>
+  );
+  return (
+    <Card padding="lg" data-testid="costs-card">
+      <CardHeader title="What things cost you" subtitle="Used for profit per product, waste cost and break-even" action={<Package className="size-5 text-ink-faint" />} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        {field("paperBox", `Box of paper (${fmtNum(paper.sheetsPerBox)} sheets)`, "cost-paper")}
+        {field("inkCartridge", "Ink cartridge", "cost-ink")}
+        {field("acrylic", "Acrylic frame", "cost-acrylic")}
+        {field("magnetic", "Magnetic frame", "cost-magnetic")}
+        <div>
+          <label htmlFor="cost-from" className={lbl}>Applies from</label>
+          <input id="cost-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input} />
+        </div>
+      </div>
+      {perSheet != null && <p className="mt-3 text-xs text-ink-muted">= {formatEGP(Math.round(perSheet * 100) / 100)} per sheet of paper</p>}
+      <p className="mt-1 text-xs text-ink-faint">All in EGP. Stays in force until you change it — earlier days keep the costs they had.</p>
+      <div className="mt-3"><FormError>{error}</FormError></div>
+      <Button className="mt-3" size="sm" loading={busy} data-testid="costs-save"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await saveCosts(costs, { from, ...v });
+            toast(`Costs saved — apply from ${dayText(from)}`, "success");
+          } catch (e) {
+            setError(authErrorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}>
+        Save costs
+      </Button>
+      {costs.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-1 border-t border-line pt-3 text-xs text-ink-muted">
+          {[...costs].sort((a, b) => b.from.localeCompare(a.from)).map((c) => (
+            <li key={c.from}>
+              From {dayText(c.from)}: paper {c.paperBox == null ? "—" : egp(c.paperBox)}/box · ink {c.inkCartridge == null ? "—" : egp(c.inkCartridge)} ·
+              acrylic {c.acrylic == null ? "—" : egp(c.acrylic)} · magnetic {c.magnetic == null ? "—" : egp(c.magnetic)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}

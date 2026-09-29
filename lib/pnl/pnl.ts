@@ -1,5 +1,9 @@
-import { addDays, parseDay, rangeWindow, startOfDay, type DateRange } from "@/lib/admin/range";
-import { scopeDashboard, scopeWindow, type RawDashboard, type Scope } from "@/lib/admin/scope";
+import { addDays, dayKey, daysBetween, parseDay, rangeWindow, startOfDay, type DateRange } from "@/lib/admin/range";
+import { scopeDashboard, scopeWindow, type RawDashboard, type Scope, type ScopedDashboard } from "@/lib/admin/scope";
+import { breakEven, type BreakEven } from "./breakeven";
+import type { CostStep } from "./costs";
+import { feeOn, saleFee, type FeeStep } from "./fees";
+import { cartridgesPerSheet, productBreakdown, type ProductBreakdown } from "./products";
 import { comparisonWindows } from "@/lib/stats/revenue";
 import { trendBuckets } from "@/lib/stats/waste";
 import { recurringShare } from "./recurring";
@@ -15,16 +19,28 @@ import { EXPENSE_CATEGORIES, type Expense, type ExpenseCategory, type RecurringE
  * Scope: an event → only that event's expenses. Global → everything, incl. General (eventId null).
  */
 
-export type PnlInputs = { raw: RawDashboard; expenses: Expense[]; recurring: RecurringExpense[] };
+export type PnlInputs = {
+  raw: RawDashboard;
+  expenses: Expense[];
+  recurring: RecurringExpense[];
+  fees?: FeeStep[];
+  costs?: CostStep[];
+  sheetsPerBox?: number;
+};
+
+/** Manual categories + the automatic "Card fees" line. */
+export type PnlCategory = ExpenseCategory | "cardFees";
 
 export type ExpenseTotals = {
-  total: number;
-  byCategory: Record<ExpenseCategory, number>;
+  total: number; // manual expenses + card fees
+  manual: number; // one-offs + monthly (what break-even treats as fixed)
+  cardFees: number;
+  byCategory: Record<PnlCategory, number>;
   oneOffs: Expense[]; // in the window, newest first
   recurring: { r: RecurringExpense; amount: number }[]; // share in the window (> 0)
 };
 
-const emptyCats = () => Object.fromEntries(EXPENSE_CATEGORIES.map((c) => [c, 0])) as Record<ExpenseCategory, number>;
+const emptyCats = () => Object.fromEntries([...EXPENSE_CATEGORIES, "cardFees"].map((c) => [c, 0])) as Record<PnlCategory, number>;
 const inScope = (scope: Scope) => (eventId: string | null) => scope === "global" || eventId === scope;
 
 /** End of the day containing the last instant before `until` (whole-day windows). */
@@ -47,7 +63,7 @@ export function expenseTotals(
   until: Date | null,
   now: Date,
 ): ExpenseTotals {
-  const out: ExpenseTotals = { total: 0, byCategory: emptyCats(), oneOffs: [], recurring: [] };
+  const out: ExpenseTotals = { total: 0, manual: 0, cardFees: 0, byCategory: emptyCats(), oneOffs: [], recurring: [] };
   const endToday = addDays(startOfDay(now), 1);
   let u = until ? dayCeil(until) : endToday;
   if (u > endToday) u = endToday;
@@ -70,7 +86,28 @@ export function expenseTotals(
     out.byCategory[r.category] += amount;
   }
   out.oneOffs.sort((a, b) => b.date.localeCompare(a.date));
+  out.manual = out.total;
   return out;
+}
+
+/**
+ * Card machine fees on the scoped sales: each sale's Visa amount, with the fee setting in
+ * force on the day its SHIFT started (orphan entries: their own day).
+ */
+export function cardFeesFor(d: ScopedDashboard, fees: FeeStep[] = []): number {
+  if (!fees.length) return 0;
+  const startDay = new Map(d.shifts.map((s) => [s.shift.id, dayKey(new Date(s.shift.startTime))]));
+  let total = 0;
+  for (const e of d.entries) {
+    if (e.type !== "sale" || !(e.visa > 0)) continue;
+    const day = startDay.get(e.shiftId) ?? dayKey(new Date(e.time || Date.now()));
+    total += saleFee(feeOn(fees, day), e.visa);
+  }
+  return total;
+}
+
+function addFees(t: ExpenseTotals, fees: number): ExpenseTotals {
+  return { ...t, cardFees: fees, total: t.total + fees, byCategory: { ...t.byCategory, cardFees: fees } };
 }
 
 export type PnlSummary = {
@@ -84,14 +121,16 @@ export type PnlSummary = {
 
 export function pnlSummary(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): PnlSummary {
   const w = rangeWindow(range, now);
-  const revenue = scopeDashboard(inp.raw, scope, range, now).overview.total;
-  const expenses = expenseTotals(inp, inScope(scope), w.from, w.until, now);
+  const scoped = scopeDashboard(inp.raw, scope, range, now);
+  const revenue = scoped.overview.total;
+  const expenses = addFees(expenseTotals(inp, inScope(scope), w.from, w.until, now), cardFeesFor(scoped, inp.fees));
   const profit = revenue - expenses.total;
   const cw = comparisonWindows(range, now);
   let previous: PnlSummary["previous"] = null;
   if (cw) {
-    const pr = scopeWindow(inp.raw, scope, cw.previous.from, cw.previous.until).overview.total;
-    const pe = expenseTotals(inp, inScope(scope), cw.previous.from, cw.previous.until, now).total;
+    const prevScoped = scopeWindow(inp.raw, scope, cw.previous.from, cw.previous.until);
+    const pr = prevScoped.overview.total;
+    const pe = expenseTotals(inp, inScope(scope), cw.previous.from, cw.previous.until, now).total + cardFeesFor(prevScoped, inp.fees);
     previous = { revenue: pr, expenses: pe, profit: pr - pe, label: cw.previousLabel };
   }
   return { revenue, expenses, profit, margin: revenue > 0 ? profit / revenue : null, previous };
@@ -111,8 +150,9 @@ export function pnlTrend(inp: PnlInputs, scope: Scope, range: DateRange, now: Da
   const buckets = trendBuckets(range, now, firsts.length ? Math.min(...firsts) : null);
   return buckets.map((b, i) => {
     const until = buckets[i + 1]?.start ?? w.until;
-    const revenue = scopeWindow(inp.raw, scope, b.start, until).overview.total;
-    const expenses = expenseTotals(inp, inScope(scope), b.start, until, now).total;
+    const d = scopeWindow(inp.raw, scope, b.start, until);
+    const revenue = d.overview.total;
+    const expenses = expenseTotals(inp, inScope(scope), b.start, until, now).total + cardFeesFor(d, inp.fees);
     return { key: b.start.toISOString(), label: b.label, revenue, expenses, profit: revenue - expenses };
   });
 }
@@ -130,15 +170,64 @@ export function pnlByLocation(inp: PnlInputs, range: DateRange, now: Date): PnlL
   const row = (id: string | null, name: string, revenue: number, expenses: number): PnlLocationRow => ({
     id, name, revenue, expenses, profit: revenue - expenses, margin: revenue > 0 ? (revenue - expenses) / revenue : null,
   });
-  const rows = inp.raw.events.map((ev) =>
-    row(ev.id, ev.name, scopeDashboard(inp.raw, ev.id, range, now).overview.total,
-      expenseTotals(inp, (id) => id === ev.id, w.from, w.until, now).total),
-  );
-  const globalRevenue = scopeDashboard(inp.raw, "global", range, now).overview.total;
-  const noEventRevenue = globalRevenue - rows.reduce((s, r) => s + r.revenue, 0);
+  let eventFees = 0;
+  const rows = inp.raw.events.map((ev) => {
+    const d = scopeDashboard(inp.raw, ev.id, range, now);
+    const fees = cardFeesFor(d, inp.fees);
+    eventFees += fees;
+    return row(ev.id, ev.name, d.overview.total, expenseTotals(inp, (id) => id === ev.id, w.from, w.until, now).total + fees);
+  });
+  const globalScoped = scopeDashboard(inp.raw, "global", range, now);
+  // Whatever Global has beyond the events = sales with no event (and their card fees).
+  const noEventRevenue = globalScoped.overview.total - rows.reduce((s, r) => s + r.revenue, 0);
+  const noEventFees = cardFeesFor(globalScoped, inp.fees) - eventFees;
   const general = expenseTotals(inp, (id) => !id || !ids.has(id), w.from, w.until, now).total;
   rows.sort((a, b) => b.profit - a.profit || a.name.localeCompare(b.name));
-  if (Math.abs(noEventRevenue) > 0.004) rows.push(row(null, "No event", noEventRevenue, 0));
+  if (Math.abs(noEventRevenue) > 0.004 || noEventFees > 0.004) rows.push(row(null, "No event", noEventRevenue, noEventFees));
   if (general > 0.004) rows.push(row(null, "General", 0, general));
   return rows;
+}
+
+/** Days the range covers up to and including today (All time: from the scope's first data). */
+function daysToDate(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): number {
+  const w = rangeWindow(range, now);
+  const endToday = addDays(startOfDay(now), 1);
+  const until = w.until && w.until < endToday ? w.until : endToday;
+  let from = w.from;
+  if (!from) {
+    const starts = inp.raw.shifts
+      .filter((s) => scope === "global" || s.eventId === scope)
+      .map((s) => new Date(s.startTime).getTime())
+      .filter((t) => !Number.isNaN(t));
+    const fe = firstExpenseDay({ ...inp, expenses: inp.expenses.filter((e) => inScope(scope)(e.eventId)), recurring: inp.recurring.filter((r) => inScope(scope)(r.eventId)) });
+    const all = [...starts, ...(fe ? [fe.getTime()] : [])];
+    from = all.length ? startOfDay(new Date(Math.min(...all))) : startOfDay(now);
+  }
+  return Math.max(1, daysBetween(from, until));
+}
+
+/** Profit per product + waste cost for a scope/range (analysis only). */
+export function pnlProducts(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): ProductBreakdown {
+  const d = scopeDashboard(inp.raw, scope, range, now);
+  return productBreakdown(d, inp.fees ?? [], inp.costs ?? [], inp.sheetsPerBox ?? 0, cartridgesPerSheet(inp.raw, scope));
+}
+
+export type BreakEvenRow = { id: string | null; name: string; be: BreakEven; materialsMissing: boolean };
+
+/** Break-even for one scope (a location, or Global incl. General costs). */
+export function pnlBreakEven(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): { be: BreakEven; materialsMissing: boolean } {
+  const s = pnlSummary(inp, scope, range, now);
+  const products = pnlProducts(inp, scope, range, now);
+  const materials = products.materials ?? products.rows.reduce((t, r) => t + (r.materials ?? 0), 0);
+  return {
+    be: breakEven({ revenue: s.revenue, fixed: s.expenses.manual, variable: materials + s.expenses.cardFees, days: daysToDate(inp, scope, range, now) }),
+    materialsMissing: products.missingCosts,
+  };
+}
+
+/** Break-even per location (ended events left out). */
+export function breakEvenByLocation(inp: PnlInputs, range: DateRange, now: Date, endedIds: Set<string>): BreakEvenRow[] {
+  return inp.raw.events
+    .filter((ev) => !endedIds.has(ev.id))
+    .map((ev) => ({ id: ev.id, name: ev.name, ...pnlBreakEven(inp, ev.id, range, now) }));
 }

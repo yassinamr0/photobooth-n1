@@ -1,7 +1,9 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc, type DocumentData } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc, type DocumentData } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
 import { withAmountFrom } from "./recurring";
+import { withCostsFrom, type CostStep } from "./costs";
+import { withFeeFrom, type FeeStep } from "./fees";
 import { isCategory, type AmountStep, type Expense, type ExpenseCategory, type RecurringExpense } from "./types";
 
 /*
@@ -100,4 +102,46 @@ export function updateRecurringDetails(id: string, patch: { eventId: string | nu
 
 export function deleteRecurring(id: string) {
   return deleteDoc(doc(recurringCol(), id));
+}
+
+/* ───────────── Card fees + product costs (settings/fees, settings/costs — admin only) ───────────── */
+
+const feesDoc = () => doc(db(), "settings", "fees");
+const costsDoc = () => doc(db(), "settings", "costs");
+const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+export function watchFees(onChange: (steps: FeeStep[]) => void, onError: (e: Error) => void) {
+  return listen(feesDoc(), (s) => {
+    const raw = s.data()?.steps;
+    onChange(Array.isArray(raw)
+      ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
+          from: x.from, mode: x.mode === "percentPlusFixed" ? "percentPlusFixed" : "percent", percent: num(x.percent), fixed: num(x.fixed),
+        } as FeeStep))
+      : []);
+  }, onError);
+}
+
+export function watchCosts(onChange: (steps: CostStep[]) => void, onError: (e: Error) => void) {
+  return listen(costsDoc(), (s) => {
+    const raw = s.data()?.steps;
+    onChange(Array.isArray(raw)
+      ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
+          from: x.from, paperBox: numOrNull(x.paperBox), inkCartridge: numOrNull(x.inkCartridge), acrylic: numOrNull(x.acrylic), magnetic: numOrNull(x.magnetic),
+        }))
+      : []);
+  }, onError);
+}
+
+/** Save a new card fee that applies from `step.from` until changed again. */
+export function saveFee(steps: FeeStep[], step: FeeStep) {
+  if (!(step.percent >= 0 && step.percent < 100)) throw new Error("Percentage must be between 0 and 100");
+  if (step.mode === "percentPlusFixed" && !(step.fixed >= 0)) throw new Error("Fixed amount must be 0 or more");
+  const clean: FeeStep = { ...step, fixed: step.mode === "percentPlusFixed" ? step.fixed : 0 };
+  return setDoc(feesDoc(), { steps: withFeeFrom(steps, clean) });
+}
+
+export function saveCosts(steps: CostStep[], step: CostStep) {
+  for (const v of [step.paperBox, step.inkCartridge, step.acrylic, step.magnetic])
+    if (v != null && !(v >= 0)) throw new Error("Costs must be 0 or more");
+  return setDoc(costsDoc(), { steps: withCostsFrom(steps, step) });
 }
