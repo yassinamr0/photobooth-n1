@@ -31,9 +31,11 @@ export function StatisticsSection() {
       <ChartDefsHost />
       <RevenueTrend scoped={d} raw={raw} scope={scope} range={range} scopeLabel={label} now={now} />
       <LocationComparison raw={raw} scope={scope} range={range} now={now} rangeLabel={RANGE_WORDS[range]} />
-      <PaymentSplit scoped={d} range={range} scopeLabel={label} now={now} />
       <BusiestHours entries={d.entries} scopeLabel={label} />
-      <WasteRate shifts={d.shifts} range={range} scopeLabel={label} now={now} />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <PaymentSplit scoped={d} range={range} scopeLabel={label} now={now} />
+        <WasteRate shifts={d.shifts} range={range} scopeLabel={label} now={now} />
+      </div>
       <BurnRate rows={inv.rows} global={scope === "global"} />
     </div>
   );

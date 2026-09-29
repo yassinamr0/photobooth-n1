@@ -11,6 +11,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { createEvent, setEventStatus, updateEvent } from "@/lib/inventory/firestore";
 import type { EventRecord } from "@/lib/inventory/types";
+import { fmtNum } from "@/lib/format";
 import { useEvents, useScopedInventory } from "./DashboardData";
 
 /**
@@ -58,7 +59,7 @@ export function EventsSection() {
         </form>
         <div className="mt-3"><FormError>{error}</FormError></div>
         <p className="mt-2 text-xs text-ink-faint">
-          New events start with 0 paper and 0 ink; restock them from Inventory. Low-stock warning defaults to one box ({paper.sheetsPerBox} sheets).
+          New events start with 0 paper, ink and frames; restock them from Inventory. Low-stock warning defaults to one box ({fmtNum(paper.sheetsPerBox)} sheets) for paper, 1 ink cartridge and 5 of each frame.
         </p>
       </Card>
 
@@ -67,7 +68,7 @@ export function EventsSection() {
         {events.length === 0 ? (
           <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No events yet.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-3 lg:gap-0 lg:divide-y lg:divide-line">
             {events.map((ev) => (
               <EventRow key={ev.id} ev={ev} assigned={assignedCount(ev.id)} />
             ))}
@@ -101,7 +102,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
   }
 
   return (
-    <li data-testid="event-row" className="rounded-inner border border-line bg-surface-2/40 p-4">
+    <li data-testid="event-row" className="rounded-inner border border-line bg-surface-2/40 p-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-3">
       {editing ? (
         <div className="grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end">
           <Field id={`edit-name-${ev.id}`} label="Name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -115,17 +116,20 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 lg:grid lg:grid-cols-[40px_minmax(0,1fr)_minmax(0,1.4fr)_130px_auto] lg:gap-4">
           <span className="grid size-10 place-items-center rounded-[10px] bg-accent-dim text-magenta"><MapPin className="size-5" /></span>
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
               <span data-testid="event-name">{ev.name}</span>
               {ev.status === "active" ? <Tag tone="success" dot>Active</Tag> : <Tag tone="neutral" dot>Inactive</Tag>}
             </p>
-            <p className="truncate text-xs text-ink-faint">
+            <p className="truncate text-xs text-ink-faint lg:hidden">
               {ev.notes || "No notes"} · {assigned} staff assigned
             </p>
           </div>
+          <p className="hidden truncate text-sm text-ink-muted lg:block" title={ev.notes}>{ev.notes || <span className="text-ink-faint">No notes</span>}</p>
+          <p className="hidden text-sm text-ink-muted lg:block">{fmtNum(assigned)} staff assigned</p>
+          <div className="flex items-center gap-2 lg:justify-end">
           <Button size="sm" variant="ghost" leftIcon={<Pencil className="size-3.5" />} onClick={() => setEditing(true)}>Edit</Button>
           {ev.status === "active" ? (
             <Button size="sm" variant="secondary" onClick={() => (assigned > 0 ? setConfirmDeactivate(true) : run(() => setEventStatus(ev.id, "inactive"), `${ev.name} deactivated`))}>
@@ -136,6 +140,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
               Reactivate
             </Button>
           )}
+          </div>
         </div>
       )}
       {confirmDeactivate && (

@@ -1,11 +1,11 @@
-import { collection, deleteDoc, doc, increment, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
 import { parseEntry, parseShift, watchPaperSettings } from "@/lib/shift/firestore";
 import { parseUserDoc, type UserProfile } from "@/lib/users";
 import type { Entry, Shift } from "@/lib/shift/types";
 import { parseEvent } from "@/lib/inventory/firestore";
-import type { EventRecord } from "@/lib/inventory/types";
+import { DEDUCTION_FIELD, STOCK_INFO, STOCK_TYPES, type EventRecord } from "@/lib/inventory/types";
 import type { PaperSettings } from "@/lib/shift/paper";
 
 /*
@@ -15,6 +15,7 @@ import type { PaperSettings } from "@/lib/shift/paper";
  */
 
 const db = () => firebase().db;
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
 type Handlers = {
   users: (u: UserProfile[]) => void;
@@ -78,30 +79,52 @@ export async function deleteShiftAndEntries(
     entryIds.slice(i, i + CHUNK).forEach((id) => batch.delete(doc(db(), "entries", id)));
     await batch.commit();
   }
-  const final = writeBatch(db());
   const d = shift.stockDeduction;
-  if (d && d.sheets > 0) {
-    final.update(doc(db(), "events", d.eventId, "stock", "paper"), {
-      currentQuantity: increment(d.sheets),
-      updatedAt: serverTimestamp(),
+  // Put back exactly what this shift took from its event's stock (paper, ink, frames).
+  // A transaction, so a restored quantity back at/above the warning level re-arms the alert.
+  const types = d ? STOCK_TYPES.filter((t) => (d[DEDUCTION_FIELD[t]] ?? 0) > 0) : [];
+  await runTransaction(db(), async (tx) => {
+    const refs = types.map((t) => doc(db(), "events", d!.eventId, "stock", t));
+    const snaps = await Promise.all(refs.map((r) => tx.get(r)));
+    types.forEach((t, i) => {
+      const n = d![DEDUCTION_FIELD[t]];
+      const data = snaps[i].data() ?? {};
+      const q = Math.round((num(data.currentQuantity) + n) * 10) / 10;
+      tx.update(refs[i], {
+        currentQuantity: q,
+        updatedAt: serverTimestamp(),
+        ...(q >= num(data.lowStockThreshold) ? { alertDismissed: false } : {}),
+      });
+      tx.set(doc(collection(db(), "events", d!.eventId, "stockLogs")), {
+        stockType: t, delta: n, kind: "shiftReversal", reason: `Shift deleted — ${STOCK_INFO[t].unit} restored`,
+        shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+      });
     });
-    final.set(doc(collection(db(), "events", d.eventId, "stockLogs")), {
-      stockType: "paper", delta: d.sheets, kind: "shiftReversal", reason: "Shift deleted — sheets restored",
-      shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
-    });
+    tx.delete(doc(db(), "shifts", shift.id));
+  });
+}
+
+/**
+ * Remove a staff member from the Staff section: deletes their /users profile only. Their
+ * past shifts and sales stay in history. Their Firebase login must be deleted in the
+ * Firebase console (the app has no Admin SDK).
+ */
+export function removeUser(uid: string) {
+  return deleteDoc(doc(db(), "users", uid));
+}
+
+/**
+ * One-time admin tool: tag ended shifts that have NO event (legacy app) with an event.
+ * Only shifts whose eventId is null are touched — real snapshots are never changed.
+ * stockExempt keeps them out of inventory entirely (no deduction, never "pending").
+ */
+export async function tagShiftsWithEvent(shiftIds: string[], eventId: string) {
+  const CHUNK = 450;
+  for (let i = 0; i < shiftIds.length; i += CHUNK) {
+    const b = writeBatch(db());
+    shiftIds.slice(i, i + CHUNK).forEach((id) => b.update(doc(db(), "shifts", id), { eventId, stockExempt: true }));
+    await b.commit();
   }
-  if (d && (d.cartridges ?? 0) > 0) {
-    final.update(doc(db(), "events", d.eventId, "stock", "ink"), {
-      currentQuantity: increment(d.cartridges),
-      updatedAt: serverTimestamp(),
-    });
-    final.set(doc(collection(db(), "events", d.eventId, "stockLogs")), {
-      stockType: "ink", delta: d.cartridges, kind: "shiftReversal", reason: "Shift deleted — cartridges restored",
-      shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
-    });
-  }
-  final.delete(doc(db(), "shifts", shift.id));
-  await final.commit();
 }
 
 /** Admin-only: the two SEPARATE paper units (pack = staff shift changes, box = inventory restocks). */

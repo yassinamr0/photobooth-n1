@@ -10,6 +10,7 @@ import { fmtTime } from "@/lib/shift/summary";
 import type { ShiftTotals } from "@/lib/shift/summary";
 import type { Shift } from "@/lib/shift/types";
 import { NumberInput } from "./Stepper";
+import { fmtNum } from "@/lib/format";
 
 /**
  * LOCKED card #1 — "Your shift": status bar (start time · paper loaded · pack counter ·
@@ -120,7 +121,7 @@ function StatusBar({
               onClick={() => { setDraft(shift.startPaperCount); setEditing(true); }}
               className="mt-0.5 flex items-center gap-1.5 font-display text-lg font-bold tabular-nums hover:text-magenta"
             >
-              {shift.startPaperCount ?? "—"}
+              {shift.startPaperCount != null ? fmtNum(shift.startPaperCount) : "—"}
               <Pencil className="size-3.5 text-ink-faint" aria-label="Edit" />
             </button>
           )}
@@ -197,14 +198,14 @@ function SummaryGrid({ totals }: { totals: ShiftTotals }) {
     <div className="mt-3 grid grid-cols-2 gap-2" data-testid="shift-summary-grid">
       <div className={cn(cell, "col-span-2 flex items-baseline justify-between border-gold/30 bg-gold-dim/40")}>
         <span className={l}>Total EGP</span>
-        <span data-testid="sum-total" className={cn(v, "text-2xl text-gold")}>{totals.total}</span>
+        <span data-testid="sum-total" className={cn(v, "text-2xl text-gold")}>{fmtNum(totals.total)}</span>
       </div>
-      <div className={cell}><div data-testid="sum-cash" className={cn(v, "text-success")}>{totals.cash}</div><div className={l}>Cash</div></div>
-      <div className={cell}><div data-testid="sum-visa" className={cn(v, "text-info")}>{totals.visa}</div><div className={l}>Visa</div></div>
-      <div className={cell}><div data-testid="sum-sheets" className={v}>{totals.sheets}</div><div className={l}>Sheets sold</div></div>
-      <div className={cell}><div data-testid="sum-hadr" className={cn(v, "text-pink")}>{totals.hadr}</div><div className={l}>Hadr wasted</div></div>
-      <div className={cell}><div data-testid="sum-acrylic" className={v}>{totals.acrylic}</div><div className={l}>Acrylic sold</div></div>
-      <div className={cell}><div data-testid="sum-magnetic" className={v}>{totals.magnetic}</div><div className={l}>Magnetic sold</div></div>
+      <div className={cell}><div data-testid="sum-cash" className={cn(v, "text-success")}>{fmtNum(totals.cash)}</div><div className={l}>Cash</div></div>
+      <div className={cell}><div data-testid="sum-visa" className={cn(v, "text-info")}>{fmtNum(totals.visa)}</div><div className={l}>Visa</div></div>
+      <div className={cell}><div data-testid="sum-sheets" className={v}>{fmtNum(totals.sheets)}</div><div className={l}>Sheets sold</div></div>
+      <div className={cell}><div data-testid="sum-hadr" className={cn(v, "text-pink")}>{fmtNum(totals.hadr)}</div><div className={l}>Hadr wasted</div></div>
+      <div className={cell}><div data-testid="sum-acrylic" className={v}>{fmtNum(totals.acrylic)}</div><div className={l}>Acrylic sold</div></div>
+      <div className={cell}><div data-testid="sum-magnetic" className={v}>{fmtNum(totals.magnetic)}</div><div className={l}>Magnetic sold</div></div>
     </div>
   );
 }

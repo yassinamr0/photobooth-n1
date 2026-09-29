@@ -18,8 +18,20 @@ export type Shift = {
   /** Pack size snapshotted when the shift started (older/legacy shifts don't have it). */
   sheetsPerPack?: number | null;
   paperVerified?: boolean;
-  /** Set once when this shift's paper use was deducted from ITS OWN event's stock (Phase 5). */
-  stockDeduction?: { eventId: string; sheets: number; cartridges: number } | null;
+  /** Set once when this shift's paper/ink/frames were deducted from ITS OWN event's stock. */
+  stockDeduction?: {
+    eventId: string;
+    sheets: number;
+    cartridges: number;
+    acrylic: number;
+    magnetic: number;
+  } | null;
+  /**
+   * Tagged with an event by an admin AFTER the fact (e.g. legacy "no event" shifts). Counts
+   * toward that event's revenue/stats but never touches its stock and never shows as
+   * "not yet deducted".
+   */
+  stockExempt?: boolean;
   createdAt?: Timestamp | null;
 };
 

@@ -15,8 +15,19 @@ import {
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
 import type { Entry, Shift } from "@/lib/shift/types";
-import { boxesToSheets, shiftActualUsed } from "./units";
-import type { EventRecord, EventStatus, StockDoc, StockLog, StockType } from "./types";
+import { boxesToSheets, shiftActualUsed, shiftFramesSold } from "./units";
+import {
+  DEDUCTION_FIELD,
+  SHIFT_LOG_PREFIX,
+  STOCK_INFO,
+  STOCK_TYPES,
+  type EventRecord,
+  type EventStatus,
+  type ShiftDeduction,
+  type StockDoc,
+  type StockLog,
+  type StockType,
+} from "./types";
 
 /*
  * Per-event inventory writes. Paper is tracked in SHEETS; restocks are entered in BOXES
@@ -52,13 +63,14 @@ function parseStock(type: StockType, d: DocumentData): StockDoc {
     lowStockThreshold: num(d.lowStockThreshold),
     trackingSinceMs: ms(d.trackingSince) ?? Date.now(), // pending server timestamp → now
     updatedAtMs: ms(d.updatedAt),
+    alertDismissed: d.alertDismissed === true,
   };
 }
 
 function parseLog(id: string, d: DocumentData): StockLog {
   return {
     id,
-    stockType: d.stockType === "ink" ? "ink" : "paper",
+    stockType: (STOCK_TYPES as string[]).includes(d.stockType) ? d.stockType : "paper",
     delta: num(d.delta),
     reason: typeof d.reason === "string" ? d.reason : "",
     kind: ["restock", "correction", "shift", "shiftReversal"].includes(d.kind) ? d.kind : "correction",
@@ -71,19 +83,16 @@ function parseLog(id: string, d: DocumentData): StockLog {
   };
 }
 
-/** Live stock docs for one event (paper + ink). `exists` tells us whether tracking was set up. */
-export function watchEventStock(
-  eventId: string,
-  onChange: (stock: { paper: StockDoc | null; ink: StockDoc | null; fromServer: boolean }) => void,
-) {
+export type EventStock = Record<StockType, StockDoc | null>;
+
+/** Live stock docs for one event (paper, ink, frames). A missing doc → null (not set up yet). */
+export function watchEventStock(eventId: string, onChange: (stock: EventStock & { fromServer: boolean }) => void) {
   return listen(collection(db(), "events", eventId, "stock"), (snap) => {
-    let paper: StockDoc | null = null;
-    let ink: StockDoc | null = null;
+    const stock: EventStock = { paper: null, ink: null, acrylic: null, magnetic: null };
     snap.docs.forEach((d) => {
-      if (d.id === "paper") paper = parseStock("paper", d.data());
-      if (d.id === "ink") ink = parseStock("ink", d.data());
+      if ((STOCK_TYPES as string[]).includes(d.id)) stock[d.id as StockType] = parseStock(d.id as StockType, d.data());
     });
-    onChange({ paper, ink, fromServer: !snap.metadata.fromCache });
+    onChange({ ...stock, fromServer: !snap.metadata.fromCache });
   });
 }
 
@@ -94,16 +103,23 @@ export function watchEventLogs(eventId: string, onChange: (logs: StockLog[]) => 
   );
 }
 
+/** Default warning level per type — paper = one BOX (from settings, never hardcoded). */
+const defaultThreshold = (type: StockType, sheetsPerBox: number) => {
+  const d = STOCK_INFO[type].defaultThreshold;
+  return d === "box" ? sheetsPerBox : d;
+};
+
 /**
- * Create the stock docs for an event that doesn't have them yet (e.g. the manual Phase-4 test
- * doc). Transactional so two admin tabs can't both initialise. Tracking starts now.
+ * Create the stock docs an event doesn't have yet (older events predate ink/frames).
+ * Transactional so two admin tabs can't both initialise. Tracking starts now.
  */
 export async function ensureStockDocs(eventId: string, sheetsPerBox: number) {
   await runTransaction(db(), async (tx) => {
-    const [p, i] = await Promise.all([tx.get(stockRef(eventId, "paper")), tx.get(stockRef(eventId, "ink"))]);
+    const snaps = await Promise.all(STOCK_TYPES.map((t) => tx.get(stockRef(eventId, t))));
     const base = { currentQuantity: 0, updatedAt: serverTimestamp(), trackingSince: serverTimestamp() };
-    if (!p.exists()) tx.set(stockRef(eventId, "paper"), { ...base, lowStockThreshold: sheetsPerBox });
-    if (!i.exists()) tx.set(stockRef(eventId, "ink"), { ...base, lowStockThreshold: 1 });
+    STOCK_TYPES.forEach((t, i) => {
+      if (!snaps[i].exists()) tx.set(stockRef(eventId, t), { ...base, lowStockThreshold: defaultThreshold(t, sheetsPerBox) });
+    });
   });
 }
 
@@ -114,9 +130,7 @@ export async function createEvent(name: string, notes: string, by: Actor, sheets
   const b = writeBatch(db());
   b.set(ref, { name: name.trim(), notes: notes.trim(), status: "active", createdAt: serverTimestamp(), createdBy: by.uid });
   const base = { currentQuantity: 0, updatedAt: serverTimestamp(), trackingSince: serverTimestamp() };
-  // Default low-stock threshold for paper = one box (from settings, never hardcoded).
-  b.set(stockRef(ref.id, "paper"), { ...base, lowStockThreshold: sheetsPerBox });
-  b.set(stockRef(ref.id, "ink"), { ...base, lowStockThreshold: 1 });
+  for (const t of STOCK_TYPES) b.set(stockRef(ref.id, t), { ...base, lowStockThreshold: defaultThreshold(t, sheetsPerBox) });
   await b.commit();
   return ref.id;
 }
@@ -131,99 +145,138 @@ export function setEventStatus(eventId: string, status: EventStatus) {
 
 /* ───────────────────────────── Stock writes ───────────────────────────── */
 
-/** Restock PAPER in BOXES → converted to sheets via sheetsPerBox. Logs both numbers. */
-export async function restockPaper(eventId: string, boxes: number, sheetsPerBox: number, by: Actor) {
-  if (!Number.isInteger(boxes) || boxes <= 0) throw new Error("Enter a whole number of boxes");
-  const sheets = boxesToSheets(boxes, sheetsPerBox);
-  const b = writeBatch(db());
-  b.update(stockRef(eventId, "paper"), { currentQuantity: increment(sheets), updatedAt: serverTimestamp() });
-  b.set(doc(logsCol(eventId)), {
-    stockType: "paper", delta: sheets, kind: "restock", boxes, sheetsPerBox,
-    reason: `Restock: ${boxes} box${boxes === 1 ? "" : "es"}`,
-    byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
-  });
-  await b.commit();
-  return sheets;
-}
+/*
+ * Admin stock writes run as transactions so they can re-arm a "marked as read" low-stock
+ * alert: once the new quantity is back AT OR ABOVE the warning level, alertDismissed is
+ * cleared, so the alert shows again the next time stock drops low.
+ */
+const rearm = (quantity: number, threshold: number) => (quantity >= threshold ? { alertDismissed: false } : {});
 
-/** Restock INK (cartridges — no unit conversion). */
-export async function restockInk(eventId: string, cartridges: number, by: Actor) {
-  if (!Number.isInteger(cartridges) || cartridges <= 0) throw new Error("Enter a whole number of cartridges");
-  const b = writeBatch(db());
-  b.update(stockRef(eventId, "ink"), { currentQuantity: increment(cartridges), updatedAt: serverTimestamp() });
-  b.set(doc(logsCol(eventId)), {
-    stockType: "ink", delta: cartridges, kind: "restock", reason: `Restock: ${cartridges} cartridge${cartridges === 1 ? "" : "s"}`,
-    byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
-  });
-  await b.commit();
-}
-
-/** Stock-take correction: set the counted amount; logs the difference. NOT a restock. */
-export async function correctCount(eventId: string, type: StockType, counted: number, reason: string, by: Actor) {
-  if (!Number.isFinite(counted) || counted < 0) throw new Error("Enter the counted amount");
+async function adminAdjust(
+  eventId: string,
+  type: StockType,
+  next: (current: number) => number,
+  log: (current: number, updated: number) => Record<string, unknown> | null,
+) {
+  let updated = 0;
   await runTransaction(db(), async (tx) => {
     const snap = await tx.get(stockRef(eventId, type));
     if (!snap.exists()) throw new Error("Inventory isn't set up for this event yet");
     const current = num(snap.data().currentQuantity);
-    const delta = Math.round((counted - current) * 10) / 10;
-    tx.update(stockRef(eventId, type), { currentQuantity: counted, updatedAt: serverTimestamp() });
-    tx.set(doc(logsCol(eventId)), {
-      stockType: type, delta, kind: "correction", reason: `Count correction${reason.trim() ? `: ${reason.trim()}` : ""}`,
-      byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+    updated = Math.round(next(current) * 10) / 10;
+    tx.update(stockRef(eventId, type), {
+      currentQuantity: updated,
+      updatedAt: serverTimestamp(),
+      ...rearm(updated, num(snap.data().lowStockThreshold)),
+    });
+    const l = log(current, updated);
+    if (l) tx.set(doc(logsCol(eventId)), { ...l, stockType: type, createdAt: serverTimestamp() });
+  });
+  return updated;
+}
+
+/** Restock PAPER in BOXES → converted to sheets via sheetsPerBox. Logs both numbers. */
+export async function restockPaper(eventId: string, boxes: number, sheetsPerBox: number, by: Actor) {
+  if (!Number.isInteger(boxes) || boxes <= 0) throw new Error("Enter a whole number of boxes");
+  const sheets = boxesToSheets(boxes, sheetsPerBox);
+  await adminAdjust(eventId, "paper", (c) => c + sheets, () => ({
+    delta: sheets, kind: "restock", boxes, sheetsPerBox,
+    reason: `Restock: ${boxes} box${boxes === 1 ? "" : "es"}`,
+    byUid: by.uid, byName: by.name,
+  }));
+  return sheets;
+}
+
+/** Restock ink or frames BY PIECE (no unit conversion). */
+export async function restockPieces(eventId: string, type: Exclude<StockType, "paper">, count: number, by: Actor) {
+  const { unit, unitOne } = STOCK_INFO[type];
+  if (!Number.isInteger(count) || count <= 0) throw new Error(`Enter a whole number of ${unit}`);
+  await adminAdjust(eventId, type, (c) => c + count, () => ({
+    delta: count, kind: "restock", reason: `Restock: ${count} ${count === 1 ? unitOne : unit}`,
+    byUid: by.uid, byName: by.name,
+  }));
+}
+
+export const restockInk = (eventId: string, cartridges: number, by: Actor) => restockPieces(eventId, "ink", cartridges, by);
+
+/** Stock-take correction: set the counted amount; logs the difference. NOT a restock. */
+export async function correctCount(eventId: string, type: StockType, counted: number, reason: string, by: Actor) {
+  if (!Number.isFinite(counted) || counted < 0) throw new Error("Enter the counted amount");
+  await adminAdjust(eventId, type, () => counted, (current, updated) => ({
+    delta: Math.round((updated - current) * 10) / 10, kind: "correction",
+    reason: `Count correction${reason.trim() ? `: ${reason.trim()}` : ""}`,
+    byUid: by.uid, byName: by.name,
+  }));
+}
+
+export async function setThreshold(eventId: string, type: StockType, threshold: number) {
+  if (!Number.isFinite(threshold) || threshold < 0) throw new Error("Enter a threshold of 0 or more");
+  await runTransaction(db(), async (tx) => {
+    const snap = await tx.get(stockRef(eventId, type));
+    if (!snap.exists()) throw new Error("Inventory isn't set up for this event yet");
+    tx.update(stockRef(eventId, type), {
+      lowStockThreshold: threshold,
+      updatedAt: serverTimestamp(),
+      ...rearm(num(snap.data().currentQuantity), threshold),
     });
   });
 }
 
-export function setThreshold(eventId: string, type: StockType, threshold: number) {
-  if (!Number.isFinite(threshold) || threshold < 0) throw new Error("Enter a threshold of 0 or more");
-  return updateDoc(stockRef(eventId, type), { lowStockThreshold: threshold, updatedAt: serverTimestamp() });
+/** "Mark as read" on a low-stock alert — hidden for every admin until stock is fixed. */
+export function dismissLowStock(eventId: string, type: StockType) {
+  return updateDoc(stockRef(eventId, type), { alertDismissed: true });
 }
 
 /* ─────────────────────── Automatic shift consumption ─────────────────────── */
 
-/** Doc ids for the (at most one) paper and ink log written per shift. */
-export const shiftLogId = (shiftId: string) => `shift_${shiftId}`;
-export const shiftInkLogId = (shiftId: string) => `shiftink_${shiftId}`;
+/** Doc id of the (at most one) log per stock type written for a shift. */
+export const shiftStockLogId = (type: StockType, shiftId: string) => `${SHIFT_LOG_PREFIX[type]}${shiftId}`;
+export const shiftLogId = (shiftId: string) => shiftStockLogId("paper", shiftId);
+export const shiftInkLogId = (shiftId: string) => shiftStockLogId("ink", shiftId);
+
+/** What a shift takes from stock: paper = actual use, ink = logged changes, frames = sold. */
+export function shiftConsumption(shift: Shift, entries: Entry[]): Omit<ShiftDeduction, "eventId"> {
+  const own = entries.filter((e) => e.shiftId === shift.id);
+  return {
+    sheets: shiftActualUsed(own),
+    cartridges: Math.max(0, Math.trunc(shift.inkChanges || 0)),
+    ...shiftFramesSold(own),
+  };
+}
+
+const SHIFT_LOG_REASON: Record<StockType, (n: number) => string> = {
+  paper: () => "Shift ended",
+  ink: (n) => `Shift ended — ${n} ink change${n === 1 ? "" : "s"}`,
+  acrylic: (n) => `Shift ended — ${n} acrylic frame${n === 1 ? "" : "s"} sold`,
+  magnetic: (n) => `Shift ended — ${n} magnetic frame${n === 1 ? "" : "s"} sold`,
+};
 
 /**
  * Deduct a finished shift's consumption from the stock of the event the SHIFT was stamped
  * with, in one atomic batch (security rules allow it once per shift):
- *   - paper: the shift's ACTUAL use (sheets sold + hadr wasted)
- *   - ink:   the cartridges staff logged with "+ Ink change" (shift.inkChanges)
- * Returns what was deducted, or null when the shift has no event (never guessed).
+ *   - paper:  the shift's ACTUAL use (sheets sold + hadr wasted) — always logged
+ *   - ink:    the cartridges staff logged with "+ Ink change" (shift.inkChanges)
+ *   - frames: acrylic / magnetic frames sold in the shift's own sale entries
+ * Non-paper types are only written when above 0.
+ * Returns what was deducted, or null when the shift has no event (never guessed) or is
+ * stock-exempt (tagged with an event by an admin after the fact).
  */
-export async function applyShiftDeduction(
-  shift: Shift,
-  entries: Entry[],
-  by: Actor,
-): Promise<{ sheets: number; cartridges: number } | null> {
+export async function applyShiftDeduction(shift: Shift, entries: Entry[], by: Actor): Promise<ShiftDeduction | null> {
   const eventId = shift.eventId; // the shift's own snapshot — NOT anyone's current assignment
-  if (!eventId || shift.stockDeduction) return null;
-  const sheets = shiftActualUsed(entries.filter((e) => e.shiftId === shift.id));
-  const cartridges = Math.max(0, Math.trunc(shift.inkChanges || 0));
+  if (!eventId || shift.stockDeduction || shift.stockExempt) return null;
+  const amounts = shiftConsumption(shift, entries);
+  const deduction: ShiftDeduction = { eventId, ...amounts };
   const b = writeBatch(db());
-  b.update(doc(db(), "shifts", shift.id), { stockDeduction: { eventId, sheets, cartridges } });
-  b.update(stockRef(eventId, "paper"), {
-    currentQuantity: increment(-sheets),
-    updatedAt: serverTimestamp(),
-    lastShiftId: shift.id,
-  });
-  b.set(doc(logsCol(eventId), shiftLogId(shift.id)), {
-    stockType: "paper", delta: sheets === 0 ? 0 : -sheets, kind: "shift", reason: "Shift ended", shiftId: shift.id,
-    byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
-  });
-  if (cartridges > 0) {
-    b.update(stockRef(eventId, "ink"), {
-      currentQuantity: increment(-cartridges),
-      updatedAt: serverTimestamp(),
-      lastShiftId: shift.id,
-    });
-    b.set(doc(logsCol(eventId), shiftInkLogId(shift.id)), {
-      stockType: "ink", delta: -cartridges, kind: "shift",
-      reason: `Shift ended — ${cartridges} ink change${cartridges === 1 ? "" : "s"}`, shiftId: shift.id,
+  b.update(doc(db(), "shifts", shift.id), { stockDeduction: deduction });
+  for (const type of STOCK_TYPES) {
+    const n = amounts[DEDUCTION_FIELD[type]];
+    if (type !== "paper" && n <= 0) continue;
+    b.update(stockRef(eventId, type), { currentQuantity: increment(-n), updatedAt: serverTimestamp(), lastShiftId: shift.id });
+    b.set(doc(logsCol(eventId), shiftStockLogId(type, shift.id)), {
+      stockType: type, delta: n === 0 ? 0 : -n, kind: "shift", reason: SHIFT_LOG_REASON[type](n), shiftId: shift.id,
       byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
     });
   }
   await b.commit();
-  return { sheets, cartridges };
+  return deduction;
 }

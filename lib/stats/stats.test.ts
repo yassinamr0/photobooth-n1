@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { busiestHours, mondayIndex } from "./busiest";
 import { burnRows } from "./burn";
-import { isClimbing, isHigh, staffWaste, sumUsage, trendBuckets, usage, wasteTrend, type TrendPoint } from "./waste";
+import { isClimbing, isHigh, sumUsage, trendBuckets, usage, wasteTrend, type TrendPoint } from "./waste";
 import type { ScopedShift } from "@/lib/admin/scope";
 import type { Entry, Shift } from "@/lib/shift/types";
 import type { InventoryRow } from "@/lib/inventory/scope";
@@ -55,15 +55,9 @@ describe("waste rate", () => {
     expect(isHigh(usage(94, 6), 0.05)).toBe(false); // 6% — below 1.5× (7.5%)
     expect(isHigh(usage(99, 1), 0)).toBe(false); // 1% vs 0% — under +2pp
   });
-  it("staff ranked highest waste first, flags the outlier, omits no-usage staff", () => {
-    const shifts = [ss("a", "Amr", local(2026, 9, 29), 17, 3), ss("n", "Nour", local(2026, 9, 29), 49, 1), ss("n", "Nour", local(2026, 9, 30), 30, 0), ss("z", "Zero", local(2026, 9, 30), 0, 0)];
-    const overall = sumUsage(shifts);
-    const rows = staffWaste(shifts, overall);
-    expect(rows.map((r) => r.name)).toEqual(["Amr", "Nour"]);
-    expect(rows[0]).toMatchObject({ high: true });
-    expect(rows[0].usage.rate).toBeCloseTo(0.15);
-    expect(rows[1].usage).toMatchObject({ sold: 79, hadr: 1, used: 80 });
-    expect(rows[1].high).toBe(false);
+  it("overall usage sums every shift in scope (no per-staff ranking)", () => {
+    const shifts = [ss("a", "Amr", local(2026, 9, 29), 17, 3), ss("n", "Nour", local(2026, 9, 29), 49, 1), ss("z", "Zero", local(2026, 9, 30), 0, 0)];
+    expect(sumUsage(shifts)).toMatchObject({ sold: 66, hadr: 4, used: 70 });
   });
 });
 
@@ -99,14 +93,23 @@ describe("climbing", () => {
 });
 
 describe("burn rows", () => {
-  const row = (name: string, paperDays: number | null, inkDays: number | null, low = false): InventoryRow => ({
+  const fc = (daysLeft: number | null) => ({ avgPerDay: 1, windowDays: 14, daysLeft });
+  const row = (name: string, paperDays: number | null, inkDays: number | null, low = false, acrylicDays: number | null = null): InventoryRow => ({
     event: { id: name, name, notes: "", status: "active", createdAtMs: 0, createdBy: null },
-    inv: { paper: null, ink: null, logs: [] }, tracked: true, paperLow: low, inkLow: false,
-    forecast: { avgPerDay: 1, windowDays: 14, daysLeft: paperDays }, inkForecast: { avgPerDay: 0, windowDays: 14, daysLeft: inkDays }, pending: [],
+    inv: { paper: null, ink: null, acrylic: null, magnetic: null, logs: [] }, tracked: true,
+    low: { paper: low, ink: false, acrylic: false, magnetic: false },
+    alerting: { paper: low, ink: false, acrylic: false, magnetic: false },
+    forecasts: { paper: fc(paperDays), ink: fc(inkDays), acrylic: fc(acrylicDays), magnetic: null }, pending: [],
   });
   it("sorted soonest-to-run-out first; ≤7 days or below threshold warns", () => {
     const r = burnRows([row("Slow", 40, null), row("Soon", 5, 30), row("NoData", null, null), row("Low", 20, null, true)]);
     expect(r.map((x) => x.row.event.name)).toEqual(["Soon", "Low", "Slow", "NoData"]);
     expect(r.map((x) => x.warn)).toEqual([true, true, false, false]);
+  });
+  it("frames count too: acrylic running out in 3 days sorts first and warns", () => {
+    const r = burnRows([row("Paper", 20, null), row("Frames", 40, null, false, 3)]);
+    expect(r.map((x) => x.row.event.name)).toEqual(["Frames", "Paper"]);
+    expect(r[0].warn).toBe(true);
+    expect(r[0].days.acrylic).toBe(3);
   });
 });

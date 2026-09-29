@@ -8,7 +8,8 @@ import type { StockDoc } from "./types";
  */
 export function pendingDeductions(shifts: Shift[], paperByEvent: Map<string, StockDoc | null>): Shift[] {
   return shifts.filter((s) => {
-    if (!s.endTime || !s.eventId || s.stockDeduction) return false;
+    // stockExempt = tagged with an event by an admin after the fact; never touches stock.
+    if (!s.endTime || !s.eventId || s.stockDeduction || s.stockExempt) return false;
     const paper = paperByEvent.get(s.eventId);
     if (!paper) return false; // event has no inventory tracking (yet)
     const since = paper.trackingSinceMs;

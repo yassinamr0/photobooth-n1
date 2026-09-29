@@ -73,37 +73,40 @@ service cloud.firestore {
                     && (request.resource.data.get('sheetsPerPack', null) == null
                         || packSizeMatchesSettings(request.resource.data.sheetsPerPack))
                     && request.resource.data.get('stockDeduction', null) == null
+                    && request.resource.data.get('stockExempt', false) == false
                     && request.resource.data.get('inkChanges', 0) == 0;
       allow update: if isAdmin()
                     || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && !request.resource.data.diff(resource.data).affectedKeys()
-                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack', 'stockDeduction'])
+                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack', 'stockDeduction', 'stockExempt'])
                       // once deducted from stock, the shift is frozen for staff
                       && resource.data.get('stockDeduction', null) == null
                       && request.resource.data.get('inkChanges', 0) is int
                       && request.resource.data.get('inkChanges', 0) >= 0
                     )
-                    // Phase 5 — automatic paper consumption, staff side. Only the owner, only
-                    // after the shift has ended, only once, only into the shift's OWN eventId,
-                    // and only together with the matching stock update + stock log (same batch).
+                    // Automatic stock consumption, staff side (paper, ink, frames). Only the owner,
+                    // only after the shift has ended, only once, only into the shift's OWN eventId,
+                    // never for a stock-exempt shift, and only together with one stock log per
+                    // type that was taken (fixed ids). Each log's own rule checks the matching
+                    // stock went down by exactly that amount (see isValidStockDeduction), so a
+                    // shift mark can't be written without the stock updates and vice versa.
+                    // (Checks are split this way to stay under Firestore's 10-lookup limit.)
                     || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && resource.data.get('endTime', null) != null
                       && resource.data.get('eventId', null) != null
                       && resource.data.get('stockDeduction', null) == null
+                      && resource.data.get('stockExempt', false) != true
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockDeduction'])
-                      && request.resource.data.stockDeduction.keys().hasOnly(['eventId', 'sheets', 'cartridges'])
-                      // ink: exactly the cartridges staff logged on this shift ("+ Ink change")
-                      && request.resource.data.stockDeduction.get('cartridges', 0) == resource.data.get('inkChanges', 0)
-                      && request.resource.data.stockDeduction.eventId == resource.data.eventId
-                      && request.resource.data.stockDeduction.sheets is number
-                      && request.resource.data.stockDeduction.sheets >= 0
-                      && existsAfter(/databases/$(database)/documents/events/$(resource.data.eventId)/stockLogs/$('shift_' + shiftId))
-                      && isValidShiftDeduction(resource.data.eventId, shiftId, request.resource.data.stockDeduction.sheets)
-                      && (resource.data.get('inkChanges', 0) == 0
-                          || (existsAfter(/databases/$(database)/documents/events/$(resource.data.eventId)/stockLogs/$('shiftink_' + shiftId))
-                              && isValidInkDeduction(resource.data.eventId, shiftId, resource.data.inkChanges)))
+                      && isValidDeductionShape(request.resource.data.stockDeduction, resource.data)
+                      && existsAfter(stockLogPath(resource.data.eventId, 'shift_' + shiftId))
+                      && (request.resource.data.stockDeduction.get('cartridges', 0) == 0
+                          || existsAfter(stockLogPath(resource.data.eventId, 'shiftink_' + shiftId)))
+                      && (request.resource.data.stockDeduction.get('acrylic', 0) == 0
+                          || existsAfter(stockLogPath(resource.data.eventId, 'shiftacr_' + shiftId)))
+                      && (request.resource.data.stockDeduction.get('magnetic', 0) == 0
+                          || existsAfter(stockLogPath(resource.data.eventId, 'shiftmag_' + shiftId)))
                     );
       allow delete: if isAdmin();
     }
@@ -139,86 +142,82 @@ service cloud.firestore {
       allow read: if isApproved();
       allow write: if isAdmin();
 
-      // Per-event stock: paper (in SHEETS) and ink (cartridges). Admin writes everything
-      // (restocks in BOXES → sheets, corrections, thresholds). The ONLY staff write is the
-      // automatic shift-end paper deduction, checked against the shift in the same batch.
+      // Per-event stock: paper (in SHEETS), ink (cartridges), acrylic + magnetic frames
+      // (pieces). Admin writes everything (restocks — paper in BOXES → sheets — corrections,
+      // thresholds, "mark as read" on low-stock alerts). The ONLY staff write is the automatic
+      // shift-end deduction, checked against the shift in the same batch; staff can never
+      // touch the threshold or alertDismissed.
       match /stock/{stockType} {
         allow read: if isApproved();
         allow write: if isAdmin();
         allow update: if isApproved()
-                      && stockType == 'paper'
+                      && stockType in ['paper', 'ink', 'acrylic', 'magnetic']
                       && request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['currentQuantity', 'updatedAt', 'lastShiftId'])
-                      && isValidShiftDeduction(eventId, request.resource.data.lastShiftId,
-                           resource.data.currentQuantity - request.resource.data.currentQuantity);
-        allow update: if isApproved()
-                      && stockType == 'ink'
-                      && request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['currentQuantity', 'updatedAt', 'lastShiftId'])
-                      && isValidInkDeduction(eventId, request.resource.data.lastShiftId,
+                      && isValidStockDeduction(eventId, request.resource.data.lastShiftId, stockType,
                            resource.data.currentQuantity - request.resource.data.currentQuantity);
       }
 
       match /stockLogs/{logId} {
         allow read: if isApproved();
         allow create, update, delete: if isAdmin();
-        // Staff: exactly one log per shift, id "shift_<shiftId>", matching the deduction.
+        // Staff: at most one log per stock type per shift, with a fixed id
+        // (shift_ / shiftink_ / shiftacr_ / shiftmag_ + shiftId), matching the deduction.
         allow create: if isApproved()
                       && request.resource.data.kind == 'shift'
-                      && request.resource.data.stockType == 'paper'
-                      && logId == 'shift_' + request.resource.data.shiftId
+                      && request.resource.data.stockType in ['paper', 'ink', 'acrylic', 'magnetic']
+                      && logId == shiftLogPrefix()[request.resource.data.stockType] + request.resource.data.shiftId
                       && request.resource.data.byUid == request.auth.uid
-                      && isValidShiftDeduction(eventId, request.resource.data.shiftId,
-                           -request.resource.data.delta);
-        // Staff: one ink log per shift, id "shiftink_<shiftId>", matching the cartridges.
-        allow create: if isApproved()
-                      && request.resource.data.kind == 'shift'
-                      && request.resource.data.stockType == 'ink'
-                      && logId == 'shiftink_' + request.resource.data.shiftId
-                      && request.resource.data.byUid == request.auth.uid
-                      && isValidInkDeduction(eventId, request.resource.data.shiftId,
-                           -request.resource.data.delta);
+                      && isValidStockDeduction(eventId, request.resource.data.shiftId,
+                           request.resource.data.stockType, -request.resource.data.delta);
       }
     }
 
-    // A staff deduction batch is valid only if, in the SAME batch (get = before, getAfter = after):
-    //  - the shift belongs to the caller, was stamped with THIS event, had ended, and had no
-    //    deduction before — and has exactly `sheets` recorded after;
-    //  - THIS event's paper stock went down by exactly `sheets`, tagged with this shift.
-    // Every one of the three writes (shift mark, stock update, log) checks all of it, so none
-    // can be written without the others.
-    function isValidShiftDeduction(eventId, shiftId, sheets) {
+    function stockLogPath(eventId, logId) {
+      return /databases/$(database)/documents/events/$(eventId)/stockLogs/$(logId);
+    }
+    function shiftLogPrefix() {
+      return { 'paper': 'shift_', 'ink': 'shiftink_', 'acrylic': 'shiftacr_', 'magnetic': 'shiftmag_' };
+    }
+    // Field on shift.stockDeduction holding each stock type's amount.
+    function deductionField() {
+      return { 'paper': 'sheets', 'ink': 'cartridges', 'acrylic': 'acrylic', 'magnetic': 'magnetic' };
+    }
+
+    // The stockDeduction map a staff member writes on their own shift (no lookups).
+    // Ink must be exactly the cartridges they logged on this shift ("+ Ink change").
+    function isValidDeductionShape(sd, shift) {
+      return sd.keys().hasOnly(['eventId', 'sheets', 'cartridges', 'acrylic', 'magnetic'])
+          && sd.eventId == shift.eventId
+          && sd.sheets is number && sd.sheets >= 0
+          && sd.get('cartridges', 0) == shift.get('inkChanges', 0)
+          && sd.get('acrylic', 0) is int && sd.get('acrylic', 0) >= 0
+          && sd.get('magnetic', 0) is int && sd.get('magnetic', 0) >= 0;
+    }
+
+    // A staff deduction for ONE stock type is valid only if, in the SAME batch
+    // (get = before, getAfter = after):
+    //  - the shift belongs to the caller, was stamped with THIS event, had ended, isn't
+    //    stock-exempt, and had no deduction before — and records exactly `amount` of this
+    //    type after (ink: also equal to the shift's own inkChanges);
+    //  - THIS event's stock of this type went down by exactly `amount`, tagged with the shift.
+    // Paper is always written (may be 0); other types only when above 0.
+    function isValidStockDeduction(eventId, shiftId, stockType, amount) {
       let before = get(shiftPath(shiftId)).data;
       let after = getAfter(shiftPath(shiftId)).data;
-      let paperPath = /databases/$(database)/documents/events/$(eventId)/stock/paper;
+      let stockPath = /databases/$(database)/documents/events/$(eventId)/stock/$(stockType);
       return before.uid == request.auth.uid
           && before.get('eventId', null) == eventId
           && before.get('endTime', null) != null
           && before.get('stockDeduction', null) == null
+          && before.get('stockExempt', false) != true
+          && (stockType == 'paper' || amount > 0)
+          && (stockType != 'ink' || before.get('inkChanges', 0) == amount)
           && after.get('stockDeduction', null) != null
           && after.stockDeduction.eventId == eventId
-          && after.stockDeduction.sheets == sheets
-          && getAfter(paperPath).data.get('lastShiftId', null) == shiftId
-          && get(paperPath).data.currentQuantity - getAfter(paperPath).data.currentQuantity == sheets;
-    }
-
-    // Ink half of the same batch: THIS event's ink stock went down by exactly the cartridges
-    // recorded on the shift (its own inkChanges), tagged with this shift.
-    function isValidInkDeduction(eventId, shiftId, cartridges) {
-      let before = get(shiftPath(shiftId)).data;
-      let after = getAfter(shiftPath(shiftId)).data;
-      let inkPath = /databases/$(database)/documents/events/$(eventId)/stock/ink;
-      return cartridges > 0
-          && before.uid == request.auth.uid
-          && before.get('eventId', null) == eventId
-          && before.get('endTime', null) != null
-          && before.get('stockDeduction', null) == null
-          && before.get('inkChanges', 0) == cartridges
-          && after.get('stockDeduction', null) != null
-          && after.stockDeduction.eventId == eventId
-          && after.stockDeduction.get('cartridges', 0) == cartridges
-          && getAfter(inkPath).data.get('lastShiftId', null) == shiftId
-          && get(inkPath).data.currentQuantity - getAfter(inkPath).data.currentQuantity == cartridges;
+          && after.stockDeduction.get(deductionField()[stockType], 0) == amount
+          && getAfter(stockPath).data.get('lastShiftId', null) == shiftId
+          && get(stockPath).data.currentQuantity - getAfter(stockPath).data.currentQuantity == amount;
     }
 
     // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.

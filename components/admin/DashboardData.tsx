@@ -5,6 +5,7 @@ import { watchDashboard } from "@/lib/admin/firestore";
 import { scopeDashboard, type DateRange, type RawDashboard, type Scope, type ScopedDashboard } from "@/lib/admin/scope";
 import { DEFAULT_SHEETS_PER_BOX, DEFAULT_SHEETS_PER_PACK, type PaperSettings } from "@/lib/shift/paper";
 import { ensureStockDocs, watchEventLogs, watchEventStock } from "@/lib/inventory/firestore";
+import { emptyInventory, STOCK_TYPES } from "@/lib/inventory/types";
 import { scopeInventory, type ScopedInventory } from "@/lib/inventory/scope";
 import type { EventInventory, EventRecord } from "@/lib/inventory/types";
 import { authErrorMessage } from "@/lib/auth/errors";
@@ -78,15 +79,15 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     const patch = (id: string, p: Partial<EventInventory>) =>
       setInventories((m) => {
         const next = new Map(m);
-        next.set(id, { ...(next.get(id) ?? { paper: null, ink: null, logs: [] }), ...p });
+        next.set(id, { ...(next.get(id) ?? emptyInventory()), ...p });
         return next;
       });
     const initialised = new Set<string>();
     const unsubs = ids.flatMap((id) => [
-      watchEventStock(id, ({ paper: p, ink, fromServer }) => {
-        patch(id, { paper: p, ink });
-        // Events created before Phase 5 (e.g. the manual test doc) get stock docs on first load.
-        if (fromServer && (!p || !ink) && !initialised.has(id)) {
+      watchEventStock(id, ({ fromServer, ...stock }) => {
+        patch(id, stock);
+        // Older events (before ink/frames were tracked) get their missing stock docs on first load.
+        if (fromServer && STOCK_TYPES.some((t) => !stock[t]) && !initialised.has(id)) {
           initialised.add(id);
           ensureStockDocs(id, sheetsPerBox).catch((e) => setError(`Inventory setup: ${authErrorMessage(e)}`));
         }
@@ -159,8 +160,8 @@ export function useDashboardScope() {
 
 /** Scoped data — the ONLY data source for Overview, Staff, Shifts and Staff history. */
 export function useScopedDashboard() {
-  const { scoped, loaded, error, events, inventory } = useDashboard();
-  return { ...scoped, events, loaded, error, lowStockRows: inventory.lowRows };
+  const { scoped, loaded, error, events } = useDashboard();
+  return { ...scoped, events, loaded, error };
 }
 
 /** Pending approvals ONLY — deliberately unscoped (always global, per spec). */
