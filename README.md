@@ -1,7 +1,7 @@
 # Booth Log
 
 > **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
-> `PLAN.md`). Current state: Phase 5 — events + per-event inventory. The original single-file app lives in
+> `PLAN.md`). Current state: Phase 6 — statistics (all six phases built). The original single-file app lives in
 > `legacy/`; its instructions (further down) still apply to it.
 
 ## Rebuild — setup

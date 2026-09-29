@@ -1,209 +1,111 @@
-# PLAN — Phase 5: Events (Locations) + Per-Event Inventory
+# PLAN — Phase 6: Statistics
 
-> Phases 1–4 are built and pushed (latest `93704f6`). Once you approve, this file replaces
-> `PLAN.md`.
+> Phases 1–5, plus the ink follow-up, are built and pushed (latest `fcaccf0`). Once you
+> approve, this file replaces `PLAN.md`.
 
 ## Context
-Admins need to manage booth locations (events) properly, and track paper and ink stock per
-location. Paper changes three ways:
-- **restocks** entered in **BOXES** (`settings/paper.sheetsPerBox`, default 108);
-- **automatic deductions** when a shift ends;
-- **stock-take corrections** in sheets.
+Add a **Statistics** section to the admin dashboard with **exactly three stats**, per SPEC
+and your instruction; nothing else gets added without asking:
+1. Busiest hours
+2. Waste rate: a per-staff ranked list plus an adaptive-granularity trend chart
+3. Inventory burn-rate projection
 
-Ink is manual only. These numbers are inventory-critical, so each unit rule is enforced in
-code **and** in security rules.
+Like every other section, Statistics consumes only scoped data, so it respects the event
+switcher (and the date range where one applies). It never reads raw Firestore data directly.
 
-**Decisions you made:**
-1. **Deduction runs in the app, checked by rules.** It's one atomic write: the shift is marked
-   as deducted, the stock goes down, and a log line is written. It happens once per shift,
-   into that shift's own eventId. If it fails, the shift still ends, and admin gets
-   "N ended shifts not yet deducted" with an **Apply now** button.
-2. **Deleting a deducted shift puts its sheets back**, with a "+X — shift deleted" log line.
-3. **"Correct count"** (stock-take) exists for paper (in sheets) and ink (in cartridges),
-   labelled separately from restocks. Paper restocks stay **boxes only**.
+## 1. Where the data comes from (reusing what exists)
+- **`useScopedDashboard()`** (Phase 4) already gives `shifts` and `entries` filtered by event
+  and date range. Entries belong to their shift's event and count toward the range their
+  shift started in.
+- **`useScopedInventory()`** (Phase 5) already gives per-location rows with `forecast` (paper)
+  and `inkForecast`, using the same 14-day computation shown on Inventory.
+- All new maths goes in **`lib/stats/`** as pure, unit-tested functions.
 
-**Unit rule (CLAUDE.md), enforced throughout:**
-- Inventory uses `sheetsPerBox` only; `sheetsPerPack` is never used here.
-- Stock is stored in raw sheets.
-- The deduction amount is the shift's **actualUsed = sheets sold + hadr wasted**, NOT the
-  "expected" reconciliation figure.
+## 2. Stat 1 — Busiest hours (`lib/stats/busiest.ts`)
+- **What it counts:** sale entries in scope (event + date range), bucketed by each entry's own
+  timestamp (per spec) into a **7 × 24 grid** of weekday × hour (Mon–Sun, device-local time).
+  - Each cell holds the number of sales and the EGP taken.
+  - Waste entries are excluded: this measures sales activity only.
+- **UI:**
+  - a heatmap using the violet→magenta sequential scale from the chart tokens (empty = the
+    track colour);
+  - per-hour totals as a bar strip under the grid, and per-weekday totals down the right;
+  - a callout, e.g. "Busiest: Fri 18:00–19:00 (12 sales, 4,800 EGP)";
+  - each cell has a hover/focus title with the exact numbers;
+  - on phones the grid scrolls horizontally inside its card, never the whole page.
 
-## 1. Data model
-- **`/events/{id}`**: `{ name, notes, status: "active"|"inactive", createdAt, createdBy }`.
-  Your manual `citystars` test doc keeps working: missing fields read as `notes ""` and
-  `status "active"`, and it can be edited normally. Nothing needs replacing.
-- **`/events/{id}/stock/{paper|ink}`**:
-  - `{ currentQuantity, lowStockThreshold, updatedAt, trackingSince, lastShiftId? }`;
-  - paper quantity is in sheets, ink in cartridges;
-  - created together with the event;
-  - for events that predate Phase 5, the admin dashboard creates missing stock docs on load
-    (quantity 0, `trackingSince` = now).
-- **`/events/{id}/stockLogs/{id}`**:
-  - `{ stockType, delta, reason, kind, byUid, byName, createdAt }`;
-  - `kind` is `restock`, `correction`, `shift` or `shiftReversal`;
-  - restocks also store `boxes` and `sheetsPerBox` (the box count and the sheet delta are both
-    logged, per spec);
-  - shift logs store `shiftId`, and their doc id is `shift_{shiftId}` (at most one per shift).
-- **`/shifts/{id}.stockDeduction`**: `{ eventId, sheets }`, set once when the deduction is
-  applied.
+## 3. Stat 2 — Waste rate (`lib/stats/waste.ts`)
+- **Definition:** `wasteRate = hadr ÷ (sheets sold + hadr)`, from scoped entries. When
+  nothing was used the rate is `null` (shown as "—"), never 0%.
+- **Headline:** the overall waste rate for the scope and range, e.g. "4.2% — 3 of 71 sheets
+  wasted".
+- **Per-staff ranked list:**
+  - every staff member with sheets used in scope, ranked **highest waste first**;
+  - each row shows rate %, hadr / used, and a small bar relative to the others;
+  - "most" and "least" are marked at the top and bottom.
+- **Adaptive trend chart**, bucketed by the **shift start date** (the same rule that decides
+  which range a shift belongs to):
+  - **This week:** daily points, Monday → today.
+  - **This month:** weekly points (Monday-start weeks, clipped to the month).
+  - **All time:** monthly points, from the first month with data to now.
+  - Empty buckets leave a gap in the line; they are never plotted as 0%.
+- **Warning treatment** (amber, the same as mismatch and low-stock warnings):
+  - **High staff member:** rate ≥ **1.5×** the scope's overall rate, AND at least **2
+    percentage points** above it, AND at least **10 sheets** used. The minimum usage stops
+    one bad print looking like a crisis.
+  - **High trend point:** the same test against the range's overall rate.
+  - **Climbing:** the last **3** non-empty points each strictly higher than the one before.
+    This shows a "Waste rate climbing" tag on the chart.
+  - The thresholds live as named constants at the top of `waste.ts`, so they're easy to
+    tweak later.
+- The chart is hand-drawn SVG, reusing the Phase 1 chart tokens and `ChartDefs` gradient. No
+  new chart library is needed for these three simple charts.
 
-## 2. Inventory logic — `lib/inventory/` (pure functions, unit-tested)
-- **Boxes:** `boxesToSheets(boxes, sheetsPerBox)` and `sheetsToBoxes(sheets, sheetsPerBox)`
-  (for "≈ 3.2 boxes").
-- **Deduction amount:** `shiftActualUsed(entries)` = sheets sold + hadr, using the same
-  `aggregate()` as reconciliation.
-- **Pending deductions:** `pendingDeductions(shifts, stockByEvent)` returns shifts that:
-  - have ended;
-  - have a non-null eventId;
-  - have no `stockDeduction`;
-  - ended at or after that event's `trackingSince`, so pre-Phase-5 history is never
-    back-deducted.
-- **`unattributedShifts`**: ended shifts with no eventId. These are never deducted, and a note
-  in the UI says so.
-- **Forecast:** `forecast(logs, current, trackingSince, now)`:
-  - rolling **14-day** average daily consumption from `shift` logs minus `shiftReversal`
-    logs;
-  - divided by `min(14, days since tracking started)`, at least 1;
-  - result: "runs out in ≈ N days", or "not enough data yet".
-- **Low stock:** `isLow(stock)` = `currentQuantity < lowStockThreshold`.
-- **Tests:**
-  - 3 boxes × 108 = 324;
-  - a snapshot-free conversion from a changed `sheetsPerBox`;
-  - actualUsed ≠ expected;
-  - pending excludes shifts before tracking started, no-event shifts and already-deducted
-    shifts;
-  - forecast maths and edge cases;
-  - a unit guard: inventory code never imports or reads `sheetsPerPack` (a test greps
-    `lib/inventory`).
+## 4. Stat 3 — Inventory burn-rate projection
+- It reuses the **Phase 5 figure** (`forecastStock`, 14-day rolling average) exactly, so it
+  can't disagree with the Inventory screen.
+- **Under an event:** that location's paper card shows sheets left, average sheets per day,
+  and "runs out in ≈ N days". Ink shows the same, since it now has a forecast too.
+- **Under Global:** a combined table of every location, sorted soonest-to-run-out first. Any
+  location running out within **7 days**, or already below its low-stock threshold, gets the
+  amber treatment.
+- The date range doesn't apply here: the projection is always "the last 14 days → from now".
+  A note on the card says so.
 
-## 3. Writes — `lib/inventory/firestore.ts`
-- **`applyShiftDeduction(shift, entries, by)`** is one batch:
-  - the shift gets `stockDeduction {eventId: shift.eventId, sheets: X}`;
-  - `events/{shift.eventId}/stock/paper` gets `currentQuantity: increment(−X)`, `updatedAt`
-    and `lastShiftId`;
-  - the log `shift_{id}` is created: `{stockType:"paper", delta:−X, kind:"shift", reason:"Shift ended", shiftId}`.
-  - The eventId **always comes from the shift doc**, never from the user profile.
-- **Staff end-shift flow:** `endShift()` runs first and must succeed. Then
-  `applyShiftDeduction` runs, using the shift's live entries. A failure is only logged (no
-  scary UI), and the shift simply stays in the admin's pending list. Shifts without an
-  eventId are skipped.
-- **Admin "Apply now":** the same function, recomputing X from that shift's entries.
-- **`restockPaper(eventId, boxes, sheetsPerBox)`**: adds `boxes × sheetsPerBox` sheets and
-  logs `{kind:"restock", boxes, sheetsPerBox, delta}`.
-- **`restockInk(eventId, n)`** adds cartridges.
-- **`correctCount(eventId, type, counted, reason)`**: `delta = counted − current`, and logs a
-  `correction`.
-- **`setThreshold(eventId, type, n)`.**
-- **`deleteShiftAndEntries`** (from Phase 4) is extended: if the shift has a
-  `stockDeduction`, the final batch also adds `+sheets` back to that event's paper and logs a
-  `shiftReversal` line.
-- **Events CRUD:** `createEvent` (event + both stock docs in one batch; the default paper
-  threshold is **one box**, i.e. `sheetsPerBox` from settings; the ink threshold is 1),
-  `updateEvent` (name, notes) and `setEventStatus`. There's no hard delete, so history stays
-  intact.
-- **Paper settings editor:** `sheetsPerPack` and `sheetsPerBox` are two separate, clearly
-  labelled fields. Changing the pack size affects new shifts only (Phase 4 snapshot).
-
-## 4. Dashboard UI (`components/admin/`)
-- **Events section** (new rail item):
-  - list of events with a status tag (Active / Inactive), notes, and the number of staff
-    assigned;
-  - **New event** form (name, notes);
-  - inline edit;
-  - Deactivate / Reactivate. Deactivating warns if staff are still assigned; their next shift
-    still stamps that event until they're reassigned.
-  - Inactive events stay in the switcher (labelled "inactive", for history) but are hidden
-    from the Staff assignment dropdown.
-- **Inventory section** (new rail item), scoped by the switcher:
-  - **Event view:**
-    - **Paper card**: sheets remaining, "≈ N boxes", threshold (editable), a low-stock
-      warning in the same amber treatment as paper mismatches, and "at this rate runs out in
-      ≈ N days".
-    - Actions: **Restock (boxes)**, whose input is boxes only, with a live preview
-      "3 boxes = 324 sheets"; and **Correct count (sheets)**.
-    - **Ink card**: cartridges, Restock (cartridges), Correct count, threshold, warning.
-    - A **pending-deductions** notice with Apply now.
-    - A note: "N shifts with no event don't affect any location's inventory."
-    - **Stock log history**, most recent first: date, type, kind tag, delta (a restock also
-      shows "3 boxes"), reason, by whom.
-  - **Global view:**
-    - a side-by-side comparison table of every event: paper sheets, boxes, threshold, status,
-      days left, ink;
-    - a low-stock banner if ANY location is under its threshold;
-    - pending deductions across all events;
-    - the Paper settings card (pack vs box).
-- **Overview:** adds a scoped low-stock banner (Global: any event; event: that event).
-- **Shifts:** the expanded shift shows its stock status: "Deducted 2 sheets from City Stars",
-  "Not yet deducted" with Apply now, or "No event — doesn't affect inventory".
-- **Staff:** the assignment dropdown lists active events only (plus the current value if it's
-  inactive).
-
-## 5. Security rules
-- **`/events/{id}`:** read by **approved** users (per spec; staff still never see events in
-  the UI), write by admin only.
-- **`stock/{type}` and `stockLogs/{id}`:** read by approved users, write by admin, **plus
-  one narrow staff path for the shift-end deduction**. All three writes must land together in
-  one batch:
-  - **Shift update** (a new branch for the owner): the shift has already ended; it had no
-    `stockDeduction`; only `stockDeduction` changes;
-    `stockDeduction.eventId == resource.data.eventId != null`; `sheets` is a number ≥ 0; and
-    `existsAfter(events/{eventId}/stockLogs/shift_{id})`.
-  - **Stock paper update** by staff: only `currentQuantity`, `updatedAt` and `lastShiftId`
-    change. `lastShiftId` names a shift the caller owns, which:
-    - belongs to THIS event;
-    - had no `stockDeduction` before the batch (`get`) and has one after (`getAfter`);
-    - satisfies `old − new == getAfter(shift).stockDeduction.sheets`.
-  - **Stock log create** by staff: the id is `shift_{shiftId}`; kind `shift`, stockType
-    `paper`; `delta == −getAfter(shift).stockDeduction.sheets`; the event matches; the log
-    didn't exist before (a create can't overwrite).
-  - Staff cannot restock, correct, change thresholds, write ink, or touch another event or
-    shift.
-- The Phase 4 locked-key list for staff shift updates adds `stockDeduction`, so the general
-  update path can't set it.
+## 5. UI
+- **Placement:** a new rail item **Statistics** (a chart icon) plus the phone pill nav. The
+  section has three cards in spec order: Busiest hours, Waste rate, Burn rate.
+- **Scope chip:** the switcher chip shows "Showing: {event} · {range}". The Burn-rate card
+  notes that the range doesn't apply to it.
+- **Empty states:** each card has a clear empty state, e.g. "No sales in this range at City
+  Stars".
+- Before writing chart code I'll load the `dataviz` skill for the chart conventions.
 
 ## 6. Files
 New:
-- `lib/inventory/{units,forecast,pending,firestore}.ts` + tests
-- `components/admin/{EventsSection,InventorySection,StockCards,StockLog,PaperSettingsCard}.tsx`
+- `lib/stats/{busiest,waste,burn}.ts` + `stats.test.ts`
+- `components/admin/stats/{StatisticsSection,BusiestHours,WasteRate,BurnRate}.tsx`
 
 Modified:
-- `lib/admin/{scope,firestore}.ts`: events with status, stock and logs listeners, low-stock
-  in scope, reversal on delete
-- `components/admin/{AdminDashboard,DashboardData,Sections,ShiftPieces}.tsx`
-- `components/shift/StaffShiftScreen.tsx`: deduction after end
-- `lib/shift/types.ts`
-- `firestore.rules`
+- `components/admin/AdminDashboard.tsx`: nav + section
+- `components/admin/Sections.tsx`: `Section` type
 - `README.md`
 
 ## 7. Verification
-- **Unit tests** as in §2.
-- **Emulator rules tests:**
-  - a valid staff deduction passes;
-  - denied cases:
-    - a wrong eventId (e.g. the staff member's NEW assignment rather than the shift's);
-    - a second deduction for the same shift;
-    - a deduction on another user's shift;
-    - a deduction on an open shift;
-    - an amount that doesn't match between stock, log and shift;
-    - skipping one of the three writes;
-    - staff restock, staff ink write, or staff threshold change;
-  - admin restock, correction and apply-now pass;
-  - approved users can read events and pending users can't;
-  - regression runs of the Phase 2–4 suites.
+- **Unit tests:**
+  - **Busiest hours:** bucketing, including local-time hour and weekday, Sunday → Mon-first
+    index, and excluding waste entries.
+  - **Waste rate:**
+    - the rate maths and the `null` case;
+    - staff ranking and high flags, including the ≥ 10-sheets minimum;
+    - bucket boundaries for week (daily), month (weekly, clipped) and all time (monthly);
+    - gaps for empty buckets;
+    - "climbing" detection.
+  - **Burn rate:** the table sort, and the ≤ 7-days warning.
 - **Playwright against the emulators:**
-  1. Create an event in the UI; its stock docs exist.
-  2. Assign staff.
-  3. Restock 2 boxes → 216 sheets, with a log showing "2 boxes, +216".
-  4. Staff shift: sell 1.5, waste 0.5, end → **214**, log `−2 · Shift ended`, and the shift
-     shows "Deducted 2".
-  5. **Reassign staff mid-shift** to event B → the shift still deducts from **A**; B is
-     untouched.
-  6. Delete that shift → stock is restored, with a reversal log.
-  7. Correct count → delta logged.
-  8. Ink restock and low-stock banner (Overview + Inventory Global).
-  9. Seeded ended shift without a deduction → pending → Apply now.
-  10. A no-event shift is never deducted, and the note is shown.
-  11. The Global comparison table.
-  12. Deactivate an event → it's hidden from the assign dropdown.
-  13. Screenshots at 1440 and 390 px.
-- `npm test`, lint, build. Commit and push. Stop before Phase 6.
+  - seed two events with differently timed sales and different waste per staff member;
+  - switch Global → Event A → Event B and assert each card's numbers change: heatmap peak cell
+    and totals, overall waste %, staff list membership and order, trend point count per
+    range (7 / weeks / months), and burn-rate rows;
+  - screenshots at 1440 and 390 px.
+- `npm test`, lint, build. Commit and push, then tell you how to check each stat's scoping.

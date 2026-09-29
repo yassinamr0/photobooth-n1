@@ -3,6 +3,8 @@ import { cn } from "@/lib/cn";
 
 export type RailItem = {
   label: string;
+  /** Short text shown under the icon (defaults to label). */
+  caption?: string;
   icon: ReactNode;
   href?: string;
   /** In-app navigation (renders a button instead of a link). */
@@ -11,8 +13,8 @@ export type RailItem = {
 };
 
 /**
- * Minimal icon-only left navigation for the admin dashboard.
- * Labels are exposed via aria-label + title (tooltip). Hidden below md.
+ * Left navigation for the admin dashboard: icon + short visible caption for every section
+ * (icon-only proved hard to find things in). Sticky, full height. Hidden below md.
  */
 export function SidebarRail({
   logo,
@@ -26,16 +28,14 @@ export function SidebarRail({
   return (
     <nav
       aria-label="Main"
-      className="relative hidden w-[72px] shrink-0 flex-col items-center gap-2 border-r border-line py-5 md:flex"
+      className="sticky top-0 z-10 hidden h-dvh w-[92px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-line bg-canvas py-5 md:flex"
     >
       {logo && <div className="mb-4">{logo}</div>}
       {items.map((item) => {
         const className = cn(
-          "grid size-11 place-items-center rounded-full transition-colors [&_svg]:size-5",
+          "group flex w-[76px] flex-col items-center gap-1 rounded-[14px] px-1 py-2 text-center transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60",
-          item.active
-            ? "bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgb(217_70_239/0.8)]"
-            : "text-ink-faint hover:bg-surface-2 hover:text-ink",
+          item.active ? "text-ink" : "text-ink-faint hover:bg-surface-2 hover:text-ink",
         );
         const common = {
           "aria-label": item.label,
@@ -43,13 +43,26 @@ export function SidebarRail({
           "aria-current": item.active ? ("page" as const) : undefined,
           className,
         };
+        const content = (
+          <>
+            <span
+              className={cn(
+                "grid size-10 place-items-center rounded-full [&_svg]:size-5",
+                item.active && "bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgb(217_70_239/0.8)]",
+              )}
+            >
+              {item.icon}
+            </span>
+            <span className="text-[11px] leading-tight font-semibold">{item.caption ?? item.label}</span>
+          </>
+        );
         return item.onClick ? (
           <button key={item.label} type="button" onClick={item.onClick} {...common}>
-            {item.icon}
+            {content}
           </button>
         ) : (
           <a key={item.label} href={item.href ?? "#"} {...common}>
-            {item.icon}
+            {content}
           </a>
         );
       })}

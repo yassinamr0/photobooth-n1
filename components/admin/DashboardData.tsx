@@ -180,3 +180,13 @@ export function useEvents() {
   const { events, raw } = useDashboard();
   return { events, users: raw.users };
 }
+
+/**
+ * Raw (unscoped) data + the current scope — ONLY for computations that must look outside
+ * the selected date range but still apply the same scoping rules (e.g. "vs last period"
+ * and the location comparison in Statistics). Sections should use useScopedDashboard.
+ */
+export function useDashboardRaw() {
+  const { raw, scope, range } = useDashboard();
+  return { raw, scope, range };
+}

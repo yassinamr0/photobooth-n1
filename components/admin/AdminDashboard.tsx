@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
+import { BarChart3, Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Spinner } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import { DashboardDataProvider, useDashboardScope, usePendingUsers, useScopedDas
 import { OverviewSection, PendingSection, ShiftsSection, StaffHistoryView, StaffSection, type Section } from "./Sections";
 import { InventorySection } from "./InventorySection";
 import { EventsSection } from "./EventsSection";
+import { StatisticsSection } from "./stats/StatisticsSection";
 
 export function AdminDashboard() {
   return (
@@ -25,13 +26,14 @@ export function AdminDashboard() {
   );
 }
 
-const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "Overview", icon: <LayoutGrid /> },
-  { id: "pending", label: "Pending approvals", icon: <UserCheck /> },
-  { id: "staff", label: "Staff", icon: <Users /> },
-  { id: "shifts", label: "Shifts", icon: <CalendarClock /> },
-  { id: "inventory", label: "Inventory", icon: <Boxes /> },
-  { id: "events", label: "Events", icon: <MapPin /> },
+const NAV: { id: Section; label: string; caption: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "Overview", caption: "Overview", icon: <LayoutGrid /> },
+  { id: "pending", label: "Pending approvals", caption: "Pending", icon: <UserCheck /> },
+  { id: "staff", label: "Staff", caption: "Staff", icon: <Users /> },
+  { id: "shifts", label: "Shifts", caption: "Shifts", icon: <CalendarClock /> },
+  { id: "inventory", label: "Inventory", caption: "Inventory", icon: <Boxes /> },
+  { id: "statistics", label: "Statistics", caption: "Statistics", icon: <BarChart3 /> },
+  { id: "events", label: "Events", caption: "Events", icon: <MapPin /> },
 ];
 
 function DashboardInner() {
@@ -58,6 +60,7 @@ function DashboardInner() {
           }
           items={NAV.map((n) => ({
             label: n.id === "pending" && pending.length ? `${n.label} (${pending.length})` : n.label,
+            caption: n.caption,
             icon: (
               <span className="relative">
                 {n.icon}
@@ -88,7 +91,7 @@ function DashboardInner() {
           </div>
           <ScopeBar section={historyUid ? "staff" : section} />
           {/* Phone-width nav (the rail is hidden below md) */}
-          <nav aria-label="Sections" className="-mx-1 flex gap-2 overflow-x-auto px-1 md:hidden">
+          <nav aria-label="Sections" className="flex flex-wrap gap-2 md:hidden">
             {NAV.map((n) => (
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-full border px-4 text-sm font-semibold",
@@ -115,6 +118,8 @@ function DashboardInner() {
           <InventorySection />
         ) : section === "events" ? (
           <EventsSection />
+        ) : section === "statistics" ? (
+          <StatisticsSection />
         ) : (
           <ShiftsSection />
         )}

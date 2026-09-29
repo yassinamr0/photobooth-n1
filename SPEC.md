@@ -62,6 +62,8 @@ screens is much more expensive than establishing it up front.
   top of a soft pastel gradient (blush pink → lavender → soft blue) that stays visible in the
   margin around the panel — a dark floating card resting on a colorful surface, not an
   edge-to-edge dark page. This framing device is a deliberate, key part of the look.
+  - OWNER CHANGE (after Phase 6): the pastel border was removed — the app is now an
+    edge-to-edge dark canvas on every screen. Do not reintroduce the gradient frame.
 - Inside the dark panel: individual cards use a slightly lighter dark shade than the base
   background, rounded corners (12–16px), thin subtle borders, soft drop shadows.
 - Primary accent: a vivid violet-to-magenta/pink gradient, used specifically for data
@@ -70,6 +72,9 @@ screens is much more expensive than establishing it up front.
   rather than flat fills everywhere — reads as custom-designed, not templated.
 - Bold, large, confident sans-serif display type for headers/greetings.
 - Minimal, icon-only left sidebar navigation for the admin dashboard.
+  - OWNER CHANGE (after Phase 6): every sidebar icon has a short visible text label under it
+    (icon-only made sections like Statistics hard to find); the phone nav wraps instead of
+    scrolling sideways.
 - Pill-shaped buttons and small rounded status/category tags throughout (role badges, event
   status, the paper-mismatch warning flag, low-stock warnings).
 - Rounded-square avatar treatment for staff profile photos if/when added; stacked, slightly
@@ -312,6 +317,14 @@ Build exactly these three — do not add more without checking first:
    - Visually distinguish an unusually high or climbing rate (warning color) from normal.
 3. **Inventory burn-rate projection**: surfaced here too (per-location under a specific
    event, or the combined table under "Global") — same figure as computed in Phase 5.
+
+Owner-approved additions (after Phase 6), same scoping rules as everything else:
+4. **Revenue trend** (daily/weekly/monthly by range) + "vs same point last period"
+   (week-to-date vs last week to the same moment; month likewise; none for All time).
+5. **Locations compared**: every event side by side — revenue, sales, avg sale, hours
+   clocked in, EGP/hour, sheets sold, waste % (+ a "No event" row for unattributed shifts);
+   selected event highlighted. Each row equals that event's Overview for the same range.
+6. **Cash vs Visa**: share of payments + split per period.
 
 ---
 
