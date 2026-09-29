@@ -21,7 +21,9 @@ export function PanelFrame({
   className?: string;
 }) {
   return (
-    <div className="min-h-dvh p-3 md:p-6 lg:p-8">
+    // Safe-area padding: when installed to an iPhone home screen the page runs full-screen
+    // under the status bar / notch / home indicator, so never let the panel go beneath them.
+    <div className="min-h-dvh p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:p-6 lg:p-8">
       <div
         className={cn(
           "relative flex min-h-[calc(100dvh-1.5rem)] overflow-hidden bg-canvas shadow-panel",
