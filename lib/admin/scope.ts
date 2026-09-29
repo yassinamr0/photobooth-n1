@@ -99,8 +99,21 @@ export function eventLabel(events: EventDoc[], eventId: string | null): string |
 }
 
 export function scopeDashboard(raw: RawDashboard, scope: Scope, range: DateRange, now = new Date()): ScopedDashboard {
-  const from = rangeStart(range, now);
-  const inRange = (iso: string | null | undefined) => !from || (!!iso && new Date(iso) >= from);
+  return scopeWindow(raw, scope, rangeStart(range, now), null);
+}
+
+/**
+ * Same scoping rules as scopeDashboard, over an explicit time window [from, until)
+ * (null = unbounded). Used for "vs previous period" comparisons so both periods are
+ * computed by exactly the same rules.
+ */
+export function scopeWindow(raw: RawDashboard, scope: Scope, from: Date | null, until: Date | null): ScopedDashboard {
+  const inRange = (iso: string | null | undefined) => {
+    if (!from && !until) return true;
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return (!from || t >= from.getTime()) && (!until || t < until.getTime());
+  };
   const inScope = (s: Shift) => scope === "global" || s.eventId === scope;
 
   const usersById = new Map(raw.users.map((u) => [u.uid, u]));

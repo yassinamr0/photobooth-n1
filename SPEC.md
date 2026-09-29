@@ -318,6 +318,14 @@ Build exactly these three — do not add more without checking first:
 3. **Inventory burn-rate projection**: surfaced here too (per-location under a specific
    event, or the combined table under "Global") — same figure as computed in Phase 5.
 
+Owner-approved additions (after Phase 6), same scoping rules as everything else:
+4. **Revenue trend** (daily/weekly/monthly by range) + "vs same point last period"
+   (week-to-date vs last week to the same moment; month likewise; none for All time).
+5. **Locations compared**: every event side by side — revenue, sales, avg sale, hours
+   clocked in, EGP/hour, sheets sold, waste % (+ a "No event" row for unattributed shifts);
+   selected event highlighted. Each row equals that event's Overview for the same range.
+6. **Cash vs Visa**: share of payments + split per period.
+
 ---
 
 ## FULL FIRESTORE SECURITY RULES (consolidated reference — paste into Firebase console once
