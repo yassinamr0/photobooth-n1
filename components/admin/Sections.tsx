@@ -15,7 +15,7 @@ import { useDashboardScope, usePendingUsers, useScopedDashboard } from "./Dashbo
 import { MismatchIcon, ShiftRow, StatGrid } from "./ShiftPieces";
 import { LowStockBanner } from "./InventorySection";
 
-export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events";
+export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events" | "statistics";
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;

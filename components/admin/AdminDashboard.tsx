@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
+import { BarChart3, Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Spinner } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import { DashboardDataProvider, useDashboardScope, usePendingUsers, useScopedDas
 import { OverviewSection, PendingSection, ShiftsSection, StaffHistoryView, StaffSection, type Section } from "./Sections";
 import { InventorySection } from "./InventorySection";
 import { EventsSection } from "./EventsSection";
+import { StatisticsSection } from "./stats/StatisticsSection";
 
 export function AdminDashboard() {
   return (
@@ -31,6 +32,7 @@ const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "staff", label: "Staff", icon: <Users /> },
   { id: "shifts", label: "Shifts", icon: <CalendarClock /> },
   { id: "inventory", label: "Inventory", icon: <Boxes /> },
+  { id: "statistics", label: "Statistics", icon: <BarChart3 /> },
   { id: "events", label: "Events", icon: <MapPin /> },
 ];
 
@@ -115,6 +117,8 @@ function DashboardInner() {
           <InventorySection />
         ) : section === "events" ? (
           <EventsSection />
+        ) : section === "statistics" ? (
+          <StatisticsSection />
         ) : (
           <ShiftsSection />
         )}
