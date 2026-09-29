@@ -3,7 +3,7 @@ import { scopeDashboard, scopeWindow, type RawDashboard, type Scope, type Scoped
 import { breakEven, type BreakEven } from "./breakeven";
 import type { CostStep } from "./costs";
 import { feeOn, saleFee, type FeeStep } from "./fees";
-import { cartridgesPerSheet, productBreakdown, type ProductBreakdown } from "./products";
+import { productBreakdown, type ProductBreakdown } from "./products";
 import { comparisonWindows } from "@/lib/stats/revenue";
 import { trendBuckets } from "@/lib/stats/waste";
 import { recurringShare } from "./recurring";
@@ -209,7 +209,7 @@ function daysToDate(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): 
 /** Profit per product + waste cost for a scope/range (analysis only). */
 export function pnlProducts(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): ProductBreakdown {
   const d = scopeDashboard(inp.raw, scope, range, now);
-  return productBreakdown(d, inp.fees ?? [], inp.costs ?? [], inp.sheetsPerBox ?? 0, cartridgesPerSheet(inp.raw, scope));
+  return productBreakdown(d, inp.fees ?? [], inp.costs ?? [], inp.sheetsPerBox ?? 0);
 }
 
 export type BreakEvenRow = { id: string | null; name: string; be: BreakEven; materialsMissing: boolean };

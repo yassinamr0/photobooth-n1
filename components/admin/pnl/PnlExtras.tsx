@@ -17,6 +17,7 @@ import { breakEvenByLocation, pnlBreakEven, pnlProducts, type PnlInputs } from "
 import { costsOn, paperPerSheet, type CostStep } from "@/lib/pnl/costs";
 import { describeFee, feeOn, type FeeMode } from "@/lib/pnl/fees";
 import { saveCosts, saveFee } from "@/lib/pnl/firestore";
+import { savePaperSettings } from "@/lib/admin/firestore";
 import type { BreakEven } from "@/lib/pnl/breakeven";
 import { usePnl } from "../DashboardData";
 
@@ -157,7 +158,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
         {p.waste.sheets === 0 ? (
           <span className="text-ink-muted">No hadr waste in this range.</span>
         ) : p.waste.cost == null ? (
-          <span className="text-ink-muted">{fmtNum(p.waste.sheets)} sheets wasted — set paper and ink costs to see what that cost.</span>
+          <span className="text-ink-muted">{fmtNum(p.waste.sheets)} sheets wasted — set the box price to see what that cost.</span>
         ) : (
           <span className="text-ink-muted">
             Waste cost you <b className="text-ink">{egp(p.waste.cost)}</b> ({fmtNum(p.waste.sheets)} sheet{p.waste.sheets === 1 ? "" : "s"} of paper + ink)
@@ -166,7 +167,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
       </div>
       <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />
-        Frames count at full price; prints take any discount. Ink per sheet comes from the ink changes staff logged. This is an
+        Frames count at full price; prints take any discount. A printed sheet costs the box price ÷ sheets in a box (ink included). This is an
         analysis — your headline profit already includes stock purchases as expenses, so materials aren&apos;t subtracted twice.
         {p.missingCosts && " Set your costs in “What things cost you” below to fill in the blanks."}
       </p>
@@ -250,39 +251,58 @@ export function CostsCard() {
   const today = dayKey(new Date());
   const current = costsOn(costs, today);
   const [v, setV] = useState<Omit<CostStep, "from">>({
-    paperBox: current?.paperBox ?? null, inkCartridge: current?.inkCartridge ?? null, acrylic: current?.acrylic ?? null, magnetic: current?.magnetic ?? null,
+    paperBox: current?.paperBox ?? null, cartridgesPerBox: current?.cartridgesPerBox ?? null, acrylic: current?.acrylic ?? null, magnetic: current?.magnetic ?? null,
   });
+  // Sheets per BOX is the same setting Inventory restocks use (settings/paper) — one box, one number.
+  const [sheetsPerBox, setSheetsPerBox] = useState<number | null>(paper.sheetsPerBox);
   const [from, setFrom] = useState(today);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const perSheet = paperPerSheet({ from, ...v }, paper.sheetsPerBox);
-  const field = (k: keyof typeof v, label: string, testid: string) => (
+  const perSheet = paperPerSheet({ from, ...v }, sheetsPerBox ?? 0);
+  const field = (k: keyof typeof v, label: string, testid: string, hint?: string) => (
     <div>
       <label htmlFor={`cost-${k}`} className={lbl}>{label}</label>
       <NumberInput id={`cost-${k}`} data-testid={testid} value={v[k]} onChange={(x) => setV({ ...v, [k]: x })} className="h-11 text-base" />
+      {hint && <p className="mt-1 text-[11px] text-ink-faint">{hint}</p>}
     </div>
   );
   return (
     <Card padding="lg" data-testid="costs-card">
       <CardHeader title="What things cost you" subtitle="Used for profit per product, waste cost and break-even" action={<Package className="size-5 text-ink-faint" />} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {field("paperBox", `Box of paper (${fmtNum(paper.sheetsPerBox)} sheets)`, "cost-paper")}
-        {field("inkCartridge", "Ink cartridge", "cost-ink")}
-        {field("acrylic", "Acrylic frame", "cost-acrylic")}
-        {field("magnetic", "Magnetic frame", "cost-magnetic")}
+      <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-muted uppercase">Box of paper (ink included)</h4>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {field("paperBox", "Box price (EGP)", "cost-paper")}
+        <div>
+          <label htmlFor="cost-sheetsPerBox" className={lbl}>Sheets in a box</label>
+          <NumberInput id="cost-sheetsPerBox" data-testid="cost-sheets" value={sheetsPerBox} onChange={setSheetsPerBox} inputMode="numeric" className="h-11 text-base" />
+          <p className="mt-1 text-[11px] text-ink-faint">Same box you restock in Inventory</p>
+        </div>
+        {field("cartridgesPerBox", "Ink cartridges in a box", "cost-cartridges")}
+      </div>
+      {perSheet != null && (
+        <p data-testid="cost-per-sheet" className="mt-2 text-xs text-ink-muted">
+          = {formatEGP(Math.round(perSheet * 100) / 100)} per printed sheet (paper + ink)
+          {v.cartridgesPerBox != null && ` · ${fmtNum(v.cartridgesPerBox)} cartridge${v.cartridgesPerBox === 1 ? "" : "s"} per ${fmtNum(sheetsPerBox ?? 0)} sheets`}
+        </p>
+      )}
+      <h4 className="mt-5 mb-2 text-xs font-semibold tracking-wide text-ink-muted uppercase">Frames</h4>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {field("acrylic", "Acrylic frame (EGP)", "cost-acrylic")}
+        {field("magnetic", "Magnetic frame (EGP)", "cost-magnetic")}
         <div>
           <label htmlFor="cost-from" className={lbl}>Applies from</label>
           <input id="cost-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input} />
         </div>
       </div>
-      {perSheet != null && <p className="mt-3 text-xs text-ink-muted">= {formatEGP(Math.round(perSheet * 100) / 100)} per sheet of paper</p>}
-      <p className="mt-1 text-xs text-ink-faint">All in EGP. Stays in force until you change it — earlier days keep the costs they had.</p>
+      <p className="mt-3 text-xs text-ink-faint">Prices stay in force until you change them — earlier days keep the prices they had.</p>
       <div className="mt-3"><FormError>{error}</FormError></div>
       <Button className="mt-3" size="sm" loading={busy} data-testid="costs-save"
         onClick={async () => {
           setBusy(true);
           setError(null);
           try {
+            if (sheetsPerBox !== paper.sheetsPerBox)
+              await savePaperSettings({ sheetsPerPack: paper.sheetsPerPack, sheetsPerBox: sheetsPerBox ?? 0 });
             await saveCosts(costs, { from, ...v });
             toast(`Costs saved — apply from ${dayText(from)}`, "success");
           } catch (e) {
@@ -297,7 +317,8 @@ export function CostsCard() {
         <ul className="mt-4 flex flex-col gap-1 border-t border-line pt-3 text-xs text-ink-muted">
           {[...costs].sort((a, b) => b.from.localeCompare(a.from)).map((c) => (
             <li key={c.from}>
-              From {dayText(c.from)}: paper {c.paperBox == null ? "—" : egp(c.paperBox)}/box · ink {c.inkCartridge == null ? "—" : egp(c.inkCartridge)} ·
+              From {dayText(c.from)}: box {c.paperBox == null ? "—" : egp(c.paperBox)}
+              {c.cartridgesPerBox != null && ` (${fmtNum(c.cartridgesPerBox)} cartridge${c.cartridgesPerBox === 1 ? "" : "s"})`} ·
               acrylic {c.acrylic == null ? "—" : egp(c.acrylic)} · magnetic {c.magnetic == null ? "—" : egp(c.magnetic)}
             </li>
           ))}
@@ -316,11 +337,7 @@ export function EmailCard() {
     <Card padding="lg" data-testid="email-card">
       <CardHeader title="Daily summary email" subtitle="Every morning at 9:00 (Cairo): yesterday's revenue & profit, shifts, month so far and alerts"
         action={<Mail className="size-5 text-ink-faint" />} />
-      <p className="text-sm text-ink-muted">
-        Sent automatically once it&apos;s set up in Vercel (see the README). Use the button to check it works — it sends the
-        summary right now.
-      </p>
-      <Button className="mt-4" size="sm" variant="secondary" loading={busy} data-testid="email-test"
+      <Button size="sm" variant="secondary" loading={busy} data-testid="email-test"
         onClick={async () => {
           setBusy(true);
           setResult(null);

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Camera } from "lucide-react";
+import Image from "next/image";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 
 /** Centered mobile-style frame used by every auth screen. */
@@ -19,9 +19,8 @@ export function AuthShell({
       <div className="flex min-h-[80dvh] flex-col justify-center gap-8 py-6">
         <div className="flex flex-col items-center gap-4 text-center">
           {icon ?? (
-            <span className="grid size-14 place-items-center rounded-[16px] bg-gold text-[#1a1406]">
-              <Camera className="size-6" />
-            </span>
+            <Image src="/icons/icon-192.png" alt="Memoire" width={64} height={64} priority
+              data-testid="auth-logo" className="size-16 rounded-[16px]" />
           )}
           <div>
             <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>

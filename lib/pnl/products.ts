@@ -1,5 +1,5 @@
 import { dayKey } from "@/lib/admin/range";
-import type { RawDashboard, Scope, ScopedDashboard } from "@/lib/admin/scope";
+import type { ScopedDashboard } from "@/lib/admin/scope";
 import { FRAME_PRICES } from "@/lib/shift/pricing";
 import { costsOn, paperPerSheet, type CostStep } from "./costs";
 import { feeOn, saleFee, type FeeStep } from "./fees";
@@ -12,8 +12,8 @@ import { feeOn, saleFee, type FeeStep } from "./fees";
  *   - prints take whatever is left (so discounts / price overrides land on prints);
  *   - a sale with no prints puts any difference in "Adjustments".
  * The sale's card fee is shared between its products by revenue.
- * Materials: paper per sheet (box price ÷ sheets per BOX) + ink per sheet (cartridges per
- * sheet from all of the scope's shifts × cartridge price) for prints; frame cost for frames.
+ * Materials: per printed sheet = box price ÷ sheets per BOX (the box includes its ink) for
+ * prints; frame cost for frames.
  * Costs/fees use the settings in force on the day the sale's SHIFT started.
  */
 
@@ -33,28 +33,13 @@ export type ProductBreakdown = {
   materials: number | null; // total, null when any sold product's cost is missing
   missingCosts: boolean;
   waste: { sheets: number; cost: number | null };
-  inkPerSheet: number | null;
 };
-
-/** Cartridges per sheet used (sold + hadr) across ALL of the scope's shifts — stable estimate. */
-export function cartridgesPerSheet(raw: RawDashboard, scope: Scope): number {
-  const shifts = raw.shifts.filter((s) => scope === "global" || s.eventId === scope);
-  const ids = new Set(shifts.map((s) => s.id));
-  const cartridges = shifts.reduce((n, s) => n + (s.inkChanges || 0), 0);
-  let sheets = 0;
-  for (const e of raw.entries) {
-    if (!ids.has(e.shiftId)) continue;
-    sheets += e.type === "sale" ? e.sheets || 0 : e.hadr || 0;
-  }
-  return sheets > 0 ? cartridges / sheets : 0;
-}
 
 export function productBreakdown(
   d: ScopedDashboard,
   fees: FeeStep[],
   costs: CostStep[],
   sheetsPerBox: number,
-  cartridgesPerSheetRatio: number,
 ): ProductBreakdown {
   const startDay = new Map(d.shifts.map((s) => [s.shift.id, dayKey(new Date(s.shift.startTime))]));
   const dayOf = (shiftId: string, time: string) => startDay.get(shiftId) ?? dayKey(new Date(time || Date.now()));
@@ -65,15 +50,9 @@ export function productBreakdown(
     custom: { units: 0, revenue: 0, fees: 0, materials: 0, missing: false },
     adjust: { units: 0, revenue: 0, fees: 0, materials: 0, missing: false },
   };
-  const perSheet = (day: string) => {
-    const c = costsOn(costs, day);
-    const paper = paperPerSheet(c, sheetsPerBox);
-    const ink = c?.inkCartridge == null ? null : c.inkCartridge * cartridgesPerSheetRatio;
-    return paper == null || ink == null ? null : paper + ink;
-  };
+  const perSheet = (day: string) => paperPerSheet(costsOn(costs, day), sheetsPerBox);
   let wasteSheets = 0;
   let wasteCost: number | null = 0;
-  let inkPerSheet: number | null = null;
 
   for (const e of d.entries) {
     const day = dayOf(e.shiftId, e.time);
@@ -125,8 +104,6 @@ export function productBreakdown(
     acc.custom.units += (e.custom ?? []).length;
     if (parts.adjust !== 0) acc.adjust.units += 1;
   }
-  const latest = costsOn(costs, dayKey(new Date()));
-  if (latest?.inkCartridge != null) inkPerSheet = latest.inkCartridge * cartridgesPerSheetRatio;
 
   const LABEL: Record<ProductKey, string> = {
     prints: "Prints (0.5 sheet)", acrylic: "Acrylic frames", magnetic: "Magnetic frames", custom: "Custom items", adjust: "Adjustments",
@@ -144,6 +121,5 @@ export function productBreakdown(
     materials: missingCosts ? null : rows.reduce((s, r) => s + (r.materials ?? 0), 0),
     missingCosts,
     waste: { sheets: wasteSheets, cost: wasteCost },
-    inkPerSheet,
   };
 }
