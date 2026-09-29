@@ -1,7 +1,7 @@
 # PLAN — Custom date range + P&L
 
-> The previous batch (frames, mark as read, remove staff, tag tool, desktop layouts, commas)
-> is built and pushed (`e9352c8`). This plan needs approval before any code is written.
+> Approved with one change: monthly (recurring) expenses are **spread evenly across the days
+> of each month** instead of counting in full on one day.
 
 ## Owner's answers
 - **Expenses:** one-off, plus recurring monthly (e.g. rent).
@@ -42,12 +42,10 @@
   - **Location** is an event, or **General**, for costs not tied to one booth (e.g.
     accounting). General costs only count under Global.
 - **Recurring expense (monthly):**
-  - **Fields:** amount, category, location, day of the month, start month, optional end month,
-    and a Stop button.
-  - **When it counts:** it counts the full amount once per month, on its day, whenever that
-    day falls in the selected range. It isn't spread across days, so a single-week view only
-    includes rent if the rent day is in that week. If the day is 31 and the month is shorter,
-    it counts on the month's last day.
+  - **Fields:** amount, category, location, start month, optional end month, and a Stop
+    button.
+  - **When it counts (owner's change):** the monthly amount is spread evenly over the days of
+    each month (amount ÷ days in that month, per day), so any range gets its fair share.
   - **Changing the amount** (e.g. a rent increase) applies from the month you change it. Past
     months keep the old amount, because each change is stored with the month it starts from.
 - **Managing expenses:** you can edit or delete any expense, and there's a list of every

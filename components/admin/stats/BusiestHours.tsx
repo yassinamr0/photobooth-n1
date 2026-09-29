@@ -105,17 +105,19 @@ export function BusiestHours({ entries, scopeLabel }: { entries: Entry[]; scopeL
             More sales
           </div>
           {/* Table view for screen readers */}
-          <table className="sr-only">
-            <caption>Sales count by weekday and hour</caption>
-            <tbody>
-              {WEEKDAYS.map((d, w) => (
-                <tr key={d}>
-                  <th scope="row">{d}</th>
-                  {b.grid[w].map((c, h) => (c.sales ? <td key={h}>{`${hourLabel(h)}: ${c.sales}`}</td> : null))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="sr-only">
+            <table>
+              <caption>Sales count by weekday and hour</caption>
+              <tbody>
+                {WEEKDAYS.map((d, w) => (
+                  <tr key={d}>
+                    <th scope="row">{d}</th>
+                    {b.grid[w].map((c, h) => (c.sales ? <td key={h}>{`${hourLabel(h)}: ${c.sales}`}</td> : null))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </Card>

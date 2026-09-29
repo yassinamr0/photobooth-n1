@@ -19,7 +19,9 @@ import type { UserProfile } from "@/lib/users";
  */
 
 export type Scope = "global" | string; // event id
-export type DateRange = "week" | "month" | "all";
+import { rangeWindow, type DateRange } from "./range";
+export { rangeStart, startOfMonth, startOfWeek } from "./range";
+export type { DateRange } from "./range";
 
 import type { EventRecord } from "@/lib/inventory/types";
 
@@ -69,25 +71,6 @@ export type ScopedDashboard = {
   dateGroups: DateGroup[];
 };
 
-/** Monday 00:00 local (matches the legacy app). */
-export function startOfWeek(now: Date) {
-  const d = new Date(now);
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-export function startOfMonth(now: Date) {
-  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-}
-
-export function rangeStart(range: DateRange, now: Date): Date | null {
-  if (range === "week") return startOfWeek(now);
-  if (range === "month") return startOfMonth(now);
-  return null;
-}
-
 export function localDateKey(iso: string) {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -99,7 +82,8 @@ export function eventLabel(events: EventDoc[], eventId: string | null): string |
 }
 
 export function scopeDashboard(raw: RawDashboard, scope: Scope, range: DateRange, now = new Date()): ScopedDashboard {
-  return scopeWindow(raw, scope, rangeStart(range, now), null);
+  const w = rangeWindow(range, now);
+  return scopeWindow(raw, scope, w.from, w.until);
 }
 
 /**

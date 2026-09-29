@@ -1,5 +1,5 @@
+import { addDays, customDays, isCustom, parseDay, rangeStart, rangeWindow } from "@/lib/admin/range";
 import {
-  rangeStart,
   scopeDashboard,
   scopeWindow,
   type DateRange,
@@ -29,8 +29,15 @@ export type PeriodWindow = { from: Date; until: Date };
  * elapsed time; same for this month vs last month (clipped to last month's length).
  * "All time" has no previous period.
  */
-export function comparisonWindows(range: DateRange, now: Date): { current: PeriodWindow; previous: PeriodWindow } | null {
+export function comparisonWindows(range: DateRange, now: Date): { current: PeriodWindow; previous: PeriodWindow; previousLabel: string } | null {
   if (range === "all") return null;
+  if (isCustom(range)) {
+    // Custom: the same number of days immediately before.
+    const { from, until } = rangeWindow(range, now) as PeriodWindow;
+    const n = customDays(range);
+    const previousLabel = n === 1 ? "the day before" : range.mode === "week" ? "the week before" : `the ${n} days before`;
+    return { current: { from, until }, previous: { from: addDays(parseDay(range.from), -n), until: from }, previousLabel };
+  }
   const start = rangeStart(range, now)!;
   const elapsed = now.getTime() - start.getTime();
   let prevStart: Date;
@@ -43,7 +50,11 @@ export function comparisonWindows(range: DateRange, now: Date): { current: Perio
     prevEnd = start;
   }
   const until = new Date(Math.min(prevStart.getTime() + elapsed, prevEnd.getTime()));
-  return { current: { from: start, until: now }, previous: { from: prevStart, until } };
+  return {
+    current: { from: start, until: now },
+    previous: { from: prevStart, until },
+    previousLabel: range === "week" ? "same point last week" : "same point last month",
+  };
 }
 
 export type Comparison = {
@@ -57,13 +68,14 @@ export type Comparison = {
 export function revenueComparison(raw: RawDashboard, scope: Scope, range: DateRange, now: Date): Comparison | null {
   const w = comparisonWindows(range, now);
   if (!w) return null;
-  const current = scopeWindow(raw, scope, w.current.from, null).overview.total;
+  // Presets: the current period runs up to now (nothing later exists); custom: to its end.
+  const current = scopeWindow(raw, scope, w.current.from, isCustom(range) ? w.current.until : null).overview.total;
   const previous = scopeWindow(raw, scope, w.previous.from, w.previous.until).overview.total;
   return {
     current,
     previous,
     change: previous > 0 ? (current - previous) / previous : null,
-    previousLabel: range === "week" ? "same point last week" : "same point last month",
+    previousLabel: w.previousLabel,
   };
 }
 

@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { watchDashboard } from "@/lib/admin/firestore";
+import { parseStoredRange } from "@/lib/admin/range";
+import { watchExpenses, watchRecurring } from "@/lib/pnl/firestore";
+import type { Expense, RecurringExpense } from "@/lib/pnl/types";
 import { scopeDashboard, type DateRange, type RawDashboard, type Scope, type ScopedDashboard } from "@/lib/admin/scope";
 import { DEFAULT_SHEETS_PER_BOX, DEFAULT_SHEETS_PER_PACK, type PaperSettings } from "@/lib/shift/paper";
 import { ensureStockDocs, watchEventLogs, watchEventStock } from "@/lib/inventory/firestore";
@@ -30,6 +33,9 @@ type Ctx = {
   paper: PaperSettings;
   inventories: Map<string, EventInventory>;
   inventory: ScopedInventory;
+  expenses: Expense[];
+  recurring: RecurringExpense[];
+  pnlLoaded: boolean;
   loaded: boolean;
   error: string | null;
 };
@@ -39,7 +45,8 @@ const DashboardContext = createContext<Ctx | null>(null);
 function readStored(): { scope: Scope; range: DateRange } {
   try {
     const v = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
-    if (v && typeof v.scope === "string" && ["week", "month", "all"].includes(v.range)) return v;
+    const range = parseStoredRange(v?.range);
+    if (v && typeof v.scope === "string" && range) return { scope: v.scope, range };
   } catch {
     // storage blocked / corrupt — use defaults
   }
@@ -58,6 +65,16 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [inventories, setInventories] = useState<Map<string, EventInventory>>(new Map());
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
+
+  // P&L data (admin-only collections).
+  useEffect(() => {
+    const mark = (k: string) => setLoadedKeys((s) => (s.has(k) ? s : new Set(s).add(k)));
+    const u1 = watchExpenses((e) => { setExpenses(e); mark("expenses"); }, (e) => setError(`Expenses: ${authErrorMessage(e)}`));
+    const u2 = watchRecurring((r) => { setRecurring(r); mark("recurring"); }, (e) => setError(`Recurring expenses: ${authErrorMessage(e)}`));
+    return () => { u1(); u2(); };
+  }, []);
 
   useEffect(() => {
     const mark = (k: string) => setLoadedKeys((s) => (s.has(k) ? s : new Set(s).add(k)));
@@ -139,6 +156,9 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     paper,
     inventories,
     inventory,
+    expenses,
+    recurring,
+    pnlLoaded: loadedKeys.has("expenses") && loadedKeys.has("recurring"),
     loaded,
     error,
   };
@@ -190,4 +210,10 @@ export function useEvents() {
 export function useDashboardRaw() {
   const { raw, scope, range } = useDashboard();
   return { raw, scope, range };
+}
+
+/** P&L inputs: every expense (scoped inside lib/pnl) + the raw dashboard + the switcher state. */
+export function usePnl() {
+  const { raw, scope, range, events, expenses, recurring, pnlLoaded } = useDashboard();
+  return { raw, scope, range, events, expenses, recurring, pnlLoaded };
 }
