@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { watchDashboard } from "@/lib/admin/firestore";
-import { parseStoredRange } from "@/lib/admin/range";
+import { dayKey, parseStoredRange } from "@/lib/admin/range";
+import { costsOn } from "@/lib/pnl/costs";
 import { watchCosts, watchExpenses, watchFees, watchRecurring } from "@/lib/pnl/firestore";
 import type { CostStep } from "@/lib/pnl/costs";
 import type { FeeStep } from "@/lib/pnl/fees";
@@ -202,8 +203,10 @@ export function usePendingUsers() {
 
 /** Inventory under the switcher (Global = every location; event = that one) + paper units. */
 export function useScopedInventory() {
-  const { inventory, events, paper, raw, scope } = useDashboard();
-  return { ...inventory, events, paper, scope, shifts: raw.shifts, entries: raw.entries };
+  const { inventory, events, paper, raw, scope, costs } = useDashboard();
+  // Ink cartridges that come in one paper box (P&L → What things cost you), as of today.
+  const cartridgesPerBox = costsOn(costs, dayKey(new Date()))?.cartridgesPerBox ?? null;
+  return { ...inventory, events, paper, scope, shifts: raw.shifts, entries: raw.entries, cartridgesPerBox };
 }
 
 /** Full event records (Events management screen). */
