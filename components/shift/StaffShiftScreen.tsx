@@ -21,6 +21,7 @@ import {
   watchShiftEntries,
 } from "@/lib/shift/firestore";
 import { DEFAULT_SHEETS_PER_PACK } from "@/lib/shift/paper";
+import { applyShiftDeduction } from "@/lib/inventory/firestore";
 import { aggregate, buildShiftSummaryText } from "@/lib/shift/summary";
 import type { Entry, Shift } from "@/lib/shift/types";
 import { ShiftCard } from "./ShiftCard";
@@ -158,9 +159,20 @@ function ShiftScreenInner() {
           open={dialog === "end"}
           onClose={() => setDialog(null)}
           onConfirm={async (start, end, left) => {
-            await endShift(shift.id, start, end, left);
+            // Capture the shift + its entries as they are right now (the listener will clear them).
+            const ended = shift;
+            const endedEntries = entries;
+            await endShift(ended.id, start, end, left);
             setDialog(null);
             toast("Shift ended — nice work", "success");
+            // Automatic paper consumption: deduct this shift's actual use (sold + hadr) from the
+            // stock of the event THIS SHIFT was stamped with (not the current assignment).
+            // Invisible to staff; if it fails, the admin sees it as "not yet deducted".
+            if (ended.eventId) {
+              applyShiftDeduction(ended, endedEntries, { uid: profile.uid, name: profile.name }).catch((e) =>
+                console.warn("[inventory] deduction deferred to admin:", e),
+              );
+            }
           }}
         />
       )}

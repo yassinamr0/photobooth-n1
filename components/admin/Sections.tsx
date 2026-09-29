@@ -13,8 +13,9 @@ import { approveUser, assignEvent, rejectUser } from "@/lib/admin/firestore";
 import { fmtDateTime } from "@/lib/shift/summary";
 import { useDashboardScope, usePendingUsers, useScopedDashboard } from "./DashboardData";
 import { MismatchIcon, ShiftRow, StatGrid } from "./ShiftPieces";
+import { LowStockBanner } from "./InventorySection";
 
-export type Section = "overview" | "pending" | "staff" | "shifts";
+export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events";
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
@@ -44,6 +45,11 @@ export function OverviewSection({ go }: { go: (s: Section) => void }) {
             paper counts
           </span>
           <span className="text-sm underline underline-offset-4">Review in Shifts</span>
+        </button>
+      )}
+      {d.lowStockRows.length > 0 && (
+        <button type="button" onClick={() => go("inventory")} className="text-left">
+          <LowStockBanner rows={d.lowStockRows} />
         </button>
       )}
       {pending.length > 0 && (
@@ -186,8 +192,9 @@ export function StaffSection({ openHistory }: { openHistory: (uid: string) => vo
                       className="h-9 rounded-full border border-line bg-surface-2 px-3 text-sm text-ink outline-none focus:border-magenta/70"
                     >
                       <option value="">No event</option>
-                      {d.events.map((ev) => (
-                        <option key={ev.id} value={ev.id}>{ev.name}</option>
+                      {/* Only ACTIVE events can be assigned (keep showing the current one if it was deactivated). */}
+                      {d.events.filter((ev) => ev.status === "active" || ev.id === r.assignedEventId).map((ev) => (
+                        <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>
                       ))}
                       {r.assignedEventId && !d.events.some((ev) => ev.id === r.assignedEventId) && (
                         <option value={r.assignedEventId}>Unknown event</option>

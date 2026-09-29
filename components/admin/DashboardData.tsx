@@ -3,7 +3,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { watchDashboard } from "@/lib/admin/firestore";
 import { scopeDashboard, type DateRange, type RawDashboard, type Scope, type ScopedDashboard } from "@/lib/admin/scope";
-import { DEFAULT_SHEETS_PER_PACK } from "@/lib/shift/paper";
+import { DEFAULT_SHEETS_PER_BOX, DEFAULT_SHEETS_PER_PACK, type PaperSettings } from "@/lib/shift/paper";
+import { ensureStockDocs, watchEventLogs, watchEventStock } from "@/lib/inventory/firestore";
+import { scopeInventory, type ScopedInventory } from "@/lib/inventory/scope";
+import type { EventInventory, EventRecord } from "@/lib/inventory/types";
 import { authErrorMessage } from "@/lib/auth/errors";
 
 /*
@@ -22,6 +25,10 @@ type Ctx = {
   setRange: (r: DateRange) => void;
   raw: RawDashboard;
   scoped: ScopedDashboard;
+  events: EventRecord[];
+  paper: PaperSettings;
+  inventories: Map<string, EventInventory>;
+  inventory: ScopedInventory;
   loaded: boolean;
   error: string | null;
 };
@@ -45,6 +52,9 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [raw, setRaw] = useState<RawDashboard>({
     users: [], shifts: [], entries: [], events: [], sheetsPerPack: DEFAULT_SHEETS_PER_PACK,
   });
+  const [events, setEvents] = useState<EventRecord[]>([]);
+  const [paper, setPaper] = useState<PaperSettings>({ sheetsPerPack: DEFAULT_SHEETS_PER_PACK, sheetsPerBox: DEFAULT_SHEETS_PER_BOX });
+  const [inventories, setInventories] = useState<Map<string, EventInventory>>(new Map());
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +64,43 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       users: (users) => { setRaw((r) => ({ ...r, users })); mark("users"); },
       shifts: (shifts) => { setRaw((r) => ({ ...r, shifts })); mark("shifts"); },
       entries: (entries) => { setRaw((r) => ({ ...r, entries })); mark("entries"); },
-      events: (events) => { setRaw((r) => ({ ...r, events })); mark("events"); },
-      sheetsPerPack: (sheetsPerPack) => setRaw((r) => ({ ...r, sheetsPerPack })),
+      events: (evs) => { setEvents(evs); setRaw((r) => ({ ...r, events: evs })); mark("events"); },
+      paperSettings: (p) => { setPaper(p); setRaw((r) => ({ ...r, sheetsPerPack: p.sheetsPerPack })); },
       error: (label, e) => setError(`${label}: ${authErrorMessage(e)}`),
     });
+  }, []);
+
+  // Per-event inventory listeners (stock + logs), re-subscribed when the set of events changes.
+  const eventIdsKey = events.map((e) => e.id).join("|");
+  const sheetsPerBox = paper.sheetsPerBox;
+  useEffect(() => {
+    const ids = eventIdsKey ? eventIdsKey.split("|") : [];
+    const patch = (id: string, p: Partial<EventInventory>) =>
+      setInventories((m) => {
+        const next = new Map(m);
+        next.set(id, { ...(next.get(id) ?? { paper: null, ink: null, logs: [] }), ...p });
+        return next;
+      });
+    const initialised = new Set<string>();
+    const unsubs = ids.flatMap((id) => [
+      watchEventStock(id, ({ paper: p, ink, fromServer }) => {
+        patch(id, { paper: p, ink });
+        // Events created before Phase 5 (e.g. the manual test doc) get stock docs on first load.
+        if (fromServer && (!p || !ink) && !initialised.has(id)) {
+          initialised.add(id);
+          ensureStockDocs(id, sheetsPerBox).catch((e) => setError(`Inventory setup: ${authErrorMessage(e)}`));
+        }
+      }),
+      watchEventLogs(id, (logs) => patch(id, { logs })),
+    ]);
+    return () => unsubs.forEach((u) => u());
+  }, [eventIdsKey, sheetsPerBox]);
+
+  // Clock for the stock forecast window; refreshed every 5 minutes.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5 * 60_000);
+    return () => clearInterval(t);
   }, []);
 
   const loaded = ["users", "shifts", "entries", "events"].every((k) => loadedKeys.has(k));
@@ -78,6 +121,11 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   };
 
   const scoped = useMemo(() => scopeDashboard(raw, scope, pref.range), [raw, scope, pref.range]);
+  // Inventory is NOT date-ranged (stock is a current quantity); only the event scope applies.
+  const inventory = useMemo(
+    () => scopeInventory(events, inventories, raw.shifts, scope, now),
+    [events, inventories, raw.shifts, scope, now],
+  );
 
   const value: Ctx = {
     scope,
@@ -86,6 +134,10 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     setRange: (r) => update({ scope, range: r }),
     raw,
     scoped,
+    events,
+    paper,
+    inventories,
+    inventory,
     loaded,
     error,
   };
@@ -100,19 +152,31 @@ function useDashboard() {
 
 /** The switcher's state (top bar). */
 export function useDashboardScope() {
-  const { scope, setScope, range, setRange, raw } = useDashboard();
-  const scopeName = scope === "global" ? "Global" : raw.events.find((e) => e.id === scope)?.name ?? "Event";
-  return { scope, setScope, range, setRange, events: raw.events, scopeName };
+  const { scope, setScope, range, setRange, events } = useDashboard();
+  const scopeName = scope === "global" ? "Global" : events.find((e) => e.id === scope)?.name ?? "Event";
+  return { scope, setScope, range, setRange, events, scopeName };
 }
 
 /** Scoped data — the ONLY data source for Overview, Staff, Shifts and Staff history. */
 export function useScopedDashboard() {
-  const { scoped, loaded, error, raw } = useDashboard();
-  return { ...scoped, events: raw.events, loaded, error };
+  const { scoped, loaded, error, events, inventory } = useDashboard();
+  return { ...scoped, events, loaded, error, lowStockRows: inventory.lowRows };
 }
 
 /** Pending approvals ONLY — deliberately unscoped (always global, per spec). */
 export function usePendingUsers() {
   const { raw } = useDashboard();
   return raw.users.filter((u) => !u.approved).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+}
+
+/** Inventory under the switcher (Global = every location; event = that one) + paper units. */
+export function useScopedInventory() {
+  const { inventory, events, paper, raw, scope } = useDashboard();
+  return { ...inventory, events, paper, scope, shifts: raw.shifts, entries: raw.entries };
+}
+
+/** Full event records (Events management screen). */
+export function useEvents() {
+  const { events, raw } = useDashboard();
+  return { events, users: raw.users };
 }

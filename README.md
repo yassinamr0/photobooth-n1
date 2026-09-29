@@ -1,7 +1,7 @@
 # Booth Log
 
 > **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
-> `PLAN.md`). Current state: Phase 4 — admin dashboard. The original single-file app lives in
+> `PLAN.md`). Current state: Phase 5 — events + per-event inventory. The original single-file app lives in
 > `legacy/`; its instructions (further down) still apply to it.
 
 ## Rebuild — setup
@@ -36,11 +36,13 @@ Firebase console → Authentication → Settings → Authorized domains → add 
    app once the admin dashboard exists (Phase 4); until then, approve via the console or the
    legacy app's admin panel.
 
-### 5. Test event (until Phase 5 adds event management)
-Firestore → Start collection `events` → Document ID `citystars` → field `name` (string) =
-`City Stars Mall`. Add a second one (e.g. `mallofegypt` / `Mall of Egypt`) to switch between
-two. Admins then see these in the dashboard's event switcher and in each staff member's
-"Assigned event" dropdown.
+### 5. Events and inventory
+Create booth locations in the dashboard's **Events** section; each gets its own paper and ink
+stock (Inventory section). Paper is restocked in **boxes** (Inventory → Paper units → sheets
+per box, default 108) and stored in sheets. When a staff member ends a shift, that shift's
+sheets sold + wasted are deducted automatically from the event the shift was tagged with.
+Events created by hand in the console (just a `name` field) work too — their stock is set up
+the first time an admin opens the dashboard.
 
 ### Testing tips
 - `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,

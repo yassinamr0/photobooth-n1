@@ -21,6 +21,10 @@ service cloud.firestore {
           || (exists(paperSettingsPath()) && v == get(paperSettingsPath()).data.get('sheetsPerPack', 18));
     }
 
+    function shiftPath(id) {
+      return /databases/$(database)/documents/shifts/$(id);
+    }
+
     // Any approved user (staff or admin). Pending signups are NOT approved.
     function isApproved() {
       return isSignedIn() && myDoc().data.approved == true;
@@ -54,7 +58,8 @@ service cloud.firestore {
     //   assignedEventId at this moment (missing/null on both sides = no event, which is what
     //   legacy-app shifts look like). paperVerified can't be pre-set.
     // - Update: admin always; staff only their own shift and never uid / eventId /
-    //   paperVerified / createdAt / sheetsPerPack (eventId is never re-derived; paperVerified is admin's call).
+    //   paperVerified / createdAt / sheetsPerPack / stockDeduction (eventId is never re-derived;
+    //   paperVerified is admin's call; stockDeduction only via the narrow Phase 5 branch).
     // - Delete: admin only (deleting a shift would orphan its entries).
     match /shifts/{shiftId} {
       allow read: if isApproved();
@@ -66,11 +71,29 @@ service cloud.firestore {
                     // Pack-size snapshot (Phase 4): if present it must be the current setting.
                     // Absent is allowed (legacy app) — reconciliation then uses the setting.
                     && (request.resource.data.get('sheetsPerPack', null) == null
-                        || packSizeMatchesSettings(request.resource.data.sheetsPerPack));
-      allow update: if isAdmin() || (
+                        || packSizeMatchesSettings(request.resource.data.sheetsPerPack))
+                    && request.resource.data.get('stockDeduction', null) == null;
+      allow update: if isAdmin()
+                    || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && !request.resource.data.diff(resource.data).affectedKeys()
-                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack'])
+                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack', 'stockDeduction'])
+                    )
+                    // Phase 5 — automatic paper consumption, staff side. Only the owner, only
+                    // after the shift has ended, only once, only into the shift's OWN eventId,
+                    // and only together with the matching stock update + stock log (same batch).
+                    || (
+                      isApproved() && resource.data.uid == request.auth.uid
+                      && resource.data.get('endTime', null) != null
+                      && resource.data.get('eventId', null) != null
+                      && resource.data.get('stockDeduction', null) == null
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockDeduction'])
+                      && request.resource.data.stockDeduction.keys().hasOnly(['eventId', 'sheets'])
+                      && request.resource.data.stockDeduction.eventId == resource.data.eventId
+                      && request.resource.data.stockDeduction.sheets is number
+                      && request.resource.data.stockDeduction.sheets >= 0
+                      && existsAfter(/databases/$(database)/documents/events/$(resource.data.eventId)/stockLogs/$('shift_' + shiftId))
+                      && isValidShiftDeduction(resource.data.eventId, shiftId, request.resource.data.stockDeduction.sheets)
                     );
       allow delete: if isAdmin();
     }
@@ -84,19 +107,75 @@ service cloud.firestore {
       allow read: if isApproved();
       allow create: if isApproved()
                     && request.resource.data.uid == request.auth.uid
-                    && get(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId))
-                         .data.uid == request.auth.uid;
+                    && get(shiftPath(request.resource.data.shiftId)).data.uid == request.auth.uid
+                    && get(shiftPath(request.resource.data.shiftId)).data.get('stockDeduction', null) == null;
+      // Once a shift's paper has been deducted from stock (Phase 5), its entries are frozen for
+      // staff so stock and sales can't drift apart. Admins can still correct anything.
       allow update: if isAdmin() || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && !request.resource.data.diff(resource.data).affectedKeys()
                             .hasAny(['uid', 'shiftId', 'createdAt'])
+                      && get(shiftPath(resource.data.shiftId)).data.get('stockDeduction', null) == null
                     );
-      allow delete: if isAdmin() || (isApproved() && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin() || (
+                      isApproved() && resource.data.uid == request.auth.uid
+                      && get(shiftPath(resource.data.shiftId)).data.get('stockDeduction', null) == null
+                    );
     }
 
-    // /events/{id} — booth locations. Admin-only: staff never see or choose events.
+    // /events/{id} — booth locations (Phase 5). Readable by any approved user, writable only
+    // by admins (staff never see events in the UI — it's admin bookkeeping).
     match /events/{eventId} {
-      allow read, write: if isAdmin();
+      allow read: if isApproved();
+      allow write: if isAdmin();
+
+      // Per-event stock: paper (in SHEETS) and ink (cartridges). Admin writes everything
+      // (restocks in BOXES → sheets, corrections, thresholds). The ONLY staff write is the
+      // automatic shift-end paper deduction, checked against the shift in the same batch.
+      match /stock/{stockType} {
+        allow read: if isApproved();
+        allow write: if isAdmin();
+        allow update: if isApproved()
+                      && stockType == 'paper'
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['currentQuantity', 'updatedAt', 'lastShiftId'])
+                      && isValidShiftDeduction(eventId, request.resource.data.lastShiftId,
+                           resource.data.currentQuantity - request.resource.data.currentQuantity);
+      }
+
+      match /stockLogs/{logId} {
+        allow read: if isApproved();
+        allow create, update, delete: if isAdmin();
+        // Staff: exactly one log per shift, id "shift_<shiftId>", matching the deduction.
+        allow create: if isApproved()
+                      && request.resource.data.kind == 'shift'
+                      && request.resource.data.stockType == 'paper'
+                      && logId == 'shift_' + request.resource.data.shiftId
+                      && request.resource.data.byUid == request.auth.uid
+                      && isValidShiftDeduction(eventId, request.resource.data.shiftId,
+                           -request.resource.data.delta);
+      }
+    }
+
+    // A staff deduction batch is valid only if, in the SAME batch (get = before, getAfter = after):
+    //  - the shift belongs to the caller, was stamped with THIS event, had ended, and had no
+    //    deduction before — and has exactly `sheets` recorded after;
+    //  - THIS event's paper stock went down by exactly `sheets`, tagged with this shift.
+    // Every one of the three writes (shift mark, stock update, log) checks all of it, so none
+    // can be written without the others.
+    function isValidShiftDeduction(eventId, shiftId, sheets) {
+      let before = get(shiftPath(shiftId)).data;
+      let after = getAfter(shiftPath(shiftId)).data;
+      let paperPath = /databases/$(database)/documents/events/$(eventId)/stock/paper;
+      return before.uid == request.auth.uid
+          && before.get('eventId', null) == eventId
+          && before.get('endTime', null) != null
+          && before.get('stockDeduction', null) == null
+          && after.get('stockDeduction', null) != null
+          && after.stockDeduction.eventId == eventId
+          && after.stockDeduction.sheets == sheets
+          && getAfter(paperPath).data.get('lastShiftId', null) == shiftId
+          && get(paperPath).data.currentQuantity - getAfter(paperPath).data.currentQuantity == sheets;
     }
 
     // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.

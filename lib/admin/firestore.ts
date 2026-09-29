@@ -1,10 +1,12 @@
-import { collection, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, increment, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
 import { parseEntry, parseShift, watchPaperSettings } from "@/lib/shift/firestore";
 import { parseUserDoc, type UserProfile } from "@/lib/users";
 import type { Entry, Shift } from "@/lib/shift/types";
-import type { EventDoc } from "./scope";
+import { parseEvent } from "@/lib/inventory/firestore";
+import type { EventRecord } from "@/lib/inventory/types";
+import type { PaperSettings } from "@/lib/shift/paper";
 
 /*
  * Admin reads + writes. Every subscription goes through listen() (logout-safe).
@@ -18,8 +20,8 @@ type Handlers = {
   users: (u: UserProfile[]) => void;
   shifts: (s: Shift[]) => void;
   entries: (e: Entry[]) => void;
-  events: (e: EventDoc[]) => void;
-  sheetsPerPack: (n: number) => void;
+  events: (e: EventRecord[]) => void;
+  paperSettings: (p: PaperSettings) => void;
   error: (label: string, e: Error) => void;
 };
 
@@ -30,15 +32,10 @@ export function watchDashboard(h: Handlers) {
     listen(collection(db(), "entries"), (s) => h.entries(s.docs.map((d) => parseEntry(d.id, d.data()))), (e) => h.error("Entries", e)),
     listen(
       collection(db(), "events"),
-      (s) =>
-        h.events(
-          s.docs
-            .map((d) => ({ id: d.id, name: typeof d.data().name === "string" && d.data().name ? d.data().name : d.id }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        ),
+      (s) => h.events(s.docs.map((d) => parseEvent(d.id, d.data())).sort((a, b) => a.name.localeCompare(b.name))),
       (e) => h.error("Events", e),
     ),
-    watchPaperSettings((p) => h.sheetsPerPack(p.sheetsPerPack)),
+    watchPaperSettings(h.paperSettings),
   ];
   return () => unsubs.forEach((u) => u());
 }
@@ -64,13 +61,41 @@ export function setPaperVerified(shiftId: string, verified: boolean) {
   return updateDoc(doc(db(), "shifts", shiftId), { paperVerified: verified });
 }
 
-/** Irreversibly delete a shift AND every entry logged under it (batched, chunked). */
-export async function deleteShiftAndEntries(shiftId: string, entryIds: string[]) {
+/**
+ * Irreversibly delete a shift AND every entry logged under it (batched, chunked).
+ * If the shift's paper was already deducted from its event's stock, the same final batch
+ * puts those sheets back and logs a reversal — stock always equals restocks − existing shifts.
+ */
+export async function deleteShiftAndEntries(
+  shift: Pick<Shift, "id" | "stockDeduction">,
+  entryIds: string[],
+  by: { uid: string; name: string },
+) {
   const CHUNK = 450;
   for (let i = 0; i < entryIds.length; i += CHUNK) {
     const batch = writeBatch(db());
     entryIds.slice(i, i + CHUNK).forEach((id) => batch.delete(doc(db(), "entries", id)));
     await batch.commit();
   }
-  await deleteDoc(doc(db(), "shifts", shiftId));
+  const final = writeBatch(db());
+  const d = shift.stockDeduction;
+  if (d && d.sheets > 0) {
+    final.update(doc(db(), "events", d.eventId, "stock", "paper"), {
+      currentQuantity: increment(d.sheets),
+      updatedAt: serverTimestamp(),
+    });
+    final.set(doc(collection(db(), "events", d.eventId, "stockLogs")), {
+      stockType: "paper", delta: d.sheets, kind: "shiftReversal", reason: "Shift deleted — sheets restored",
+      shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+    });
+  }
+  final.delete(doc(db(), "shifts", shift.id));
+  await final.commit();
+}
+
+/** Admin-only: the two SEPARATE paper units (pack = staff shift changes, box = inventory restocks). */
+export function savePaperSettings(p: PaperSettings) {
+  if (!(p.sheetsPerPack > 0 && Number.isInteger(p.sheetsPerPack))) throw new Error("Sheets per pack must be a whole number above 0");
+  if (!(p.sheetsPerBox > 0 && Number.isInteger(p.sheetsPerBox))) throw new Error("Sheets per box must be a whole number above 0");
+  return setDoc(doc(db(), "settings", "paper"), { sheetsPerPack: p.sheetsPerPack, sheetsPerBox: p.sheetsPerBox }, { merge: true });
 }

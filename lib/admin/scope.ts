@@ -21,7 +21,9 @@ import type { UserProfile } from "@/lib/users";
 export type Scope = "global" | string; // event id
 export type DateRange = "week" | "month" | "all";
 
-export type EventDoc = { id: string; name: string };
+import type { EventRecord } from "@/lib/inventory/types";
+
+export type EventDoc = { id: string; name: string } & Partial<EventRecord>;
 
 export type RawDashboard = {
   users: UserProfile[];

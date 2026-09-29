@@ -16,6 +16,8 @@ export type Shift = {
   /** Pack size snapshotted when the shift started (older/legacy shifts don't have it). */
   sheetsPerPack?: number | null;
   paperVerified?: boolean;
+  /** Set once when this shift's paper use was deducted from ITS OWN event's stock (Phase 5). */
+  stockDeduction?: { eventId: string; sheets: number } | null;
   createdAt?: Timestamp | null;
 };
 

@@ -42,6 +42,10 @@ export function parseShift(id: string, d: DocumentData): Shift {
     endPaperCount: numOrNull(d.endPaperCount),
     sheetsPerPack: numOrNull(d.sheetsPerPack),
     paperVerified: d.paperVerified === true,
+    stockDeduction:
+      d.stockDeduction && typeof d.stockDeduction.eventId === "string"
+        ? { eventId: d.stockDeduction.eventId, sheets: num(d.stockDeduction.sheets) }
+        : null,
     createdAt: d.createdAt ?? null,
   };
 }

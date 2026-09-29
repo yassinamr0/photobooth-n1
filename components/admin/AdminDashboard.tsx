@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
+import { Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Spinner } from "@/components/ui/Button";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/cn";
 import type { DateRange } from "@/lib/admin/scope";
 import { DashboardDataProvider, useDashboardScope, usePendingUsers, useScopedDashboard } from "./DashboardData";
 import { OverviewSection, PendingSection, ShiftsSection, StaffHistoryView, StaffSection, type Section } from "./Sections";
+import { InventorySection } from "./InventorySection";
+import { EventsSection } from "./EventsSection";
 
 export function AdminDashboard() {
   return (
@@ -28,6 +30,8 @@ const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "pending", label: "Pending approvals", icon: <UserCheck /> },
   { id: "staff", label: "Staff", icon: <Users /> },
   { id: "shifts", label: "Shifts", icon: <CalendarClock /> },
+  { id: "inventory", label: "Inventory", icon: <Boxes /> },
+  { id: "events", label: "Events", icon: <MapPin /> },
 ];
 
 function DashboardInner() {
@@ -107,6 +111,10 @@ function DashboardInner() {
           <PendingSection />
         ) : section === "staff" ? (
           <StaffSection openHistory={(uid) => { setSection("staff"); setHistoryUid(uid); }} />
+        ) : section === "inventory" ? (
+          <InventorySection />
+        ) : section === "events" ? (
+          <EventsSection />
         ) : (
           <ShiftsSection />
         )}
@@ -124,7 +132,14 @@ const RANGES: { id: DateRange; label: string }[] = [
 /** Event scope switcher + date range. Pending approvals ignores both (always global). */
 function ScopeBar({ section }: { section: Section }) {
   const { scope, setScope, range, setRange, events, scopeName } = useDashboardScope();
-  const pendingOnly = section === "pending";
+  const note =
+    section === "pending"
+      ? "Pending approvals always show all locations"
+      : section === "events"
+        ? "Events list every location"
+        : section === "inventory"
+          ? null
+          : undefined;
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3" data-testid="scope-bar">
       <label className="relative flex items-center">
@@ -138,7 +153,7 @@ function ScopeBar({ section }: { section: Section }) {
         >
           <option value="global">Global — all locations</option>
           {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>{ev.name}</option>
+            <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>
           ))}
           {/* Saved event while the events list is still loading — avoids flashing "Global". */}
           {scope !== "global" && !events.some((ev) => ev.id === scope) && <option value={scope}>Loading…</option>}
@@ -155,7 +170,12 @@ function ScopeBar({ section }: { section: Section }) {
         ))}
       </div>
       <span data-testid="scope-chip" className="ml-auto text-xs text-ink-faint">
-        {pendingOnly ? "Pending approvals always show all locations" : <>Showing: <span className="text-ink-muted">{scopeName}</span> · {RANGES.find((r) => r.id === range)?.label}</>}
+        {note ?? (
+          <>
+            Showing: <span className="text-ink-muted">{scopeName}</span>
+            {note === null ? " · current stock (date range doesn't apply)" : ` · ${RANGES.find((r) => r.id === range)?.label}`}
+          </>
+        )}
       </span>
     </div>
   );

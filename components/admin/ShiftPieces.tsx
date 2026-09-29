@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, MapPin, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, MapPin, Package, Trash2 } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { applyShiftDeduction } from "@/lib/inventory/firestore";
+import { useScopedInventory } from "./DashboardData";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
@@ -169,6 +172,7 @@ export function ShiftRow({
         <div className="flex flex-col gap-3 border-t border-line px-4 py-4">
           <StatGrid totals={s.totals} />
           <PaperBlock s={s} readOnly={readOnly} />
+          <StockStatus s={s} readOnly={readOnly} />
           {!readOnly && <DeleteShift s={s} />}
         </div>
       )}
@@ -176,8 +180,56 @@ export function ShiftRow({
   );
 }
 
+/** Whether/where this shift's paper use hit inventory (always the SHIFT'S own event). */
+export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolean }) {
+  const toast = useToast();
+  const { profile } = useAuth();
+  const { pending, entries } = useScopedInventory();
+  const [busy, setBusy] = useState(false);
+  const { shift } = s;
+  const d = shift.stockDeduction;
+  let text: React.ReactNode;
+  let action: React.ReactNode = null;
+  if (d) {
+    text = <>Deducted <b className="text-ink">{d.sheets}</b> sheet{d.sheets === 1 ? "" : "s"} from {s.eventName ?? "its event"}&apos;s paper stock</>;
+  } else if (!shift.eventId) {
+    text = shift.endTime ? "No event — this shift doesn't affect any location's inventory" : "No event — won't affect any location's inventory";
+  } else if (!shift.endTime) {
+    text = `Paper used will be deducted from ${s.eventName}'s stock when the shift ends`;
+  } else if (pending.some((p) => p.id === shift.id)) {
+    text = <span className="text-warning">Not yet deducted from {s.eventName}&apos;s stock</span>;
+    if (!readOnly && profile)
+      action = (
+        <Button size="sm" variant="secondary" loading={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const n = await applyShiftDeduction(shift, entries, { uid: profile.uid, name: profile.name });
+              toast(`Deducted ${n} sheets from ${s.eventName}`, "success");
+            } catch (e) {
+              toast(`Could not deduct: ${authErrorMessage(e)}`, "danger");
+            } finally {
+              setBusy(false);
+            }
+          }}>
+          Apply now
+        </Button>
+      );
+  } else {
+    text = "Ended before inventory tracking started for this event — not deducted";
+  }
+  return (
+    <div data-testid="stock-status" className="flex flex-wrap items-center gap-2 rounded-inner bg-surface-2 px-4 py-2.5 text-sm text-ink-muted">
+      <Package className="size-4 shrink-0 text-ink-faint" />
+      <span className="flex-1">{text}</span>
+      {action}
+    </div>
+  );
+}
+
 function DeleteShift({ s }: { s: ScopedShift }) {
   const toast = useToast();
+  const { profile } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const n = s.entries.length;
@@ -193,6 +245,11 @@ function DeleteShift({ s }: { s: ScopedShift }) {
     <div role="alertdialog" aria-label="Confirm delete shift" className="rounded-inner border border-danger/40 bg-danger-dim px-4 py-3">
       <p className="text-sm font-semibold text-danger">
         Delete this shift and its {n} {n === 1 ? "entry" : "entries"}? This can&apos;t be undone.
+        {s.shift.stockDeduction && s.shift.stockDeduction.sheets > 0 && (
+          <span className="mt-1 block font-normal">
+            Its {s.shift.stockDeduction.sheets} deducted sheets will be put back into {s.eventName ?? "its event"}&apos;s stock.
+          </span>
+        )}
       </p>
       <div className="mt-3 flex gap-2">
         <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>Cancel</Button>
@@ -200,7 +257,7 @@ function DeleteShift({ s }: { s: ScopedShift }) {
           onClick={async () => {
             setBusy(true);
             try {
-              await deleteShiftAndEntries(s.shift.id, s.entries.map((e) => e.id));
+              await deleteShiftAndEntries(s.shift, s.entries.map((e) => e.id), { uid: profile?.uid ?? "", name: profile?.name ?? "" });
               toast("Shift deleted", "success");
             } catch (e) {
               toast(`Could not delete: ${authErrorMessage(e)}`, "danger");
