@@ -365,6 +365,24 @@ Owner-approved changes (after Phase 6):
   - Location = an event, or **General** (not tied to a booth; only counted under Global).
   - Stock purchases and staff pay are entered as expenses by hand.
   - Everything counts up to today. The optional hadr "cost" field isn't counted.
+- **Card machine fees** (admin-only `settings/fees`): "percentage only" or "percentage + fixed
+  per card sale", charged on the Visa part of each sale (split sale = one card sale). Each
+  change applies from its day; earlier days keep theirs. Shown as an automatic "Card fees"
+  expense line everywhere in the P&L.
+- **Product costs** (admin-only `settings/costs`, dated history): box of paper (÷ sheets per
+  BOX), ink cartridge, acrylic frame, magnetic frame → **Profit per product** (frames at full
+  price, prints take any discount; ink per sheet from logged ink changes) and **waste cost**.
+  Analysis only — not subtracted from the headline P&L again.
+- **Break-even** per location: fixed costs per day ÷ (1 − (materials + card fees) share).
+- **Ended events**: Events → "Mark as ended" / "Reopen" (status `inactive`). Ended events
+  raise no low-stock / runs-out / break-even alerts on the site or in the email; history stays.
+- **Offline mode** (staff): Firestore persistent cache + queued writes; staff screens don't
+  wait for the server offline; service worker lets the app open offline; header pill
+  "Offline · N changes waiting to sync". The locked shift layout is unchanged.
+- **Daily summary email** (Resend, 9:00 Cairo, about yesterday): revenue & profit by location
+  vs the day before, shifts, month so far with break-even, alerts (ended events skipped).
+  Vercel Cron → `/api/daily-summary` (Firebase Admin SDK, CRON_SECRET); admin "Send test
+  email now". WhatsApp later.
 
 ---
 

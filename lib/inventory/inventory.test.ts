@@ -158,6 +158,19 @@ describe("low-stock alerts — Mark as read", () => {
   });
 });
 
+describe("ended events raise no low-stock alerts", () => {
+  it("an ended (inactive) event with 0 stock is neither low nor alerting", () => {
+    const now = Date.UTC(2026, 9, 1);
+    const st = (type: StockType): StockDoc => ({ type, currentQuantity: 0, lowStockThreshold: 5, trackingSinceMs: 0, updatedAtMs: 0, alertDismissed: false });
+    const inv = new Map<string, EventInventory>([["D5", { paper: st("paper"), ink: st("ink"), acrylic: st("acrylic"), magnetic: st("magnetic"), logs: [] }]]);
+    const g = scopeInventory([{ id: "D5", name: "District 5", notes: "", status: "inactive", createdAtMs: 0, createdBy: null }], inv, [], "global", now);
+    expect(g.alerts).toEqual([]);
+    expect(g.readAlerts).toEqual([]);
+    expect(g.lowRows).toEqual([]);
+    expect(g.rows[0].low.paper).toBe(false);
+  });
+});
+
 describe("shiftFramesSold — from the shift's own sale entries", () => {
   const sale = (a: number, m: number): Entry => ({ id: String(a + m), uid: "u", staffName: "", shiftId: "s", time: "", type: "sale", sheets: 0, frames: { Acrylic: a, Magnetic: m }, custom: [], desc: "", total: 0, cash: 0, visa: 0 });
   it("sums acrylic + magnetic separately, ignoring waste", () => {

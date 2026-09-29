@@ -255,9 +255,9 @@ export function StaffSection({ openHistory }: { openHistory: (uid: string) => vo
       className="h-9 max-w-[180px] rounded-full border border-line bg-surface-2 px-3 text-sm text-ink outline-none focus:border-magenta/70"
     >
       <option value="">No event</option>
-      {/* Only ACTIVE events can be assigned (keep showing the current one if it was deactivated). */}
+      {/* Only ACTIVE events can be assigned (keep showing the current one if it has ended). */}
       {d.events.filter((ev) => ev.status === "active" || ev.id === r.assignedEventId).map((ev) => (
-        <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (inactive)" : ""}</option>
+        <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (ended)" : ""}</option>
       ))}
       {r.assignedEventId && !d.events.some((ev) => ev.id === r.assignedEventId) && (
         <option value={r.assignedEventId}>Unknown event</option>

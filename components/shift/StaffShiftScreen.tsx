@@ -7,6 +7,8 @@ import { Spinner } from "@/components/ui/Button";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { isOnline, onLateError } from "@/lib/firebase/offline";
+import { SyncPill } from "./SyncPill";
 import { authErrorMessage } from "@/lib/auth/errors";
 import {
   adjustInkChanges,
@@ -70,6 +72,12 @@ function ShiftScreenInner() {
 
   useEffect(() => watchPaperSettings((s) => setSheetsPerPack(s.sheetsPerPack)), []);
 
+  // A change saved offline that the server later refuses (e.g. reassigned meanwhile).
+  useEffect(() => {
+    onLateError((e) => toast(`A change couldn't sync: ${authErrorMessage(e)}`, "danger"));
+    return () => onLateError(null);
+  }, [toast]);
+
   // Current shift only — never all-time.
   const entries = useMemo(
     () => (shift && entriesState?.shiftId === shift.id ? entriesState.entries : []),
@@ -82,7 +90,7 @@ function ShiftScreenInner() {
   async function run(action: () => Promise<unknown>, ok: string): Promise<boolean> {
     try {
       await action();
-      toast(ok, "success");
+      toast(isOnline() ? ok : `${ok} — saved on this phone, will sync`, "success");
       return true;
     } catch (e) {
       toast(`Could not save: ${authErrorMessage(e)}`, "danger");
@@ -94,12 +102,16 @@ function ShiftScreenInner() {
 
   return (
     <PanelFrame variant="mobile">
-      <header className="mb-5 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-ink-muted">Booth Log</p>
-          <h1 className="truncate font-display text-2xl font-extrabold tracking-tight">Hi, {firstName}</h1>
+      <header className="mb-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-ink-muted">Booth Log</p>
+            <h1 className="truncate font-display text-2xl font-extrabold tracking-tight">Hi, {firstName}</h1>
+          </div>
+          <LogoutButton />
         </div>
-        <LogoutButton />
+        {/* Offline / syncing status — part of the header, not a section (locked layout untouched). */}
+        <SyncPill />
       </header>
 
       {shift === undefined ? (

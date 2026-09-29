@@ -16,7 +16,9 @@ import { useEvents, useScopedInventory } from "./DashboardData";
 
 /**
  * Events = physical booth locations (admin-only bookkeeping; staff never see them).
- * No hard delete — deactivate instead, so past shifts/stock history stay attached.
+ * No hard delete — mark as ended instead (temporary events), so past shifts/stock history stay
+ * attached. An ended event stops raising alerts (low stock, runs-out-soon, break-even) and
+ * can't be assigned; "Reopen" undoes it. Stored as status "inactive".
  */
 export function EventsSection() {
   const { events, users } = useEvents();
@@ -121,7 +123,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
               <span data-testid="event-name">{ev.name}</span>
-              {ev.status === "active" ? <Tag tone="success" dot>Active</Tag> : <Tag tone="neutral" dot>Inactive</Tag>}
+              {ev.status === "active" ? <Tag tone="success" dot>Active</Tag> : <Tag tone="neutral" dot>Ended</Tag>}
             </p>
             <p className="truncate text-xs text-ink-faint lg:hidden">
               {ev.notes || "No notes"} · {assigned} staff assigned
@@ -132,12 +134,12 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           <div className="flex items-center gap-2 lg:justify-end">
           <Button size="sm" variant="ghost" leftIcon={<Pencil className="size-3.5" />} onClick={() => setEditing(true)}>Edit</Button>
           {ev.status === "active" ? (
-            <Button size="sm" variant="secondary" onClick={() => (assigned > 0 ? setConfirmDeactivate(true) : run(() => setEventStatus(ev.id, "inactive"), `${ev.name} deactivated`))}>
-              Deactivate
+            <Button size="sm" variant="secondary" onClick={() => (assigned > 0 ? setConfirmDeactivate(true) : run(() => setEventStatus(ev.id, "inactive"), `${ev.name} marked as ended`))}>
+              Mark as ended
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" loading={busy} onClick={() => run(() => setEventStatus(ev.id, "active"), `${ev.name} reactivated`)}>
-              Reactivate
+            <Button size="sm" variant="secondary" loading={busy} onClick={() => run(() => setEventStatus(ev.id, "active"), `${ev.name} reopened`)}>
+              Reopen
             </Button>
           )}
           </div>
@@ -150,8 +152,8 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           <div className="mt-2 flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setConfirmDeactivate(false)}>Cancel</Button>
             <Button size="sm" variant="danger" loading={busy}
-              onClick={async () => { await run(() => setEventStatus(ev.id, "inactive"), `${ev.name} deactivated`); setConfirmDeactivate(false); }}>
-              Deactivate anyway
+              onClick={async () => { await run(() => setEventStatus(ev.id, "inactive"), `${ev.name} marked as ended`); setConfirmDeactivate(false); }}>
+              Mark as ended anyway
             </Button>
           </div>
         </div>

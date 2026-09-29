@@ -3,7 +3,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { watchDashboard } from "@/lib/admin/firestore";
 import { parseStoredRange } from "@/lib/admin/range";
-import { watchExpenses, watchRecurring } from "@/lib/pnl/firestore";
+import { watchCosts, watchExpenses, watchFees, watchRecurring } from "@/lib/pnl/firestore";
+import type { CostStep } from "@/lib/pnl/costs";
+import type { FeeStep } from "@/lib/pnl/fees";
 import type { Expense, RecurringExpense } from "@/lib/pnl/types";
 import { scopeDashboard, type DateRange, type RawDashboard, type Scope, type ScopedDashboard } from "@/lib/admin/scope";
 import { DEFAULT_SHEETS_PER_BOX, DEFAULT_SHEETS_PER_PACK, type PaperSettings } from "@/lib/shift/paper";
@@ -35,6 +37,8 @@ type Ctx = {
   inventory: ScopedInventory;
   expenses: Expense[];
   recurring: RecurringExpense[];
+  fees: FeeStep[];
+  costs: CostStep[];
   pnlLoaded: boolean;
   loaded: boolean;
   error: string | null;
@@ -67,13 +71,17 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
+  const [fees, setFees] = useState<FeeStep[]>([]);
+  const [costs, setCosts] = useState<CostStep[]>([]);
 
   // P&L data (admin-only collections).
   useEffect(() => {
     const mark = (k: string) => setLoadedKeys((s) => (s.has(k) ? s : new Set(s).add(k)));
     const u1 = watchExpenses((e) => { setExpenses(e); mark("expenses"); }, (e) => setError(`Expenses: ${authErrorMessage(e)}`));
     const u2 = watchRecurring((r) => { setRecurring(r); mark("recurring"); }, (e) => setError(`Recurring expenses: ${authErrorMessage(e)}`));
-    return () => { u1(); u2(); };
+    const u3 = watchFees(setFees, (e) => setError(`Card fees: ${authErrorMessage(e)}`));
+    const u4 = watchCosts(setCosts, (e) => setError(`Product costs: ${authErrorMessage(e)}`));
+    return () => { u1(); u2(); u3(); u4(); };
   }, []);
 
   useEffect(() => {
@@ -158,6 +166,8 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     inventory,
     expenses,
     recurring,
+    fees,
+    costs,
     pnlLoaded: loadedKeys.has("expenses") && loadedKeys.has("recurring"),
     loaded,
     error,
@@ -214,6 +224,6 @@ export function useDashboardRaw() {
 
 /** P&L inputs: every expense (scoped inside lib/pnl) + the raw dashboard + the switcher state. */
 export function usePnl() {
-  const { raw, scope, range, events, expenses, recurring, pnlLoaded } = useDashboard();
-  return { raw, scope, range, events, expenses, recurring, pnlLoaded };
+  const { raw, scope, range, events, expenses, recurring, fees, costs, paper, pnlLoaded } = useDashboard();
+  return { raw, scope, range, events, expenses, recurring, fees, costs, paper, pnlLoaded };
 }

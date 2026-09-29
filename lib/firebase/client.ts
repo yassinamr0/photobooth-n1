@@ -1,6 +1,13 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
-import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 
 // Each var must be referenced literally so Next.js can inline it into the client bundle.
 const config = {
@@ -40,7 +47,19 @@ export function firebase() {
   const alreadyInitialised = getApps().length > 0;
   const app = alreadyInitialised ? getApp() : initializeApp(config);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  // Offline mode: keep a persistent on-device copy of the data this user can see and queue
+  // writes while offline (synced automatically when the connection is back). Multi-tab safe.
+  let db: Firestore;
+  if (alreadyInitialised) db = getFirestore(app);
+  else {
+    try {
+      db = initializeFirestore(app, typeof window === "undefined" ? {} : {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      });
+    } catch {
+      db = getFirestore(app); // e.g. private browsing without IndexedDB → memory cache
+    }
+  }
   if (useEmulators && !alreadyInitialised) {
     connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
     connectFirestoreEmulator(db, "127.0.0.1", 8080);

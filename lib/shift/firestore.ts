@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
 import { listen } from "@/lib/firebase/listeners";
+import { queued } from "@/lib/firebase/offline";
 import type { UserProfile } from "@/lib/users";
 import { parsePaperSettings, type PaperSettings } from "./paper";
 import { saleDescription, type SaleCheck, type Payment } from "./sale";
@@ -125,7 +126,7 @@ export function watchPaperSettings(onChange: (s: PaperSettings) => void) {
  * to equal the user's assignedEventId at creation time.
  */
 export function startShift(profile: UserProfile, startPaperCount: number, sheetsPerPack: number) {
-  return addDoc(shiftsCol(), {
+  return queued(addDoc(shiftsCol(), {
     uid: profile.uid,
     staffName: profile.name,
     eventId: profile.assignedEventId ?? null,
@@ -139,11 +140,11 @@ export function startShift(profile: UserProfile, startPaperCount: number, sheets
     // shift's reconciliation. Rules require it to equal settings/paper.sheetsPerPack.
     sheetsPerPack,
     createdAt: serverTimestamp(),
-  });
+  }));
 }
 
 export function setStartPaperCount(shiftId: string, startPaperCount: number) {
-  return updateDoc(doc(shiftsCol(), shiftId), { startPaperCount });
+  return queued(updateDoc(doc(shiftsCol(), shiftId), { startPaperCount }));
 }
 
 /**
@@ -152,7 +153,7 @@ export function setStartPaperCount(shiftId: string, startPaperCount: number) {
 export async function adjustPaperChanges(shift: Shift, delta: 1 | -1) {
   const next = Math.max(0, (shift.paperChanges || 0) + delta);
   if (next === shift.paperChanges) return false;
-  await updateDoc(doc(shiftsCol(), shift.id), { paperChanges: next });
+  await queued(updateDoc(doc(shiftsCol(), shift.id), { paperChanges: next }));
   return true;
 }
 
@@ -160,20 +161,20 @@ export async function adjustPaperChanges(shift: Shift, delta: 1 | -1) {
 export async function adjustInkChanges(shift: Shift, delta: 1 | -1) {
   const next = Math.max(0, (shift.inkChanges || 0) + delta);
   if (next === (shift.inkChanges || 0)) return false;
-  await updateDoc(doc(shiftsCol(), shift.id), { inkChanges: next });
+  await queued(updateDoc(doc(shiftsCol(), shift.id), { inkChanges: next }));
   return true;
 }
 
 export function endShift(shiftId: string, start: Date, end: Date, endPaperCount: number) {
-  return updateDoc(doc(shiftsCol(), shiftId), {
+  return queued(updateDoc(doc(shiftsCol(), shiftId), {
     startTime: start.toISOString(),
     endTime: end.toISOString(),
     endPaperCount,
-  });
+  }));
 }
 
 export function logSale(profile: UserProfile, shift: Shift, cart: Cart, payment: Payment, check: SaleCheck) {
-  return addDoc(entriesCol(), {
+  return queued(addDoc(entriesCol(), {
     uid: profile.uid,
     staffName: profile.name,
     shiftId: shift.id,
@@ -187,11 +188,11 @@ export function logSale(profile: UserProfile, shift: Shift, cart: Cart, payment:
     cash: payment.cash,
     visa: payment.visa,
     createdAt: serverTimestamp(),
-  });
+  }));
 }
 
 export function logWaste(profile: UserProfile, shift: Shift, hadr: number, cost: number) {
-  return addDoc(entriesCol(), {
+  return queued(addDoc(entriesCol(), {
     uid: profile.uid,
     staffName: profile.name,
     shiftId: shift.id,
@@ -203,9 +204,9 @@ export function logWaste(profile: UserProfile, shift: Shift, hadr: number, cost:
     cash: 0,
     visa: 0,
     createdAt: serverTimestamp(),
-  });
+  }));
 }
 
 export function deleteEntry(entryId: string) {
-  return deleteDoc(doc(entriesCol(), entryId));
+  return queued(deleteDoc(doc(entriesCol(), entryId)));
 }

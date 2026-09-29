@@ -53,13 +53,15 @@ export function scopeInventory(
         const s = inv[t];
         return s ? forecastStock(inv.logs, t, s.currentQuantity, s.trackingSinceMs, nowMs) : null;
       });
-      const low = perType((t) => isLow(inv[t]));
+      // An ENDED event (temporary location, status "inactive") raises no low-stock alerts.
+      const ended = event.status === "inactive";
+      const low = perType((t) => !ended && isLow(inv[t]));
       return {
         event,
         inv,
         tracked: STOCK_TYPES.every((t) => !!inv[t]),
         low,
-        alerting: perType((t) => isAlerting(inv[t])),
+        alerting: perType((t) => !ended && isAlerting(inv[t])),
         forecasts,
         pending: allPending.filter((s) => s.eventId === event.id),
       };

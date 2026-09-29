@@ -23,7 +23,8 @@ export function burnRows(rows: InventoryRow[]): BurnRow[] {
     .filter((r) => r.tracked)
     .map((r) => {
       const days = Object.fromEntries(STOCK_TYPES.map((t) => [t, r.forecasts[t]?.daysLeft ?? null])) as Record<StockType, number | null>;
-      const warn = STOCK_TYPES.some((t) => runsOutSoon(days[t]) || r.low[t]);
+      // Ended events never warn ("runs out soon" is irrelevant once a location has closed).
+      const warn = r.event.status !== "inactive" && STOCK_TYPES.some((t) => runsOutSoon(days[t]) || r.low[t]);
       return { row: r, days, warn };
     })
     .sort((a, b) => soonest(a) - soonest(b) || a.row.event.name.localeCompare(b.row.event.name));
