@@ -1,100 +1,106 @@
-# PLAN — Custom date range + P&L
+# PLAN — P&L additions: card fees, product costs & profit per product, break-even
 
-> Approved with one change: monthly (recurring) expenses are **spread evenly across the days
-> of each month** instead of counting in full on one day.
+> Custom range + P&L are built and pushed (`73b3a1d`). This plan needs approval before any
+> code is written.
 
-## Owner's answers
-- **Expenses:** one-off, plus recurring monthly (e.g. rent).
-- **Paper / ink / frame purchases:** entered as normal expenses by hand. Restocking stays
-  count-only.
-- **Staff pay:** entered as normal expenses (one-off or recurring).
-- **"vs last period" for a custom range:** compares with the same length of time just before
-  it.
+## 1. Card fees (editable, stays until you change it)
+- **Setting:** new admin-only `settings/fees` card inside P&L, called **"Card machine fees"**.
+  You choose one of two ways the fee works:
+  - **Percentage only** — e.g. 2.5% of every Visa amount.
+  - **Percentage + fixed per transaction** — e.g. 2% + 3 EGP for each sale paid by card.
+- **It stays until you change it:** the fee you save applies to every card sale from then
+  on. Changing it later does **not** rewrite past months — each change is stored with the
+  date it starts from, the same way monthly rent changes work. The card shows the fee
+  history, e.g. "2.5% until Oct 3 · 2% + 3 EGP since".
+- **How it's counted:**
+  - The fee is charged on the **Visa part** of each sale; the cash part pays no fee.
+  - A split cash + Visa sale counts as one card transaction, so the fixed amount is charged
+    once.
+  - Sales with no Visa amount pay nothing.
+- **In the P&L:** a new expense line, **"Card fees"**, calculated automatically. It is
+  included in Expenses, Profit, the category breakdown, the per-location table, the trend
+  chart and "vs last period".
+- **Starting point:** no fee (0%) until you set one, so nothing changes until then.
 
-## 1. Custom date range
-- **Range switcher:** the top switcher becomes **This week · This month · All time · Custom**.
-- **Custom** opens a small picker with three modes:
-  - **Day:** one date.
-  - **Week:** pick any date and get that Mon–Sun week, with ‹ › to step between weeks.
-  - **Range:** a from date and a to date, both inclusive.
-- **Chip:** the picked range shows as a chip, e.g. "Sep 10 – Sep 16". It is saved like the
-  other ranges, so it's still there after a reload.
-- **Applies everywhere the current range applies:** Overview, Staff, Shifts, staff history,
-  Statistics and the new P&L. Inventory stock and burn-rate stay as "now", as today.
-- **Data:** `DateRange` gains `{ kind: "custom", from, to }` (local dates). A shift counts when
-  its start date falls in the range, the same rule as today.
-- **Trend granularity:** up to 31 days → daily points; up to about 6 months → weekly;
-  longer → monthly.
-- **"vs last period":** compares with the same number of days just before. For example,
-  Sep 10–16 compares with Sep 3–9, and a single day compares with the day before. Week and
-  Month keep "same point last week/month".
-- **Locations compared** follows the custom range too.
+## 2. Product costs → profit per product + what waste costs
+- **Setting:** new admin-only `settings/costs` card, called **"What things cost you"**:
+  - cost of one **box of paper** (turned into a per-sheet cost using sheets per box — the
+    BOX, never the pack);
+  - cost of one **ink cartridge**;
+  - cost of one **acrylic frame**;
+  - cost of one **magnetic frame**.
 
-## 2. P&L (profit & loss)
-- **Where:** its own sidebar item, **P&L**, next to Statistics. It has entry forms, so it's
-  easier to find there than buried inside Statistics.
-- **Scope:** it follows the event switcher and date range like everything else.
+  Like the card fee, each cost stays in force until you change it, and changes apply from
+  their date only.
+- **New P&L card, "Profit per product"**, for the selected location and date range:
 
-### Expenses
-- **One-off expense:** date, amount (EGP), category, location, note.
-  - **Category** is one of: Rent · Staff pay · Stock purchases · Transport · Maintenance ·
-    Marketing · Other.
-  - **Location** is an event, or **General**, for costs not tied to one booth (e.g.
-    accounting). General costs only count under Global.
-- **Recurring expense (monthly):**
-  - **Fields:** amount, category, location, start month, optional end month, and a Stop
-    button.
-  - **When it counts (owner's change):** the monthly amount is spread evenly over the days of
-    each month (amount ÷ days in that month, per day), so any range gets its fair share.
-  - **Changing the amount** (e.g. a rent increase) applies from the month you change it. Past
-    months keep the old amount, because each change is stored with the month it starts from.
-- **Managing expenses:** you can edit or delete any expense, and there's a list of every
-  expense in the range, newest first.
+  | Product | Sold | Revenue | Materials | Card fees | Profit | Per unit |
+  |---|---|---|---|---|---|---|
+  | Prints (per 0.5 sheet) | … | … | paper + ink | share | … | e.g. "200 → 131 EGP" |
+  | Acrylic frames | … | … | frame cost | share | … | … |
+  | Magnetic frames | … | … | frame cost | share | … | … |
+  | Custom items | … | … | — | share | … | … |
 
-### What the P&L shows
-- **Headline:** Revenue (sales, same figure as Overview) − Expenses = **Net profit/loss**,
-  plus margin %.
-  - A loss shows in red, a profit in green.
-  - It includes "vs last period" for both profit and expenses.
-- **Expenses by category:** amount and share of the total.
-- **Trend chart:** revenue vs expenses per period, with the profit line on top, using the
-  same granularity as the date range.
-- **Under Global:** a per-location table with revenue, expenses, profit and margin, plus a
-  **General** row. Every row adds up to the Global total.
-- **Not counted:** the optional "cost" staff can type on a hadr waste entry. It stays out of
-  the P&L, because that paper is already paid for through your stock purchases.
+  - **Paper:** each print uses 0.5 sheet at the per-sheet cost.
+  - **Ink:** the ink cost per sheet comes from the ink cartridges staff actually logged in
+    the range ÷ sheets printed. Wasted sheets used ink too, so they count.
+- **"What waste cost you":** hadr sheets × (paper + ink per sheet) in EGP, next to the
+  waste %. For example: "Waste cost you 1,340 EGP this month."
+- **Important — no double counting:**
+  - You already enter stock purchases as expenses. So the headline Profit stays
+    **Revenue − Expenses − Card fees**, as today.
+  - "Profit per product" and "waste cost" are an **analysis** of where the money comes from.
+    They are not subtracted a second time.
+  - The card says this in one line so it's never confusing.
 
-### Data + security
-- **Collections:** `/expenses/{id}` (one-offs) and `/recurringExpenses/{id}` (monthly
-  templates, including their amount history).
-- **Access:** admins only (read and write). Staff and pending signups can't see them.
-- **Tests:** rules tests prove staff can't read or write either collection.
-- **After it ships:** re-paste `firestore.rules` into the Firebase console.
+## 3. Break-even per location
+- **What it shows**, per location and under Global, for the selected range, e.g.
+  **"City Stars needs about 1,450 EGP a day to cover its costs — it's averaging 2,100 a
+  day ✓"**, with a bar showing how close it is.
+- **How it's worked out:**
+  - **Fixed costs per day** = monthly expenses (rent, salaries…) spread per day, plus
+    one-off expenses averaged over the days in the range. Card fees and materials are not
+    fixed — they grow with sales.
+  - **Variable costs** = materials (from your product costs) + card fees, as a share of
+    revenue in the range. For example, 30% of every sale goes to materials + fees.
+  - **Break-even revenue per day** = fixed per day ÷ (1 − variable share).
+  - **Also shown in prints:** "≈ 11 prints a day" (break-even ÷ what one print earns).
+  - **Average per day** = revenue ÷ days in the range up to today.
+- **Global:** includes General costs.
+- **Missing information:** if product costs aren't set yet, it says so and leaves out
+  materials (shown as "costs not set").
 
-## Files (main)
-New:
-- `lib/pnl/{types,recurring,pnl}.ts` + tests
-- `lib/pnl/firestore.ts`
-- `components/admin/pnl/*`
-- `components/admin/CustomRangePicker.tsx`
+## Needs your OK — one money decision
+Sales store the **total paid**, not a price per item. When staff give a discount (payment
+lower than the item prices) or change the sheets price, "Profit per product" has to decide
+which product loses that money. Options:
+- **(Recommended) Spread it proportionally** — a 10% discount on a print + frame sale
+  lowers both by 10%.
+- **Put it all on prints** — frames always count at full price (400 / 200) and prints take
+  any difference.
 
-Modified:
-- `lib/admin/scope.ts`, `lib/stats/{waste,revenue}.ts` (range handling)
-- `AdminDashboard.tsx` (switcher + nav)
-- `DashboardData.tsx` (listen to expenses)
-- `firestore.rules`
-- `SPEC.md`, `README.md`
+This only affects the per-product split. Totals, Revenue and Profit are the same either way.
+
+## Security
+- `settings/fees` and `settings/costs`: **admins only**, read and write. Staff can't see
+  your costs or fees.
+- Other `settings/*` docs (like paper units) keep their current rules.
+- Rules tests cover it. Re-paste `firestore.rules` afterwards.
 
 ## Verification
 - **Unit tests:**
-  - custom range boundaries, including a shift at 23:59 on the last day;
-  - the same-length previous window;
-  - recurring months, including day 31 in February, start/end months and amount changes;
-  - P&L sums, with per-location + General = Global.
-- **Rules tests:** admin allowed; staff and pending signups denied for both collections.
-- **Browser run against the emulators:**
-  - pick a Day, a Week and a Range, and check the totals match hand-computed numbers;
-  - add rent (recurring) + a one-off, and check profit per location and Global;
-  - check that changing the rent amount only affects later months;
-  - screenshots at desktop and phone widths.
+  - percentage vs percentage + fixed fees;
+  - split cash/Visa sales and sales with no Visa amount;
+  - a fee change applies only from its date;
+  - per-sheet cost from box cost ÷ sheets per box (the box, never the pack);
+  - ink per sheet;
+  - discount splitting;
+  - break-even formula, incl. no costs set / no revenue;
+  - everything still adds up to the headline.
+- **Rules tests:** admin allowed; staff, pending and signed-out users denied for fees/costs.
+- **Browser run:**
+  - set fees → P&L drops by the expected amount;
+  - change fees → past months unchanged;
+  - set costs → per-product table + waste cost + break-even match hand-worked numbers;
+  - phone + desktop screenshots.
 - **Then:** commit and push, and remind you to re-paste the rules.
