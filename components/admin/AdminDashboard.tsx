@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Boxes, CalendarClock, Camera, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
+import Image from "next/image";
+import { BarChart3, Boxes, CalendarClock, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Spinner } from "@/components/ui/Button";
@@ -54,9 +55,8 @@ function DashboardInner() {
       sidebar={
         <SidebarRail
           logo={
-            <span className="grid size-11 place-items-center rounded-[12px] bg-gold text-[#1a1406]">
-              <Camera className="size-5" />
-            </span>
+            <Image src="/icons/icon-192.png" alt="Memoire" width={48} height={48} priority
+              data-testid="rail-logo" className="size-12 rounded-[12px]" />
           }
           items={NAV.map((n) => ({
             label: n.id === "pending" && pending.length ? `${n.label} (${pending.length})` : n.label,
@@ -77,19 +77,20 @@ function DashboardInner() {
         />
       }
     >
-      <div className="flex flex-col gap-6">
-        {/* Top bar — the switcher is ALWAYS visible, above every section */}
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-ink-muted">Admin dashboard</p>
-              <h1 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 lg:gap-5">
+        {/* Top bar — the switcher is ALWAYS visible, above every section.
+            Desktop: greeting · switcher · logout in one row. */}
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="flex flex-wrap items-center justify-between gap-3 lg:contents">
+            <div className="lg:order-1 lg:shrink-0">
+              <p className="text-sm text-ink-muted lg:text-xs">Admin dashboard</p>
+              <h1 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl lg:text-2xl">
                 Hi, <span className="text-accent-gradient">{profile?.name.split(" ")[0] || "admin"}</span>
               </h1>
             </div>
-            <LogoutButton />
+            <div className="lg:order-3"><LogoutButton /></div>
           </div>
-          <ScopeBar section={historyUid ? "staff" : section} />
+          <div className="min-w-0 lg:order-2 lg:flex-1"><ScopeBar section={historyUid ? "staff" : section} /></div>
           {/* Phone-width nav (the rail is hidden below md) */}
           <nav aria-label="Sections" className="flex flex-wrap gap-2 md:hidden">
             {NAV.map((n) => (
@@ -146,7 +147,7 @@ function ScopeBar({ section }: { section: Section }) {
           ? null
           : undefined;
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3" data-testid="scope-bar">
+    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 lg:py-2" data-testid="scope-bar">
       <label className="relative flex items-center">
         <span className="sr-only">Event scope</span>
         <MapPin className="pointer-events-none absolute left-3 size-4 text-magenta" />

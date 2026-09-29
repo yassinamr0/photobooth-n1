@@ -1,111 +1,163 @@
-# PLAN — Phase 6: Statistics
-
-> Phases 1–5, plus the ink follow-up, are built and pushed (latest `fcaccf0`). Once you
-> approve, this file replaces `PLAN.md`.
+# PLAN — Owner feedback batch (after Phase 6)
 
 ## Context
-Add a **Statistics** section to the admin dashboard with **exactly three stats**, per SPEC
-and your instruction; nothing else gets added without asking:
-1. Busiest hours
-2. Waste rate: a per-staff ranked list plus an adaptive-granularity trend chart
-3. Inventory burn-rate projection
+The owner asked for 8 changes after using the app. Their answers:
+- **Frames:** deducted automatically when a shift ends, restocked by piece.
+- **Low-stock "mark as read":** hidden for everyone until the stock is fixed and then drops
+  low again.
+- **District 5:** tag today's legacy shifts only; don't touch its stock, because the event
+  has ended.
+- **Desktop:** redo the admin screens for desktop; phones stay as they are, and the staff
+  shift screen stays locked.
 
-Like every other section, Statistics consumes only scoped data, so it respects the event
-switcher (and the date range where one applies). It never reads raw Firestore data directly.
-
-## 1. Where the data comes from (reusing what exists)
-- **`useScopedDashboard()`** (Phase 4) already gives `shifts` and `entries` filtered by event
-  and date range. Entries belong to their shift's event and count toward the range their
-  shift started in.
-- **`useScopedInventory()`** (Phase 5) already gives per-location rows with `forecast` (paper)
-  and `inkForecast`, using the same 14-day computation shown on Inventory.
-- All new maths goes in **`lib/stats/`** as pure, unit-tested functions.
-
-## 2. Stat 1 — Busiest hours (`lib/stats/busiest.ts`)
-- **What it counts:** sale entries in scope (event + date range), bucketed by each entry's own
-  timestamp (per spec) into a **7 × 24 grid** of weekday × hour (Mon–Sun, device-local time).
-  - Each cell holds the number of sales and the EGP taken.
-  - Waste entries are excluded: this measures sales activity only.
+## 1. Frames in inventory (acrylic + magnetic), deducted automatically
+- **Stock types:** `stock/{paper|ink|acrylic|magnetic}`; frames are counted in pieces.
+  - `createEvent` and `ensureStockDocs` create all four.
+  - The default frame warning level is **5**, editable per location.
+  - Older events get the missing docs automatically, the same way ink and paper did.
+- **Shift end:** the same single write also deducts the shift's acrylic and magnetic sold,
+  added up from its sale entries.
+  - `stockDeduction` gains `{acrylic, magnetic}`.
+  - One log line per type, with a fixed id (`shiftacr_<id>`, `shiftmag_<id>`), only written
+    when the count is above 0.
+- The frame counts also flow through:
+  - **Apply now**;
+  - **reversal when a shift is deleted**;
+  - pending detection;
+  - the low-stock banner;
+  - the 14-day "runs out in" forecast (reusing `forecastStock`).
 - **UI:**
-  - a heatmap using the violet→magenta sequential scale from the chart tokens (empty = the
-    track colour);
-  - per-hour totals as a bar strip under the grid, and per-weekday totals down the right;
-  - a callout, e.g. "Busiest: Fri 18:00–19:00 (12 sales, 4,800 EGP)";
-  - each cell has a hover/focus title with the exact numbers;
-  - on phones the grid scrolls horizontally inside its card, never the whole page.
+  - The Inventory event view gets Acrylic and Magnetic cards (Restock by piece, Correct
+    count, Set warning level).
+  - The Global table and the Statistics burn-rate table get frame columns.
+  - Expanded shifts show the frames deducted.
+- **Security rules.** Firestore allows at most 10 document lookups per checked write, and
+  adding two more stock types to the current design would go over that limit on the shift
+  write. So the checks are regrouped, with the same guarantees:
+  - **Shift write:** checks each type with a non-zero amount has its log line in the same
+    batch.
+  - **Log line:** checks the shift (own shift, ended, this event, first deduction) and that
+    this type's stock dropped by exactly the logged amount.
+  - **Stock update:** checks the same pair.
+  - One generic helper `isValidStockDeduction(eventId, shiftId, type, amount)` replaces the
+    separate paper and ink checks.
+  - Ink keeps its extra check that cartridges equal the shift's `inkChanges`.
+  - Staff still can't restock, correct, or touch another shift's or event's stock.
+- **Tests:** unit tests for the frame amounts and pending detection; the rules suites are
+  extended so every attack case also covers acrylic and magnetic, and the old paper/ink
+  suites are rerun.
 
-## 3. Stat 2 — Waste rate (`lib/stats/waste.ts`)
-- **Definition:** `wasteRate = hadr ÷ (sheets sold + hadr)`, from scoped entries. When
-  nothing was used the rate is `null` (shown as "—"), never 0%.
-- **Headline:** the overall waste rate for the scope and range, e.g. "4.2% — 3 of 71 sheets
-  wasted".
-- **Per-staff ranked list:**
-  - every staff member with sheets used in scope, ranked **highest waste first**;
-  - each row shows rate %, hadr / used, and a small bar relative to the others;
-  - "most" and "least" are marked at the top and bottom.
-- **Adaptive trend chart**, bucketed by the **shift start date** (the same rule that decides
-  which range a shift belongs to):
-  - **This week:** daily points, Monday → today.
-  - **This month:** weekly points (Monday-start weeks, clipped to the month).
-  - **All time:** monthly points, from the first month with data to now.
-  - Empty buckets leave a gap in the line; they are never plotted as 0%.
-- **Warning treatment** (amber, the same as mismatch and low-stock warnings):
-  - **High staff member:** rate ≥ **1.5×** the scope's overall rate, AND at least **2
-    percentage points** above it, AND at least **10 sheets** used. The minimum usage stops
-    one bad print looking like a crisis.
-  - **High trend point:** the same test against the range's overall rate.
-  - **Climbing:** the last **3** non-empty points each strictly higher than the one before.
-    This shows a "Waste rate climbing" tag on the chart.
-  - The thresholds live as named constants at the top of `waste.ts`, so they're easy to
-    tweak later.
-- The chart is hand-drawn SVG, reusing the Phase 1 chart tokens and `ChartDefs` gradient. No
-  new chart library is needed for these three simple charts.
+## 2. Low-stock "Mark as read"
+- **Where it's stored:** a new field `alertDismissed` on each stock doc, written by admins
+  only. The alert shows when `isLow && !alertDismissed`.
+- **Re-arming:** restock, correct-count and warning-level changes run as transactions. When
+  the new quantity is **at or above** the warning level they clear `alertDismissed`, so the
+  alert returns the next time the stock drops low. Shift deductions never touch the flag.
+- **UI:**
+  - Each location/item in the low-stock banner (Overview and Inventory) gets a **Mark as
+    read** button.
+  - A small "Show 2 read alerts" link brings dismissed ones back into view.
+  - The item's card shows "Low stock · read" in grey instead of amber.
+- **Unchanged:** paper mismatches keep their existing "Mark as checked".
 
-## 4. Stat 3 — Inventory burn-rate projection
-- It reuses the **Phase 5 figure** (`forecastStock`, 14-day rolling average) exactly, so it
-  can't disagree with the Inventory screen.
-- **Under an event:** that location's paper card shows sheets left, average sheets per day,
-  and "runs out in ≈ N days". Ink shows the same, since it now has a forecast too.
-- **Under Global:** a combined table of every location, sorted soonest-to-run-out first. Any
-  location running out within **7 days**, or already below its low-stock threshold, gets the
-  amber treatment.
-- The date range doesn't apply here: the projection is always "the last 14 days → from now".
-  A note on the card says so.
+## 3. Remove staff from the Staff section
+- **Button:** **Remove** on each staff row (two-step confirm), which deletes the `/users`
+  profile doc. Admins already have this permission in the rules.
+  - You can't remove yourself.
+  - The confirm text explains that past shifts and sales stay in history, and that the
+    person's login must be deleted in the Firebase console (no Admin SDK).
+- **Afterwards:** removed people drop out of the Staff list. They still appear, tagged
+  "Removed", only when the selected date range includes shifts they worked, so history adds
+  up.
 
-## 5. UI
-- **Placement:** a new rail item **Statistics** (a chart icon) plus the phone pill nav. The
-  section has three cards in spec order: Busiest hours, Waste rate, Burn rate.
-- **Scope chip:** the switcher chip shows "Showing: {event} · {range}". The Burn-rate card
-  notes that the range doesn't apply to it.
-- **Empty states:** each card has a clear empty state, e.g. "No sales in this range at City
-  Stars".
-- Before writing chart code I'll load the `dataviz` skill for the chart conventions.
+## 4. One-time: tag old "no event" shifts (District 5)
+- **Tool:** in Shifts, an admin tool **"Tag shifts with no event"**:
+  1. Pick a date (default today).
+  2. See the list of that day's shifts that have **no event**.
+  3. Pick an event (inactive ones allowed, e.g. District 5).
+  4. Confirm.
+- **What it writes:** each shift gets `{eventId, stockExempt: true}`, in batches.
+- **Only touches no-event shifts.** It never changes a shift that already has an event, so
+  CLAUDE.md's snapshot rule still holds for real snapshots.
+- **`stockExempt`:** these shifts never appear as "not yet deducted" and never touch stock
+  (as you asked). The expanded shift says "Tagged by admin later — doesn't affect
+  inventory". The rules add `stockExempt` to the fields staff can't change.
+- Revenue, stats, Overview and the location comparison count them under District 5 at once.
 
-## 6. Files
+## 5. Desktop-first admin layouts (phones unchanged, staff shift screen unchanged)
+- **Shell:** content max-width ~1440px; a tighter type scale at `lg:` (big figures 5xl→4xl,
+  headings smaller); a compact scope bar in one row.
+- **Overview** becomes a real dashboard on `lg:`:
+  - a row of compact KPI tiles;
+  - two columns: revenue chart plus locations table on the left; an alerts column on the
+    right with low stock (with Mark as read), paper mismatches, pending signups with inline
+    Approve, and **on shift now** (open shifts).
+- **Staff:** a proper table on `lg:` with columns name, role, assigned event (dropdown),
+  shifts, revenue, cash, visa, sheets, hadr, frames, actions (history, remove). Cards stay on
+  phones.
+- **Shifts:** column layout on `lg:` (time, staff, event, duration, revenue, paper status,
+  stock status) under date headings; the expanded detail sits in two columns.
+- **Pending:** a table on `lg:`.
+- **Inventory:** four stock cards in one row on `xl:` (two on `lg:`); the stock log as a
+  table.
+- **Events:** a table on `lg:`.
+- **Statistics:** revenue full width; Locations and Cash vs Visa side by side on `xl:`;
+  Busiest hours full width; Waste rate and Burn rate side by side.
+
+## 6. Commas in numbers
+- One helper, `fmtNum(n)` (en-US grouping, up to 1 decimal), used for every displayed count
+  and amount (1,000 · 14,400 · 1,234.5). `formatEGP` already does this.
+- It's applied across the admin views, the staff summary grid, entry totals, cart and
+  "Logging" totals, stock quantities, tables, chart labels and the copy-summary text.
+- The number inputs themselves stay plain, so typing works normally.
+
+## 7. Logo in the top-left square
+- The sidebar logo square shows the Memoire logo (`/icons/icon-192.png`, rounded) instead of
+  the camera icon.
+
+## 8. Remove "By staff" from Waste rate
+- The per-staff ranking and its "High" flags are removed. The overall rate and the trend
+  chart stay, with the trend going full width.
+- The now-unused `staffWaste` code and its tests are deleted.
+- SPEC.md records this as an owner change, along with items 1, 2 and 4.
+
+## Files (main)
 New:
-- `lib/stats/{busiest,waste,burn}.ts` + `stats.test.ts`
-- `components/admin/stats/{StatisticsSection,BusiestHours,WasteRate,BurnRate}.tsx`
+- `lib/format.ts` (`fmtNum`)
+- `components/admin/TagShiftsTool.tsx`
 
 Modified:
-- `components/admin/AdminDashboard.tsx`: nav + section
-- `components/admin/Sections.tsx`: `Section` type
-- `README.md`
+- `lib/inventory/{types,units,pending,scope,firestore}.ts`
+- `lib/admin/{firestore,scope}.ts`
+- `lib/stats/{waste,burn}.ts`
+- `lib/shift/types.ts`
+- `components/admin/*` (AdminDashboard, Sections, ShiftPieces, InventorySection,
+  EventsSection, stats/*)
+- `components/shift/*` (number formatting only)
+- `components/layout/SidebarRail.tsx`
+- `firestore.rules`
+- `SPEC.md`, `README.md`
 
-## 7. Verification
-- **Unit tests:**
-  - **Busiest hours:** bucketing, including local-time hour and weekday, Sunday → Mon-first
-    index, and excluding waste entries.
-  - **Waste rate:**
-    - the rate maths and the `null` case;
-    - staff ranking and high flags, including the ≥ 10-sheets minimum;
-    - bucket boundaries for week (daily), month (weekly, clipped) and all time (monthly);
-    - gaps for empty buckets;
-    - "climbing" detection.
-  - **Burn rate:** the table sort, and the ≤ 7-days warning.
+## Verification
+- **Unit tests:** frames, alert re-arm logic, `stockExempt` pending exclusion, `fmtNum`, the
+  waste suite without staff. The whole suite stays green.
+- **Emulator rules suites:**
+  - new frame deduction + attack cases;
+  - `stockExempt` locked for staff;
+  - the `alertDismissed` field is admin-only;
+  - a regression run of every earlier suite.
 - **Playwright against the emulators:**
-  - seed two events with differently timed sales and different waste per staff member;
-  - switch Global → Event A → Event B and assert each card's numbers change: heatmap peak cell
-    and totals, overall waste %, staff list membership and order, trend point count per
-    range (7 / weeks / months), and burn-rate rows;
-  - screenshots at 1440 and 390 px.
-- `npm test`, lint, build. Commit and push, then tell you how to check each stat's scoping.
+  1. A shift sells 2 acrylic + 1 magnetic → that event's frame stock drops and the logs are
+     written.
+  2. Deleting the shift restores the frames.
+  3. Low-stock Mark as read → hidden; restock above the warning level → re-armed; drop low
+     → shown again.
+  4. Remove staff → gone from Staff.
+  5. Tag tool: no-event shifts become District 5, are exempt from stock, and revenue appears
+     under District 5.
+  6. Commas show (1,000 / 14,400).
+  7. The logo is in the rail.
+  8. Waste has no staff list.
+  9. The earlier Phase 3–6 browser suites still pass (updated for commas).
+  10. Screenshots at 1440 and 390 px.
+- Commit and push. **Re-paste `firestore.rules`** afterwards (the rules change).

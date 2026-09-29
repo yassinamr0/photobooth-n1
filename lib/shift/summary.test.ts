@@ -22,7 +22,7 @@ describe("aggregate", () => {
 });
 
 describe("buildShiftSummaryText", () => {
-  it("matches the legacy format", () => {
+  it("matches the legacy format (with thousands separators)", () => {
     const txt = buildShiftSummaryText(
       "Nour Hassan",
       { startTime: "x" },
@@ -32,9 +32,9 @@ describe("buildShiftSummaryText", () => {
     );
     expect(txt).toBe(
       "SHIFT SUMMARY — Nour Hassan\nStarted: Sep 29, 18:00\n------------------------------\n" +
-        "Total: 1800 EGP  (Cash 1300 / Visa 500)\nSheets sold: 2.5\nHadr wasted: 0.5\n" +
+        "Total: 1,800 EGP  (Cash 1,300 / Visa 500)\nSheets sold: 2.5\nHadr wasted: 0.5\n" +
         "Acrylic frames: 1\nMagnetic frames: 2\n------------------------------\n" +
-        "15:00  Sheets (1.5), Acrylic x1  —  1000 EGP  [Cash 1000]\n" +
+        "15:00  Sheets (1.5), Acrylic x1  —  1,000 EGP  [Cash 1,000]\n" +
         "16:00  Sheets (1), Magnetic x2  —  800 EGP  [Cash 300 + Visa 500]\n" +
         "17:00  Hadr waste (0.5)  —  50 EGP  [WASTE]\n",
     );

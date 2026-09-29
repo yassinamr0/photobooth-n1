@@ -37,10 +37,14 @@ Firebase console → Authentication → Settings → Authorized domains → add 
    legacy app's admin panel.
 
 ### 5. Events and inventory
-Create booth locations in the dashboard's **Events** section; each gets its own paper and ink
-stock (Inventory section). Paper is restocked in **boxes** (Inventory → Paper units → sheets
+Create booth locations in the dashboard's **Events** section; each gets its own paper, ink,
+acrylic-frame and magnetic-frame stock (Inventory section). Frames and ink are restocked by
+piece. Paper is restocked in **boxes** (Inventory → Paper units → sheets
 per box, default 108) and stored in sheets. When a staff member ends a shift, that shift's
-sheets sold + wasted are deducted automatically from the event the shift was tagged with.
+sheets sold + wasted, ink changes and frames sold are deducted automatically from the event
+the shift was tagged with. Low-stock alerts can be marked as read; they come back once stock
+is fixed and then drops low again. Shifts → "Tag shifts with no event" attaches old
+legacy-app shifts to an event without touching its stock.
 Events created by hand in the console (just a `name` field) work too — their stock is set up
 the first time an admin opens the dashboard.
 

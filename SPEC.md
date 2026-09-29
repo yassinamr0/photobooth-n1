@@ -287,6 +287,19 @@ Staff never see or interact with this concept directly.
     one cartridge, with − to undo; stored as shift.inkChanges). When the shift ends, those
     cartridges are deducted from THAT SHIFT'S eventId's ink stock alongside the paper
     deduction (same once-only / pending / reversal-on-delete rules).
+  - Owner-approved follow-up: **acrylic + magnetic frames** are tracked per event too
+    (`stock/acrylic`, `stock/magnetic`, in pieces; default warning level 5). Restocked by
+    piece. When a shift ends, the frames sold in that shift's own sale entries are deducted
+    from THAT SHIFT'S eventId in the same atomic write as paper/ink (logs `shiftacr_<id>` /
+    `shiftmag_<id>`; same once-only / pending / reversal-on-delete rules).
+  - Owner-approved follow-up: **Mark as read** on a low-stock alert (`alertDismissed` on the
+    stock doc, admin-only). Hidden for every admin until that stock is back at/above its
+    warning level (restock / count correction / warning-level change / shift reversal
+    re-arms it), so the alert returns the next time it drops low.
+  - Owner-approved one-time tool: **Tag shifts with no event** (Shifts). Only shifts whose
+    eventId is null (legacy app) are offered; they get `{eventId, stockExempt: true}`. They
+    count toward that event's revenue/stats but never touch its stock and never show as
+    pending. Shifts that already have an eventId are never changed.
 - Stock log history view per location, most recent first.
 - Rolling average daily consumption (e.g. last 14 days) per location → "at this rate, this
   location's stock runs out in approximately N days." Surface on the event's Inventory view
@@ -309,8 +322,9 @@ Build exactly these three — do not add more without checking first:
    A simple heatmap or bar chart is enough. Scoped to the selected event (or combined under
    "Global").
 2. **Waste rate** (build thoroughly): hadr wasted as a % of total sheets used (sold + wasted).
-   - Ranked list per staff member (who wastes most/least), scoped to the current event/Global
-     + date range selection.
+   - ~~Ranked list per staff member~~ — REMOVED at the owner's request: shift timing differs
+     too much (slow morning shifts can be forced to waste paper between sales) to compare
+     staff fairly.
    - Also a trend chart over time at adaptive granularity: daily points under "This week,"
      weekly points under "This month," monthly points under "All time" — so trend direction
      is visible, not just one flat percentage.
@@ -326,10 +340,25 @@ Owner-approved additions (after Phase 6), same scoping rules as everything else:
    selected event highlighted. Each row equals that event's Overview for the same range.
 6. **Cash vs Visa**: share of payments + split per period.
 
+Owner-approved changes (after Phase 6):
+- **Remove staff** (Staff section): deletes the person's /users profile; their history stays
+  (shown as "Removed" when the range includes their shifts). Their Firebase Auth login must
+  be deleted in the Firebase console (no Admin SDK).
+- **Desktop-first admin layouts** at `lg` and up (phones unchanged; staff shift screen
+  unchanged): Overview dashboard (KPIs, revenue + locations, alerts column with low stock,
+  mismatches, signups with inline Approve, on shift now), tables for Staff / Pending /
+  Events / Shifts / stock history, 2-up Inventory cards (4-up on very wide screens).
+- **Thousands separators** on every displayed number (1,000 · 14,400), incl. the staff
+  screen and the copied shift summary. Inputs stay plain.
+- Memoire logo in the sidebar's top-left square.
+
 ---
 
 ## FULL FIRESTORE SECURITY RULES (consolidated reference — paste into Firebase console once
 ## all collections exist)
+
+> The deployed source of truth is `firestore.rules` in the repo root — it extends this
+> reference (automatic paper/ink/frame deductions, stockExempt, alertDismissed).
 
 ```
 rules_version = '2';

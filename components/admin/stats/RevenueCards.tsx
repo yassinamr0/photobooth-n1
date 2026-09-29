@@ -3,7 +3,7 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
-import { formatEGP } from "@/lib/format";
+import { fmtNum, formatEGP } from "@/lib/format";
 import type { DateRange, RawDashboard, Scope, ScopedDashboard } from "@/lib/admin/scope";
 import { granularityFor, pct } from "@/lib/stats/waste";
 import { locationComparison, moneyTrend, revenueComparison } from "@/lib/stats/revenue";
@@ -24,9 +24,9 @@ export function RevenueTrend({ scoped, raw, scope, range, scopeLabel, now }: {
       <CardHeader title="Revenue" subtitle={`Sales income over time · ${scopeLabel}`} />
       <div className="mb-4 flex flex-wrap items-end gap-x-6 gap-y-2">
         <div>
-          <div data-testid="revenue-total" className="font-display text-5xl font-extrabold tabular-nums text-gold">{formatEGP(scoped.overview.total)}</div>
+          <div data-testid="revenue-total" className="font-display text-5xl font-extrabold tabular-nums text-gold lg:text-4xl">{formatEGP(scoped.overview.total)}</div>
           <p className="mt-1 text-sm text-ink-muted">
-            {salesCount} sale{salesCount === 1 ? "" : "s"}
+            {fmtNum(salesCount)} sale{salesCount === 1 ? "" : "s"}
             {salesCount ? ` · average ${formatEGP(Math.round(scoped.overview.total / salesCount))}` : ""}
           </p>
         </div>
@@ -49,7 +49,7 @@ export function RevenueTrend({ scoped, raw, scope, range, scopeLabel, now }: {
               tip: (
                 <>
                   <b className="text-ink">{p.label}</b>
-                  <span className="ml-2 text-ink-muted">{formatEGP(p.totals.total)} · {p.sales} sale{p.sales === 1 ? "" : "s"}</span>
+                  <span className="ml-2 text-ink-muted">{formatEGP(p.totals.total)} · {fmtNum(p.sales)} sale{p.sales === 1 ? "" : "s"}</span>
                 </>
               ),
             }))}
@@ -169,12 +169,12 @@ export function LocationComparison({ raw, scope, range, now, rangeLabel }: {
               <tr>
                 <th className="py-2 font-medium">Location</th>
                 <th className="py-2 font-medium">Revenue</th>
-                <th className="py-2 text-right font-medium">Sales</th>
-                <th className="py-2 text-right font-medium">Avg sale</th>
-                <th className="py-2 text-right font-medium">Hours</th>
-                <th className="py-2 text-right font-medium">EGP / hour</th>
-                <th className="py-2 text-right font-medium">Sheets sold</th>
-                <th className="py-2 text-right font-medium">Waste</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">Sales</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">Avg sale</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">Hours</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">EGP / hour</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">Sheets sold</th>
+                <th className="py-2 pl-4 text-right font-medium whitespace-nowrap">Waste</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -195,12 +195,12 @@ export function LocationComparison({ raw, scope, range, now, rangeLabel }: {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 text-right tabular-nums">{r.sales}</td>
-                    <td className="py-3 text-right tabular-nums">{r.avgSale == null ? "—" : formatEGP(Math.round(r.avgSale))}</td>
-                    <td className="py-3 text-right tabular-nums">{r.hours}</td>
-                    <td className="py-3 text-right font-semibold tabular-nums">{r.revenuePerHour == null ? "—" : formatEGP(Math.round(r.revenuePerHour))}</td>
-                    <td className="py-3 text-right tabular-nums">{r.sheets}</td>
-                    <td className="py-3 text-right tabular-nums">{pct(r.waste.rate)}</td>
+                    <td className="py-3 pl-4 text-right tabular-nums">{fmtNum(r.sales)}</td>
+                    <td className="py-3 pl-4 text-right tabular-nums">{r.avgSale == null ? "—" : formatEGP(Math.round(r.avgSale))}</td>
+                    <td className="py-3 pl-4 text-right tabular-nums">{fmtNum(r.hours)}</td>
+                    <td className="py-3 pl-4 text-right font-semibold tabular-nums">{r.revenuePerHour == null ? "—" : formatEGP(Math.round(r.revenuePerHour))}</td>
+                    <td className="py-3 pl-4 text-right tabular-nums">{fmtNum(r.sheets)}</td>
+                    <td className="py-3 pl-4 text-right tabular-nums">{pct(r.waste.rate)}</td>
                   </tr>
                 );
               })}

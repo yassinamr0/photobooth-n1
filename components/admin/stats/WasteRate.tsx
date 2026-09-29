@@ -3,17 +3,16 @@
 import { AlertTriangle, TrendingUp } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
-import { cn } from "@/lib/cn";
 import type { DateRange, ScopedShift } from "@/lib/admin/scope";
 import {
   granularityFor,
   isClimbing,
   pct,
-  staffWaste,
   sumUsage,
   wasteTrend,
   type TrendPoint,
 } from "@/lib/stats/waste";
+import { fmtNum } from "@/lib/format";
 import { useChartTooltip } from "./ChartTooltip";
 
 const GRAN_LABEL = { day: "daily", week: "weekly", month: "monthly" } as const;
@@ -21,54 +20,24 @@ const GRAN_LABEL = { day: "daily", week: "weekly", month: "monthly" } as const;
 /** Stat 2 — Waste rate: hadr ÷ (sheets sold + hadr), scoped to event + date range. */
 export function WasteRate({ shifts, range, scopeLabel, now }: { shifts: ScopedShift[]; range: DateRange; scopeLabel: string; now: Date }) {
   const overall = sumUsage(shifts);
-  const staff = staffWaste(shifts, overall);
   const trend = wasteTrend(shifts, range, now, overall);
   const climbing = isClimbing(trend);
-  const maxRate = Math.max(0.0001, ...staff.map((s) => s.usage.rate ?? 0));
 
+  // No per-staff ranking (owner's call): shift timing differs too much — slow morning shifts
+  // can be forced to waste paper between sales — so staff can't fairly be compared.
   return (
     <Card padding="lg" data-testid="stat-waste">
       <CardHeader title="Waste rate" subtitle={`Hadr wasted as a share of all sheets used (sold + wasted) · ${scopeLabel}`} />
       {overall.used === 0 ? (
         <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No sheets sold or wasted in this range.</p>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {/* Headline + per-staff ranking */}
-          <div className="flex flex-col gap-4">
-            <div>
-              <div data-testid="waste-overall" className="font-display text-5xl font-extrabold tabular-nums text-ink">{pct(overall.rate)}</div>
-              <p className="mt-1 text-sm text-ink-muted">
-                {overall.hadr} of {overall.used} sheets wasted
-              </p>
-            </div>
-            <div>
-              <h4 className="mb-2 text-xs font-medium tracking-wide text-ink-faint uppercase">By staff · most waste first</h4>
-              <ol className="flex flex-col gap-2" data-testid="waste-staff">
-                {staff.map((s, i) => (
-                  <li key={s.uid} data-testid="waste-staff-row" data-high={s.high || undefined}
-                    className={cn("rounded-inner border px-3 py-2.5", s.high ? "border-warning/40 bg-warning-dim/50" : "border-line bg-surface-2/40")}>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 text-ink-faint tabular-nums">{i + 1}</span>
-                      <span data-testid="waste-staff-name" className="min-w-0 flex-1 truncate font-semibold text-ink">{s.name}</span>
-                      {s.high && <Tag tone="warning" icon={<AlertTriangle />}>High</Tag>}
-                      {staff.length > 1 && i === 0 && !s.high && <span className="text-[11px] text-ink-faint">most</span>}
-                      {staff.length > 1 && i === staff.length - 1 && <span className="text-[11px] text-ink-faint">least</span>}
-                      <span data-testid="waste-staff-rate" className="w-14 text-right font-semibold tabular-nums text-ink">{pct(s.usage.rate)}</span>
-                    </div>
-                    <div className="mt-1.5 flex items-center gap-2 pl-7">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-chart-track">
-                        <div className={cn("h-full rounded-full", s.high ? "bg-warning" : "bg-violet")}
-                          style={{ width: `${((s.usage.rate ?? 0) / maxRate) * 100}%` }} />
-                      </div>
-                      <span className="text-[11px] text-ink-faint tabular-nums">{s.usage.hadr}/{s.usage.used} sheets</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+        <div className="flex flex-col gap-4">
+          <div>
+            <div data-testid="waste-overall" className="font-display text-5xl font-extrabold tabular-nums text-ink lg:text-4xl">{pct(overall.rate)}</div>
+            <p className="mt-1 text-sm text-ink-muted">
+              {fmtNum(overall.hadr)} of {fmtNum(overall.used)} sheets wasted
+            </p>
           </div>
-
-          {/* Adaptive-granularity trend */}
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <h4 className="text-xs font-medium tracking-wide text-ink-faint uppercase">
@@ -162,7 +131,7 @@ function TrendChart({ points, baseline }: { points: TrendPoint[]; baseline: numb
         <caption>Waste rate by period</caption>
         <tbody>
           {points.map((p) => (
-            <tr key={p.key}><th scope="row">{p.label}</th><td>{pct(p.usage.rate)}</td><td>{p.usage.hadr} of {p.usage.used} sheets</td></tr>
+            <tr key={p.key}><th scope="row">{p.label}</th><td>{pct(p.usage.rate)}</td><td>{fmtNum(p.usage.hadr)} of {fmtNum(p.usage.used)} sheets</td></tr>
           ))}
         </tbody>
       </table>
@@ -174,7 +143,7 @@ function TrendTip({ p }: { p: TrendPoint }) {
   return (
     <>
       <b className="text-ink">{p.label}</b>
-      <span className="ml-2 text-ink-muted">{pct(p.usage.rate)} · {p.usage.hadr} of {p.usage.used} sheets</span>
+      <span className="ml-2 text-ink-muted">{pct(p.usage.rate)} · {fmtNum(p.usage.hadr)} of {fmtNum(p.usage.used)} sheets</span>
       {p.high && <span className="ml-2 text-warning">High</span>}
     </>
   );

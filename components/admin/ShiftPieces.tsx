@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronDown, MapPin, Package, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { applyShiftDeduction } from "@/lib/inventory/firestore";
+import { describeDeduction } from "@/lib/inventory/units";
 import { useScopedInventory } from "./DashboardData";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
@@ -15,6 +16,7 @@ import type { ScopedShift } from "@/lib/admin/scope";
 import { describeReconciliation } from "@/lib/shift/paper";
 import { fmtTime, type ShiftTotals } from "@/lib/shift/summary";
 import { fmtDuration } from "@/lib/shift/time";
+import { fmtNum, formatEGP } from "@/lib/format";
 
 export function MismatchIcon({ title = "Paper count mismatch" }: { title?: string }) {
   return (
@@ -36,7 +38,7 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
     ["Magnetic", totals.magnetic],
   ];
   return (
-    <div className={cn("grid gap-2", size === "lg" ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7" : "grid-cols-4 sm:grid-cols-7")}>
+    <div className={cn("grid gap-2", size === "lg" ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7" : "grid-cols-4 sm:grid-cols-7 lg:grid-cols-4 2xl:grid-cols-7")}>
       {cells.map(([label, v, color], i) => (
         <div
           key={label}
@@ -48,9 +50,9 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
         >
           <div
             data-testid={`stat-${label.split(" ")[0].toLowerCase()}`}
-            className={cn("font-display font-bold tabular-nums", size === "lg" ? "text-2xl" : "text-base", color)}
+            className={cn("font-display font-bold tabular-nums", size === "lg" ? "text-2xl lg:text-xl" : "text-base", color)}
           >
-            {v}
+            {fmtNum(v)}
           </div>
           <div className="text-[11px] text-ink-faint">{label}</div>
         </div>
@@ -122,6 +124,45 @@ export function PaperBlock({ s, readOnly }: { s: ScopedShift; readOnly?: boolean
   );
 }
 
+const COLS = (showEvent: boolean) =>
+  showEvent
+    ? "lg:grid lg:grid-cols-[150px_minmax(0,1.2fr)_minmax(0,1fr)_80px_110px_120px_110px_20px] lg:gap-4"
+    : "lg:grid lg:grid-cols-[150px_minmax(0,1.2fr)_80px_110px_120px_110px_20px] lg:gap-4";
+
+/** Column headings over the desktop shift rows. */
+export function ShiftColumnsHeader({ showEvent }: { showEvent: boolean }) {
+  return (
+    <div className={cn("hidden px-4 pt-1 text-[11px] font-medium tracking-wide text-ink-faint uppercase", COLS(showEvent))}>
+      <span>Time</span>
+      <span>Staff</span>
+      {showEvent && <span>Event</span>}
+      <span>Duration</span>
+      <span className="text-right">Revenue</span>
+      <span>Paper</span>
+      <span>Stock</span>
+      <span />
+    </div>
+  );
+}
+
+function paperShort(s: ScopedShift): { text: string; tone: string } {
+  const r = s.recon;
+  if (!r) return { text: s.shift.endTime ? "No counts" : "—", tone: "text-ink-faint" };
+  if (r.warn) return { text: "Mismatch", tone: "text-warning" };
+  if (r.mismatch) return { text: "Checked ✓", tone: "text-success" };
+  return { text: "Matches", tone: "text-success" };
+}
+
+function stockShort(s: ScopedShift, pendingIds: Set<string>): { text: string; tone: string } {
+  const { shift } = s;
+  if (shift.stockExempt) return { text: "Exempt", tone: "text-ink-faint" };
+  if (shift.stockDeduction) return { text: "Deducted", tone: "text-ink-muted" };
+  if (!shift.eventId) return { text: "No event", tone: "text-ink-faint" };
+  if (!shift.endTime) return { text: "At shift end", tone: "text-ink-faint" };
+  if (pendingIds.has(shift.id)) return { text: "Pending", tone: "text-warning" };
+  return { text: "Not tracked", tone: "text-ink-faint" };
+}
+
 /** One shift: collapsed row (+ ⚠ even when collapsed) → expanded stats, paper check, delete. */
 export function ShiftRow({
   s,
@@ -135,20 +176,24 @@ export function ShiftRow({
   readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const { pending } = useScopedInventory();
   const { shift } = s;
   const dur = shift.endTime ? fmtDuration(new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) : "ongoing";
   const date = showDate
     ? new Date(shift.startTime).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · "
     : "";
+  const paper = paperShort(s);
+  const stock = stockShort(s, new Set(pending.map((p) => p.id)));
   return (
     <div data-testid="shift-row" className="rounded-inner border border-line bg-surface">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className={cn("flex w-full items-center gap-3 px-4 py-3 text-left lg:items-center", COLS(showEvent))}
       >
-        <div className="min-w-0 flex-1">
+        {/* phones: stacked summary (unchanged) */}
+        <div className="min-w-0 flex-1 lg:hidden">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-ink tabular-nums">
               {date}
@@ -163,17 +208,40 @@ export function ShiftRow({
             </span>
           )}
         </div>
-        <span className="text-sm font-semibold text-gold tabular-nums">{s.totals.total} EGP</span>
-        <span className="hidden text-xs text-ink-faint sm:inline">{dur}</span>
-        {!shift.endTime && <Tag tone="success" dot>Live</Tag>}
+        {/* desktop: columns */}
+        <span className="hidden text-sm font-semibold whitespace-nowrap text-ink tabular-nums lg:block">
+          {date}
+          {fmtTime(shift.startTime)} → {shift.endTime ? fmtTime(shift.endTime) : "now"}
+        </span>
+        <span className="hidden min-w-0 items-center gap-2 text-sm text-ink lg:flex">
+          <span className="truncate">{s.staffName}</span>
+          {!shift.endTime && <Tag tone="success" dot>Live</Tag>}
+        </span>
+        {showEvent && (
+          <span data-testid="event-label-desktop" className="hidden min-w-0 items-center gap-1 truncate text-sm text-ink-muted lg:flex">
+            <MapPin className="size-3.5 shrink-0 text-ink-faint" /> <span className="truncate">{s.eventName ?? "No event"}</span>
+          </span>
+        )}
+        <span className="hidden text-sm text-ink-muted lg:block">{dur}</span>
+        <span className="text-sm font-semibold whitespace-nowrap text-gold tabular-nums lg:text-right">{formatEGP(s.totals.total)}</span>
+        <span className={cn("hidden items-center gap-1.5 text-sm lg:flex", paper.tone)}>
+          {s.recon?.warn && <AlertTriangle className="size-3.5" />}{paper.text}
+        </span>
+        <span className={cn("hidden text-sm lg:block", stock.tone)}>{stock.text}</span>
+        <span className="hidden text-xs text-ink-faint sm:inline lg:hidden">{dur}</span>
+        {!shift.endTime && <span className="lg:hidden"><Tag tone="success" dot>Live</Tag></span>}
         <ChevronDown className={cn("size-4 shrink-0 text-ink-faint transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="flex flex-col gap-3 border-t border-line px-4 py-4">
-          <StatGrid totals={s.totals} />
-          <PaperBlock s={s} readOnly={readOnly} />
-          <StockStatus s={s} readOnly={readOnly} />
-          {!readOnly && <DeleteShift s={s} />}
+        <div className="grid gap-3 border-t border-line px-4 py-4 lg:grid-cols-2 lg:gap-4">
+          <div className="flex flex-col gap-3">
+            <StatGrid totals={s.totals} />
+            <PaperBlock s={s} readOnly={readOnly} />
+          </div>
+          <div className="flex flex-col gap-3">
+            <StockStatus s={s} readOnly={readOnly} />
+            {!readOnly && <DeleteShift s={s} />}
+          </div>
         </div>
       )}
     </div>
@@ -190,18 +258,18 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
   const d = shift.stockDeduction;
   let text: React.ReactNode;
   let action: React.ReactNode = null;
-  if (d) {
+  if (shift.stockExempt) {
+    text = `Tagged with ${s.eventName ?? "an event"} by an admin later — doesn't affect inventory`;
+  } else if (d) {
     text = (
       <>
-        Deducted <b className="text-ink">{d.sheets}</b> sheet{d.sheets === 1 ? "" : "s"}
-        {d.cartridges > 0 && <> and <b className="text-ink">{d.cartridges}</b> ink cartridge{d.cartridges === 1 ? "" : "s"}</>} from{" "}
-        {s.eventName ?? "its event"}&apos;s stock
+        Deducted <b className="text-ink">{describeDeduction(d)}</b> from {s.eventName ?? "its event"}&apos;s stock
       </>
     );
   } else if (!shift.eventId) {
     text = shift.endTime ? "No event — this shift doesn't affect any location's inventory" : "No event — won't affect any location's inventory";
   } else if (!shift.endTime) {
-    text = `Paper used${shift.inkChanges ? ` and ${shift.inkChanges} ink cartridge(s)` : ""} will be deducted from ${s.eventName}'s stock when the shift ends`;
+    text = `Paper used, frames sold${shift.inkChanges ? ` and ${shift.inkChanges} ink cartridge(s)` : ""} will be deducted from ${s.eventName}'s stock when the shift ends`;
   } else if (pending.some((p) => p.id === shift.id)) {
     text = <span className="text-warning">Not yet deducted from {s.eventName}&apos;s stock</span>;
     if (!readOnly && profile)
@@ -211,7 +279,7 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
             setBusy(true);
             try {
               const n = await applyShiftDeduction(shift, entries, { uid: profile.uid, name: profile.name });
-              toast(`Deducted ${n?.sheets ?? 0} sheets${n?.cartridges ? ` + ${n.cartridges} cartridge(s)` : ""} from ${s.eventName}`, "success");
+              toast(n ? `Deducted ${describeDeduction(n)} from ${s.eventName}` : "Nothing to deduct", "success");
             } catch (e) {
               toast(`Could not deduct: ${authErrorMessage(e)}`, "danger");
             } finally {
@@ -232,11 +300,14 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
       {action}
     </div>
     <p data-testid="ink-changes-admin" className="-mt-1 px-1 text-xs text-ink-faint">
-      Ink changed during this shift: {shift.inkChanges || 0}× (1 = one cartridge)
+      Ink changed during this shift: {fmtNum(shift.inkChanges || 0)}× (1 = one cartridge)
     </p>
     </>
   );
 }
+
+const hasAnyDeduction = (d: NonNullable<ScopedShift["shift"]["stockDeduction"]>) =>
+  d.sheets > 0 || d.cartridges > 0 || d.acrylic > 0 || d.magnetic > 0;
 
 function DeleteShift({ s }: { s: ScopedShift }) {
   const toast = useToast();
@@ -256,11 +327,9 @@ function DeleteShift({ s }: { s: ScopedShift }) {
     <div role="alertdialog" aria-label="Confirm delete shift" className="rounded-inner border border-danger/40 bg-danger-dim px-4 py-3">
       <p className="text-sm font-semibold text-danger">
         Delete this shift and its {n} {n === 1 ? "entry" : "entries"}? This can&apos;t be undone.
-        {s.shift.stockDeduction && (s.shift.stockDeduction.sheets > 0 || s.shift.stockDeduction.cartridges > 0) && (
+        {s.shift.stockDeduction && hasAnyDeduction(s.shift.stockDeduction) && (
           <span className="mt-1 block font-normal">
-            Its {s.shift.stockDeduction.sheets} deducted sheets
-            {s.shift.stockDeduction.cartridges > 0 && ` and ${s.shift.stockDeduction.cartridges} ink cartridge(s)`} will be put back
-            into {s.eventName ?? "its event"}&apos;s stock.
+            The {describeDeduction(s.shift.stockDeduction)} it deducted will be put back into {s.eventName ?? "its event"}&apos;s stock.
           </span>
         )}
       </p>

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import { fmtTime, sortNewestFirst } from "@/lib/shift/summary";
 import type { Entry } from "@/lib/shift/types";
+import { fmtNum } from "@/lib/format";
 
 /** LOCKED card #4 — "This shift": every entry logged this shift, newest first. */
 export function ShiftLog({ entries, onDelete }: { entries: Entry[]; onDelete: (id: string) => Promise<void> }) {
@@ -51,7 +52,7 @@ function EntryRow({ entry: e, onDelete }: { entry: Entry; onDelete: (id: string)
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
-        <span className="font-display font-bold tabular-nums text-ink">{e.total} EGP</span>
+        <span className="font-display font-bold tabular-nums text-ink">{fmtNum(e.total)} EGP</span>
         {confirming ? (
           <div className="flex gap-1.5">
             <button type="button" onClick={() => setConfirming(false)}

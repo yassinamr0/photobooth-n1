@@ -1,4 +1,5 @@
 import type { Entry, Shift } from "./types";
+import { fmtNum } from "@/lib/format";
 
 export type ShiftTotals = {
   total: number;
@@ -51,8 +52,8 @@ export function fmtDateTime(iso: string | null | undefined) {
 export function paymentTag(e: Entry) {
   if (e.type === "waste") return "WASTE";
   const bits: string[] = [];
-  if (e.cash > 0) bits.push(`Cash ${e.cash}`);
-  if (e.visa > 0) bits.push(`Visa ${e.visa}`);
+  if (e.cash > 0) bits.push(`Cash ${fmtNum(e.cash)}`);
+  if (e.visa > 0) bits.push(`Visa ${fmtNum(e.visa)}`);
   return bits.join(" + ") || "-";
 }
 
@@ -68,17 +69,17 @@ export function buildShiftSummaryText(
   let txt = `SHIFT SUMMARY — ${staffName}\n`;
   txt += `Started: ${shift ? formatDateTime(shift.startTime) : "—"}\n`;
   txt += `------------------------------\n`;
-  txt += `Total: ${t.total} EGP  (Cash ${t.cash} / Visa ${t.visa})\n`;
-  txt += `Sheets sold: ${t.sheets}\n`;
-  txt += `Hadr wasted: ${t.hadr}\n`;
-  txt += `Acrylic frames: ${t.acrylic}\n`;
-  txt += `Magnetic frames: ${t.magnetic}\n`;
+  txt += `Total: ${fmtNum(t.total)} EGP  (Cash ${fmtNum(t.cash)} / Visa ${fmtNum(t.visa)})\n`;
+  txt += `Sheets sold: ${fmtNum(t.sheets)}\n`;
+  txt += `Hadr wasted: ${fmtNum(t.hadr)}\n`;
+  txt += `Acrylic frames: ${fmtNum(t.acrylic)}\n`;
+  txt += `Magnetic frames: ${fmtNum(t.magnetic)}\n`;
   txt += `------------------------------\n`;
   entries
     .slice()
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
     .forEach((e) => {
-      txt += `${formatTime(e.time)}  ${e.desc}  —  ${e.total} EGP  [${paymentTag(e)}]\n`;
+      txt += `${formatTime(e.time)}  ${e.desc}  —  ${fmtNum(e.total)} EGP  [${paymentTag(e)}]\n`;
     });
   return txt;
 }

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { boxesToSheets, isLow, sheetsToBoxes, shiftActualUsed } from "./units";
+import { boxesToSheets, isAlerting, isLow, sheetsToBoxes, shiftActualUsed, shiftFramesSold } from "./units";
 import { forecastPaper } from "./forecast";
 import { pendingDeductions, unattributedShifts } from "./pending";
 import { reconcileShift } from "@/lib/shift/paper";
 import type { Entry, Shift } from "@/lib/shift/types";
-import type { StockDoc, StockLog } from "./types";
+import type { StockDoc, StockLog, StockType } from "./types";
 
 const DAY = 86_400_000;
 
@@ -18,7 +18,7 @@ describe("units — BOXES for inventory", () => {
     expect(sheetsToBoxes(0, 108)).toBe(0);
   });
   it("low stock = strictly below threshold", () => {
-    const s = (q: number): StockDoc => ({ type: "paper", currentQuantity: q, lowStockThreshold: 108, trackingSinceMs: 0, updatedAtMs: 0 });
+    const s = (q: number): StockDoc => ({ type: "paper", currentQuantity: q, lowStockThreshold: 108, trackingSinceMs: 0, updatedAtMs: 0, alertDismissed: false });
     expect(isLow(s(107))).toBe(true);
     expect(isLow(s(108))).toBe(false);
   });
@@ -43,7 +43,7 @@ describe("pendingDeductions", () => {
     id, uid: "u", staffName: "", eventId: "A", startTime: new Date(now - DAY).toISOString(),
     endTime: new Date(now - 1000).toISOString(), startPaperCount: 1, paperChanges: 0, inkChanges: 0, endPaperCount: 1, ...o,
   });
-  const paper: StockDoc = { type: "paper", currentQuantity: 0, lowStockThreshold: 0, trackingSinceMs: now - 2 * DAY, updatedAtMs: 0 };
+  const paper: StockDoc = { type: "paper", currentQuantity: 0, lowStockThreshold: 0, trackingSinceMs: now - 2 * DAY, updatedAtMs: 0, alertDismissed: false };
   const map = new Map<string, StockDoc | null>([["A", paper]]);
   it("only ended, event-tagged, undeducted shifts after tracking started", () => {
     const got = pendingDeductions(
@@ -51,9 +51,10 @@ describe("pendingDeductions", () => {
         shift("ok", {}),
         shift("open", { endTime: null }),
         shift("noEvent", { eventId: null }),
-        shift("done", { stockDeduction: { eventId: "A", sheets: 2, cartridges: 0 } }),
+        shift("done", { stockDeduction: { eventId: "A", sheets: 2, cartridges: 0, acrylic: 0, magnetic: 0 } }),
         shift("before", { endTime: new Date(now - 3 * DAY).toISOString() }),
         shift("untracked", { eventId: "B" }),
+        shift("exempt", { stockExempt: true }),
       ],
       map,
     );
@@ -103,11 +104,11 @@ import type { EventInventory, EventRecord } from "./types";
 describe("scopeInventory — switcher scoping", () => {
   const now = Date.UTC(2026, 9, 1);
   const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null });
-  const stock = (type: "paper" | "ink", q: number, th: number): StockDoc => ({ type, currentQuantity: q, lowStockThreshold: th, trackingSinceMs: now - 5 * DAY, updatedAtMs: 0 });
+  const stock = (type: StockType, q: number, th: number, alertDismissed = false): StockDoc => ({ type, currentQuantity: q, lowStockThreshold: th, trackingSinceMs: now - 5 * DAY, updatedAtMs: 0, alertDismissed });
   const inv = new Map<string, EventInventory>([
-    ["A", { paper: stock("paper", 50, 108), ink: stock("ink", 3, 1), logs: [] }],
-    ["B", { paper: stock("paper", 500, 108), ink: stock("ink", 0, 1), logs: [] }],
-    ["C", { paper: stock("paper", 500, 108), ink: stock("ink", 5, 1), logs: [] }],
+    ["A", { paper: stock("paper", 50, 108), ink: stock("ink", 3, 1), acrylic: null, magnetic: null, logs: [] }],
+    ["B", { paper: stock("paper", 500, 108), ink: stock("ink", 0, 1), acrylic: null, magnetic: null, logs: [] }],
+    ["C", { paper: stock("paper", 500, 108), ink: stock("ink", 5, 1), acrylic: null, magnetic: null, logs: [] }],
   ]);
   const ended = (id: string, eventId: string | null): Shift => ({
     id, uid: "u", staffName: "", eventId, startTime: new Date(now - DAY).toISOString(), endTime: new Date(now - 1).toISOString(),
@@ -129,7 +130,40 @@ describe("scopeInventory — switcher scoping", () => {
   });
   it("untracked event (no stock docs) is not low and has no pending", () => {
     const u = scopeInventory([ev("Z")], new Map(), [ended("z", "Z")], "global", now);
-    expect(u.rows[0]).toMatchObject({ tracked: false, paperLow: false, pending: [] });
+    expect(u.rows[0]).toMatchObject({ tracked: false, low: { paper: false, ink: false, acrylic: false, magnetic: false }, pending: [] });
+  });
+});
+
+describe("low-stock alerts — Mark as read", () => {
+  const now = Date.UTC(2026, 9, 1);
+  const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null });
+  const st = (type: StockType, q: number, th: number, alertDismissed = false): StockDoc =>
+    ({ type, currentQuantity: q, lowStockThreshold: th, trackingSinceMs: 0, updatedAtMs: 0, alertDismissed });
+  it("a read alert leaves the banner but stays listed as read; frames alert too", () => {
+    const inv = new Map<string, EventInventory>([
+      ["A", { paper: st("paper", 50, 108, true), ink: st("ink", 3, 1), acrylic: st("acrylic", 2, 5), magnetic: st("magnetic", 9, 5), logs: [] }],
+      ["B", { paper: st("paper", 50, 108, true), ink: st("ink", 3, 1), acrylic: st("acrylic", 9, 5), magnetic: st("magnetic", 9, 5), logs: [] }],
+    ]);
+    const g = scopeInventory([ev("A"), ev("B")], inv, [], "global", now);
+    expect(g.alerts.map((a) => `${a.event.id}:${a.type}`)).toEqual(["A:acrylic"]);
+    expect(g.readAlerts.map((a) => `${a.event.id}:${a.type}`)).toEqual(["A:paper", "B:paper"]);
+    expect(g.lowRows.map((r) => r.event.id)).toEqual(["A"]);
+    expect(g.rows[1].low.paper).toBe(true);
+    expect(g.rows[1].alerting.paper).toBe(false);
+  });
+  it("isAlerting = low AND not read; at the threshold is never low", () => {
+    expect(isAlerting(st("acrylic", 4, 5))).toBe(true);
+    expect(isAlerting(st("acrylic", 4, 5, true))).toBe(false);
+    expect(isAlerting(st("acrylic", 5, 5))).toBe(false);
+  });
+});
+
+describe("shiftFramesSold — from the shift's own sale entries", () => {
+  const sale = (a: number, m: number): Entry => ({ id: String(a + m), uid: "u", staffName: "", shiftId: "s", time: "", type: "sale", sheets: 0, frames: { Acrylic: a, Magnetic: m }, custom: [], desc: "", total: 0, cash: 0, visa: 0 });
+  it("sums acrylic + magnetic separately, ignoring waste", () => {
+    const waste: Entry = { id: "w", uid: "u", staffName: "", shiftId: "s", time: "", type: "waste", hadr: 1, desc: "", total: 0, cash: 0, visa: 0 };
+    expect(shiftFramesSold([sale(2, 0), sale(0, 1), sale(1, 1), waste])).toEqual({ acrylic: 3, magnetic: 2 });
+    expect(shiftFramesSold([])).toEqual({ acrylic: 0, magnetic: 0 });
   });
 });
 

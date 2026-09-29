@@ -19,6 +19,7 @@ import {
 } from "@/lib/shift/pricing";
 import { checkSale, quickFill, type Payment, type SaleCheck } from "@/lib/shift/sale";
 import { Chip, NumberInput, Stepper } from "./Stepper";
+import { fmtNum } from "@/lib/format";
 
 const SHEET_PRESETS = [0.5, 1, 1.5, 2, 3];
 
@@ -133,7 +134,7 @@ export function SaleCard({
               )}
             >
               <div className="font-display font-bold">{t}</div>
-              <div className="text-sm text-gold">{FRAME_PRICES[t]} EGP</div>
+              <div className="text-sm text-gold">{fmtNum(FRAME_PRICES[t])} EGP</div>
               <div className="mt-2 flex items-center justify-between">
                 <button type="button" aria-label={`Remove ${t} frame`} disabled={n <= 0}
                   onClick={(e) => { e.stopPropagation(); setFrame(t, n - 1); }}
@@ -179,7 +180,7 @@ export function SaleCard({
               <li key={l.customId ?? l.label} className="flex items-center justify-between gap-3 text-sm">
                 <span className="truncate text-ink">{l.label}</span>
                 <span className="flex items-center gap-2 tabular-nums text-ink-muted">
-                  {l.price} EGP
+                  {fmtNum(l.price)} EGP
                   {l.customId && (
                     <button type="button" aria-label={`Remove ${l.label}`}
                       onClick={() => setCart((c) => ({ ...c, custom: c.custom.filter((x) => x.id !== l.customId) }))}
@@ -194,7 +195,7 @@ export function SaleCard({
         )}
       </div>
       <p className="mt-2 text-right text-sm text-ink-muted">
-        Items subtotal: <span data-testid="subtotal" className="font-semibold text-ink tabular-nums">{check.subtotal} EGP</span>
+        Items subtotal: <span data-testid="subtotal" className="font-semibold text-ink tabular-nums">{fmtNum(check.subtotal)} EGP</span>
       </p>
 
       {/* Payment */}
@@ -224,7 +225,7 @@ export function SaleCard({
 
       <div className="mt-5 flex items-baseline justify-between">
         <span className="text-sm text-ink-muted">Logging</span>
-        <span data-testid="logging-total" className="font-display text-3xl font-extrabold text-gold tabular-nums">{check.total} EGP</span>
+        <span data-testid="logging-total" className="font-display text-3xl font-extrabold text-gold tabular-nums">{fmtNum(check.total)} EGP</span>
       </div>
       <Button size="lg" className="mt-3 w-full" disabled={!check.canLog} loading={busy} onClick={log}>
         Log sale

@@ -41,25 +41,6 @@ export function sumUsage(shifts: ScopedShift[]): Usage {
   return usage(sold, hadr);
 }
 
-export type StaffWaste = { uid: string; name: string; usage: Usage; high: boolean };
-
-/** Per-staff ranking, highest waste rate first. Staff with no sheets used are omitted. */
-export function staffWaste(shifts: ScopedShift[], overall: Usage): StaffWaste[] {
-  const by = new Map<string, { name: string; list: ScopedShift[] }>();
-  for (const s of shifts) {
-    const g = by.get(s.shift.uid);
-    if (g) g.list.push(s);
-    else by.set(s.shift.uid, { name: s.staffName, list: [s] });
-  }
-  return [...by.entries()]
-    .map(([uid, g]) => {
-      const u = sumUsage(g.list);
-      return { uid, name: g.name, usage: u, high: isHigh(u, overall.rate) };
-    })
-    .filter((r) => r.usage.used > 0)
-    .sort((a, b) => (b.usage.rate ?? 0) - (a.usage.rate ?? 0) || b.usage.used - a.usage.used || a.name.localeCompare(b.name));
-}
-
 export type TrendPoint = {
   key: string;
   label: string;

@@ -2,7 +2,7 @@
 
 import { Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { formatEGP } from "@/lib/format";
+import { fmtNum, formatEGP } from "@/lib/format";
 import { busiestHours, hourLabel, WEEKDAYS, type Cell } from "@/lib/stats/busiest";
 import type { Entry } from "@/lib/shift/types";
 import { useChartTooltip } from "./ChartTooltip";
@@ -20,7 +20,7 @@ const cellColor = (sales: number, max: number) =>
 const tipText = (label: string, c: Cell) => (
   <>
     <b className="text-ink">{label}</b>
-    <span className="ml-2 text-ink-muted">{c.sales} sale{c.sales === 1 ? "" : "s"} · {formatEGP(c.egp)}</span>
+    <span className="ml-2 text-ink-muted">{fmtNum(c.sales)} sale{c.sales === 1 ? "" : "s"} · {formatEGP(c.egp)}</span>
   </>
 );
 
@@ -44,8 +44,8 @@ export function BusiestHours({ entries, scopeLabel }: { entries: Entry[]; scopeL
               <b className="text-ink">
                 {WEEKDAYS[b.peak.weekday]} {hourLabel(b.peak.hour)}–{hourLabel((b.peak.hour + 1) % 24)}
               </b>
-              ({b.peak.cell.sales} sale{b.peak.cell.sales === 1 ? "" : "s"}, {formatEGP(b.peak.cell.egp)})
-              <span className="ml-auto text-xs text-ink-faint" data-testid="busiest-total">{b.total.sales} sales total</span>
+              ({fmtNum(b.peak.cell.sales)} sale{b.peak.cell.sales === 1 ? "" : "s"}, {formatEGP(b.peak.cell.egp)})
+              <span className="ml-auto text-xs text-ink-faint" data-testid="busiest-total">{fmtNum(b.total.sales)} sales total</span>
             </p>
           )}
           <div className="-mx-2 overflow-x-auto px-2 pb-1">
@@ -71,7 +71,7 @@ export function BusiestHours({ entries, scopeLabel }: { entries: Entry[]; scopeL
                         onBlur={hide}
                       />
                     ))}
-                    <span className="self-center text-right text-[11px] text-ink-muted tabular-nums">{b.byWeekday[w].sales}</span>
+                    <span className="self-center text-right text-[11px] text-ink-muted tabular-nums">{fmtNum(b.byWeekday[w].sales)}</span>
                   </Row>
                 ))}
                 {/* per-hour totals as a bar strip */}
