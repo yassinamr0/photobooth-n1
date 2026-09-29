@@ -1,5 +1,60 @@
 # Booth Log
 
+> **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
+> `PLAN.md`). Current state: Phase 5 — events + per-event inventory. The original single-file app lives in
+> `legacy/`; its instructions (further down) still apply to it.
+
+## Rebuild — setup
+
+### 1. Environment variables
+Copy `.env.example` to `.env.local` and fill in the Firebase web config (Firebase console →
+Project settings → Your apps → SDK setup). The rebuild uses the **same Firebase project as the
+legacy app**, so the values are the ones in `legacy/index.html` (`firebaseConfig`). Add the
+same six `NEXT_PUBLIC_FIREBASE_*` keys in Vercel → Project → Settings → Environment Variables.
+
+```bash
+npm install
+npm run dev     # http://localhost:3000  (style guide: /style-guide)
+```
+
+### 2. Firestore security rules
+Firebase console → Firestore Database → Rules → replace everything with the contents of
+`firestore.rules` (repo root) → Publish. **Re-paste the whole file after every phase that
+changes it** (Phase 3 did). The new app shares `/shifts` and `/entries` with the legacy app,
+and the rules stay compatible with it, so both apps keep working side by side.
+
+### 3. Authorized domains
+Firebase console → Authentication → Settings → Authorized domains → add your Vercel domain
+(`localhost` is allowed by default).
+
+### 4. Become the first admin (one-time, manual)
+1. Open the app and sign up like anyone else — you land on "Waiting for approval".
+2. Firebase console → Firestore Database → Data → `users` → your document (its ID is your
+   Auth UID; match it by the `email` field).
+3. Edit `role` → `"admin"` and `approved` → `true`. Save.
+4. The app switches over by itself — no reload needed. Approve everyone else from inside the
+   app once the admin dashboard exists (Phase 4); until then, approve via the console or the
+   legacy app's admin panel.
+
+### 5. Events and inventory
+Create booth locations in the dashboard's **Events** section; each gets its own paper and ink
+stock (Inventory section). Paper is restocked in **boxes** (Inventory → Paper units → sheets
+per box, default 108) and stored in sheets. When a staff member ends a shift, that shift's
+sheets sold + wasted are deducted automatically from the event the shift was tagged with.
+Events created by hand in the console (just a `name` field) work too — their stock is set up
+the first time an admin opens the dashboard.
+
+### Testing tips
+- `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,
+  midnight rollover, shift totals, paper-pack math).
+- `npm run dev` shows a dev-only "Simulate interrupted signup" checkbox on the signup form. It
+  skips the profile write so you can see the ~4s "Setting up…" wait followed by the
+  "Finish setting up" recovery screen. It never appears in production builds.
+- Set `NEXT_PUBLIC_FIREBASE_USE_EMULATORS=true` to run against the local Firebase emulators
+  (Auth :9099, Firestore :8080) instead of the real project.
+
+## Legacy app
+
 A shift tracker for the photobooth: sheets sold (with automatic pricing), acrylic/magnetic
 frames, waste (hadr), split cash/visa payments, staff accounts with admin approval, shift
 clock in/out, and a live admin dashboard (this week / this month / all-time, per staff and

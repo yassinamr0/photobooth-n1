@@ -1,140 +1,209 @@
-# PLAN — Phase 1: Scaffold + Design System
+# PLAN — Phase 5: Events (Locations) + Per-Event Inventory
+
+> Phases 1–4 are built and pushed (latest `93704f6`). Once you approve, this file replaces
+> `PLAN.md`.
 
 ## Context
-Booth Log is being rebuilt from a single-file HTML/Firebase app (`index.html`) into Next.js 16
-(App Router) + TypeScript + Tailwind, deployed on Vercel. Phase 1 establishes the visual
-identity before any feature screens exist: design tokens, a panel-on-gradient page frame, base
-components, and a `/style-guide` route to review them. No Firebase, auth, or data logic in this
-phase. Upon approval, this plan is copied verbatim to `PLAN.md` at the repo root (first commit).
+Admins need to manage booth locations (events) properly, and track paper and ink stock per
+location. Paper changes three ways:
+- **restocks** entered in **BOXES** (`settings/paper.sheetsPerBox`, default 108);
+- **automatic deductions** when a shift ends;
+- **stock-take corrections** in sheets.
 
-## 0. Repo housekeeping
-- Move the legacy app into `legacy/` (`index.html`, `firestore.rules`, `icon.jpg`) so it stays
-  as reference for Phase 3's locked shift-screen layout but isn't served by Next.
-- Replace the misnamed `gitignore` with a proper `.gitignore` (Next defaults + `.env*.local`,
-  `.vercel`, `.DS_Store`).
-- README: short "Phase 1 / local dev" note on top; old deploy instructions kept under
-  "Legacy app" until Phase 2 rewrites setup docs. (`icon.jpg` copied to `app/icon.jpg` as favicon.)
+Ink is manual only. These numbers are inventory-critical, so each unit rule is enforced in
+code **and** in security rules.
 
-## 1. Scaffold
-`npx create-next-app@latest . --ts --tailwind --eslint --app --no-src-dir --import-alias "@/*"`
-(scaffold in a temp dir and move in, since the root isn't empty). Tailwind v4 → tokens live in
-CSS via `@theme` in `app/globals.css` (no `tailwind.config.js`). Add `clsx` only (for class
-merging); no shadcn, no component library.
+**Decisions you made:**
+1. **Deduction runs in the app, checked by rules.** It's one atomic write: the shift is marked
+   as deducted, the stock goes down, and a log line is written. It happens once per shift,
+   into that shift's own eventId. If it fails, the shift still ends, and admin gets
+   "N ended shifts not yet deducted" with an **Apply now** button.
+2. **Deleting a deducted shift puts its sheets back**, with a "+X — shift deleted" log line.
+3. **"Correct count"** (stock-take) exists for paper (in sheets) and ink (in cartridges),
+   labelled separately from restocks. Paper restocks stay **boxes only**.
 
-Fonts via `next/font/google`:
-- Display: **Sora** (700/800) — bold, geometric, confident headers & greetings.
-- Body/UI: **Inter** — with `tabular-nums` utility for figures.
+**Unit rule (CLAUDE.md), enforced throughout:**
+- Inventory uses `sheetsPerBox` only; `sheetsPerPack` is never used here.
+- Stock is stored in raw sheets.
+- The deduction amount is the shift's **actualUsed = sheets sold + hadr wasted**, NOT the
+  "expected" reconciliation figure.
 
-## 2. Color tokens (`app/globals.css`, `@theme`)
-Surface (dark, purple/blue undertone — not flat black):
-| token | value | use |
-|---|---|---|
-| `--color-canvas` | `#0F0D16` | panel base background |
-| `--color-surface` | `#17141F` | cards |
-| `--color-surface-2` | `#1F1B2A` | raised/hover, inputs |
-| `--color-line` | `#2A2538` | thin card borders |
-| `--color-line-strong` | `#3A3350` | dividers, focus-ring base |
-| `--color-ink` | `#F4F1FA` | primary text |
-| `--color-ink-muted` | `#A39DB8` | secondary text |
-| `--color-ink-faint` | `#6E6886` | labels, captions |
+## 1. Data model
+- **`/events/{id}`**: `{ name, notes, status: "active"|"inactive", createdAt, createdBy }`.
+  Your manual `citystars` test doc keeps working: missing fields read as `notes ""` and
+  `status "active"`, and it can be edited normally. Nothing needs replacing.
+- **`/events/{id}/stock/{paper|ink}`**:
+  - `{ currentQuantity, lowStockThreshold, updatedAt, trackingSince, lastShiftId? }`;
+  - paper quantity is in sheets, ink in cartridges;
+  - created together with the event;
+  - for events that predate Phase 5, the admin dashboard creates missing stock docs on load
+    (quantity 0, `trackingSince` = now).
+- **`/events/{id}/stockLogs/{id}`**:
+  - `{ stockType, delta, reason, kind, byUid, byName, createdAt }`;
+  - `kind` is `restock`, `correction`, `shift` or `shiftReversal`;
+  - restocks also store `boxes` and `sheetsPerBox` (the box count and the sheet delta are both
+    logged, per spec);
+  - shift logs store `shiftId`, and their doc id is `shift_{shiftId}` (at most one per shift).
+- **`/shifts/{id}.stockDeduction`**: `{ eventId, sheets }`, set once when the deduction is
+  applied.
 
-Accents:
-- Primary gradient (data viz / primary CTA): `--color-violet #7C3AED` → `--color-magenta #D946EF`
-  → `--color-pink #FF4D8D`; exposed as `.bg-accent-gradient` utility (135°).
-- Gold (money / totals / key numbers): `--color-gold #FFC93C`, `--color-gold-dim #3A2F12`.
+## 2. Inventory logic — `lib/inventory/` (pure functions, unit-tested)
+- **Boxes:** `boxesToSheets(boxes, sheetsPerBox)` and `sheetsToBoxes(sheets, sheetsPerBox)`
+  (for "≈ 3.2 boxes").
+- **Deduction amount:** `shiftActualUsed(entries)` = sheets sold + hadr, using the same
+  `aggregate()` as reconciliation.
+- **Pending deductions:** `pendingDeductions(shifts, stockByEvent)` returns shifts that:
+  - have ended;
+  - have a non-null eventId;
+  - have no `stockDeduction`;
+  - ended at or after that event's `trackingSince`, so pre-Phase-5 history is never
+    back-deducted.
+- **`unattributedShifts`**: ended shifts with no eventId. These are never deducted, and a note
+  in the UI says so.
+- **Forecast:** `forecast(logs, current, trackingSince, now)`:
+  - rolling **14-day** average daily consumption from `shift` logs minus `shiftReversal`
+    logs;
+  - divided by `min(14, days since tracking started)`, at least 1;
+  - result: "runs out in ≈ N days", or "not enough data yet".
+- **Low stock:** `isLow(stock)` = `currentQuantity < lowStockThreshold`.
+- **Tests:**
+  - 3 boxes × 108 = 324;
+  - a snapshot-free conversion from a changed `sheetsPerBox`;
+  - actualUsed ≠ expected;
+  - pending excludes shifts before tracking started, no-event shifts and already-deducted
+    shifts;
+  - forecast maths and edge cases;
+  - a unit guard: inventory code never imports or reads `sheetsPerPack` (a test greps
+    `lib/inventory`).
 
-Status (tags/flags): `--color-success #4ADE80`, `--color-warning #FFB547`, `--color-danger
-#FF5C6C`, `--color-info #5B9CFF`, each with a `-dim` background variant (≈15% on canvas).
-Payment identity carried from legacy: cash = success green, visa = info blue.
+## 3. Writes — `lib/inventory/firestore.ts`
+- **`applyShiftDeduction(shift, entries, by)`** is one batch:
+  - the shift gets `stockDeduction {eventId: shift.eventId, sheets: X}`;
+  - `events/{shift.eventId}/stock/paper` gets `currentQuantity: increment(−X)`, `updatedAt`
+    and `lastShiftId`;
+  - the log `shift_{id}` is created: `{stockType:"paper", delta:−X, kind:"shift", reason:"Shift ended", shiftId}`.
+  - The eventId **always comes from the shift doc**, never from the user profile.
+- **Staff end-shift flow:** `endShift()` runs first and must succeed. Then
+  `applyShiftDeduction` runs, using the shift's live entries. A failure is only logged (no
+  scary UI), and the shift simply stays in the admin's pending list. Shifts without an
+  eventId are skipped.
+- **Admin "Apply now":** the same function, recomputing X from that shift's entries.
+- **`restockPaper(eventId, boxes, sheetsPerBox)`**: adds `boxes × sheetsPerBox` sheets and
+  logs `{kind:"restock", boxes, sheetsPerBox, delta}`.
+- **`restockInk(eventId, n)`** adds cartridges.
+- **`correctCount(eventId, type, counted, reason)`**: `delta = counted − current`, and logs a
+  `correction`.
+- **`setThreshold(eventId, type, n)`.**
+- **`deleteShiftAndEntries`** (from Phase 4) is extended: if the shift has a
+  `stockDeduction`, the final batch also adds `+sheets` back to that event's paper and logs a
+  `shiftReversal` line.
+- **Events CRUD:** `createEvent` (event + both stock docs in one batch; the default paper
+  threshold is **one box**, i.e. `sheetsPerBox` from settings; the ink threshold is 1),
+  `updateEvent` (name, notes) and `setEventStatus`. There's no hard delete, so history stays
+  intact.
+- **Paper settings editor:** `sheetsPerPack` and `sheetsPerBox` are two separate, clearly
+  labelled fields. Changing the pack size affects new shifts only (Phase 4 snapshot).
 
-Frame gradient (page background, outside the panel): blush `#F9D5E5` → lavender `#DCCFF7` →
-soft blue `#C9DDFB`, as `--gradient-frame`.
+## 4. Dashboard UI (`components/admin/`)
+- **Events section** (new rail item):
+  - list of events with a status tag (Active / Inactive), notes, and the number of staff
+    assigned;
+  - **New event** form (name, notes);
+  - inline edit;
+  - Deactivate / Reactivate. Deactivating warns if staff are still assigned; their next shift
+    still stamps that event until they're reassigned.
+  - Inactive events stay in the switcher (labelled "inactive", for history) but are hidden
+    from the Staff assignment dropdown.
+- **Inventory section** (new rail item), scoped by the switcher:
+  - **Event view:**
+    - **Paper card**: sheets remaining, "≈ N boxes", threshold (editable), a low-stock
+      warning in the same amber treatment as paper mismatches, and "at this rate runs out in
+      ≈ N days".
+    - Actions: **Restock (boxes)**, whose input is boxes only, with a live preview
+      "3 boxes = 324 sheets"; and **Correct count (sheets)**.
+    - **Ink card**: cartridges, Restock (cartridges), Correct count, threshold, warning.
+    - A **pending-deductions** notice with Apply now.
+    - A note: "N shifts with no event don't affect any location's inventory."
+    - **Stock log history**, most recent first: date, type, kind tag, delta (a restock also
+      shows "3 boxes"), reason, by whom.
+  - **Global view:**
+    - a side-by-side comparison table of every event: paper sheets, boxes, threshold, status,
+      days left, ink;
+    - a low-stock banner if ANY location is under its threshold;
+    - pending deductions across all events;
+    - the Paper settings card (pack vs box).
+- **Overview:** adds a scoped low-stock banner (Global: any event; event: that event).
+- **Shifts:** the expanded shift shows its stock status: "Deducted 2 sheets from City Stars",
+  "Not yet deducted" with Apply now, or "No event — doesn't affect inventory".
+- **Staff:** the assignment dropdown lists active events only (plus the current value if it's
+  inactive).
 
-Radii/shadow: `--radius-card 16px`, `--radius-inner 12px`, `--radius-panel 28px`;
-`--shadow-card` (soft, low-opacity dark drop), `--shadow-panel` (large, diffuse, to float the
-panel on the pastel surface).
+## 5. Security rules
+- **`/events/{id}`:** read by **approved** users (per spec; staff still never see events in
+  the UI), write by admin only.
+- **`stock/{type}` and `stockLogs/{id}`:** read by approved users, write by admin, **plus
+  one narrow staff path for the shift-end deduction**. All three writes must land together in
+  one batch:
+  - **Shift update** (a new branch for the owner): the shift has already ended; it had no
+    `stockDeduction`; only `stockDeduction` changes;
+    `stockDeduction.eventId == resource.data.eventId != null`; `sheets` is a number ≥ 0; and
+    `existsAfter(events/{eventId}/stockLogs/shift_{id})`.
+  - **Stock paper update** by staff: only `currentQuantity`, `updatedAt` and `lastShiftId`
+    change. `lastShiftId` names a shift the caller owns, which:
+    - belongs to THIS event;
+    - had no `stockDeduction` before the batch (`get`) and has one after (`getAfter`);
+    - satisfies `old − new == getAfter(shift).stockDeduction.sheets`.
+  - **Stock log create** by staff: the id is `shift_{shiftId}`; kind `shift`, stockType
+    `paper`; `delta == −getAfter(shift).stockDeduction.sheets`; the event matches; the log
+    didn't exist before (a create can't overwrite).
+  - Staff cannot restock, correct, change thresholds, write ink, or touch another event or
+    shift.
+- The Phase 4 locked-key list for staff shift updates adds `stockDeduction`, so the general
+  update path can't set it.
 
-## 3. Chart color tokens (`lib/design/chart.ts` + CSS vars)
-- Ordered categorical series (for multi-series charts), all AA-contrast on `surface`:
-  `violet #8B5CF6`, `magenta #D946EF`, `pink #FF4D8D`, `gold #FFC93C`, `blue #5B9CFF`,
-  `teal #2DD4BF`.
-- `chartGradient`: SVG `<linearGradient>` stop list violet→magenta→pink for bars/rings/lines.
-- Hatch pattern: an SVG `<pattern>` (45° diagonal stripes, 6px pitch, magenta over dim violet)
-  exported as a reusable `<ChartDefs/>` component that renders `<defs>` with the gradient + hatch
-  ids, plus a CSS `.bg-hatch` (repeating-linear-gradient) for non-SVG uses (e.g. progress bars).
-- Track color `--color-chart-track #262136`, gridline `--color-chart-grid #221E30`.
-- Exported TS object so Phase 6 charts consume the same values (single source of truth: the TS
-  file reads nothing from CSS; CSS vars and TS constants are defined side-by-side and a comment
-  in each points to the other).
+## 6. Files
+New:
+- `lib/inventory/{units,forecast,pending,firestore}.ts` + tests
+- `components/admin/{EventsSection,InventorySection,StockCards,StockLog,PaperSettingsCard}.tsx`
 
-## 4. Page frame — `components/layout/PanelFrame.tsx`
-- `<body>` background = `--gradient-frame` (fixed, full viewport).
-- Outer padding: 12px mobile / 24px md / 32px lg, so the pastel stays visible around the panel.
-- Panel: `bg-canvas`, `rounded-[--radius-panel]` (20px on mobile), `shadow-panel`,
-  `min-h-[calc(100dvh-2*pad)]`, `overflow-hidden`, a faint inner top-glow for depth.
-- Props: `variant: "dashboard" | "mobile"`.
-  - `dashboard`: slot for an icon-only left sidebar (`SidebarRail` — a 72px column of round icon
-    buttons, active item gets the accent gradient; built as a static demo here, wired in Phase 4).
-  - `mobile`: single centered column, max-w ~480px, larger spacing, no sidebar.
+Modified:
+- `lib/admin/{scope,firestore}.ts`: events with status, stock and logs listeners, low-stock
+  in scope, reversal on delete
+- `components/admin/{AdminDashboard,DashboardData,Sections,ShiftPieces}.tsx`
+- `components/shift/StaffShiftScreen.tsx`: deduction after end
+- `lib/shift/types.ts`
+- `firestore.rules`
+- `README.md`
 
-## 5. Base components (`components/ui/`)
-All typed, `forwardRef` where they wrap native elements, `className` passthrough, visible
-focus rings (`ring-2 ring-magenta/60`), disabled states.
-
-- **Button** — `variant: primary | secondary | pill | danger | ghost`, `size: sm | md | lg`,
-  optional `leftIcon`/`rightIcon`, `loading`.
-  - primary: accent gradient fill, white text, pill radius.
-  - secondary: `surface-2` fill, `line` border, ink text.
-  - pill: outlined, compact, for filters/segment toggles (with `selected` state).
-  - danger: `danger-dim` fill, `danger` text/border.
-- **ActionButton** (mobile staff style) — full-width, min-height 64px, large label + optional
-  sub-label and icon, high contrast; `tone: accent | gold | neutral | danger`. Used for things
-  like "+ Paper change" in Phase 3.
-- **Card** — `Card`, `CardHeader` (title + optional action slot), `CardBody`; `surface` bg, 16px
-  radius, `line` border, `shadow-card`; `padding: sm | md | lg`.
-- **Tag / Badge** — small rounded (full) label; `tone: neutral | accent | gold | success |
-  warning | danger | info`, optional leading dot/icon. Demo examples: role badges (Admin /
-  Staff / Pending), event status (Active / Closed), "Paper mismatch" warning flag, "Low stock".
-- **StatValue** — number display helper: gold for money (`formatEGP` → "1,200 EGP"), tabular
-  nums, large display size. (Formatting only; no pricing logic in Phase 1.)
-- **Avatar / AvatarGroup** — rounded-square (10px radius) initials avatar; group overlaps by
-  −8px with a canvas-colored ring. Included since the spec calls out the treatment.
-- Icons: `lucide-react` (tree-shaken, stroke icons suit the look).
-
-## 6. `/style-guide` route — `app/style-guide/page.tsx`
-Rendered inside `PanelFrame variant="dashboard"` with the demo sidebar rail. Sections:
-1. **Header** — big display greeting ("Good evening, Yassin"-style sample) + subtitle.
-2. **Color tokens** — swatch grid for surfaces, text, accents, status, frame gradient; each shows
-   name + hex.
-3. **Typography** — display XL/L/M, body, caption, mono/tabular figures, gold money figure.
-4. **Buttons** — every variant × size, plus disabled/loading and pill selected state.
-5. **Tags** — all tones + the real-world examples listed above.
-6. **Cards** — plain card, card with header action, KPI stat cards (gold totals).
-7. **Chart tokens** — series swatches; a static SVG demo bar chart mixing gradient and hatched
-   bars; a progress ring; a donut; a sparkline trend line — all hand-rolled SVG using
-   `ChartDefs` (no chart library yet; Phase 6 picks one and feeds it these tokens).
-8. **Avatars** — single + overlapping group.
-9. **Mobile staff preview** — a phone-width (≈390px) framed box using `PanelFrame
-   variant="mobile"` styling: shift header, stacked `ActionButton`s, a few large pills. Purely
-   visual — does NOT pre-empt Phase 3's locked layout order.
-
-`app/page.tsx` for now: a minimal placeholder inside the frame linking to `/style-guide`.
-
-## Files to create
-`app/layout.tsx`, `app/globals.css`, `app/page.tsx`, `app/style-guide/page.tsx`,
-`components/layout/{PanelFrame,SidebarRail}.tsx`,
-`components/ui/{Button,ActionButton,Card,Tag,StatValue,Avatar}.tsx`,
-`components/charts/ChartDefs.tsx`, `lib/design/chart.ts`, `lib/format.ts`, `PLAN.md`,
-`.gitignore`; move legacy files to `legacy/`.
-
-## Out of scope (Phase 2+)
-Firebase SDK/config, auth, env vars, data models, security rules, real charts library,
-real navigation.
-
-## Verification
-- `npm run lint` and `npm run build` pass (typecheck included).
-- `npm run dev`, then load `/` and `/style-guide` with Playwright (preinstalled Chromium) at
-  1440px and 390px widths; screenshot both, confirm: pastel gradient visible around the panel,
-  no horizontal scroll at 390px, all sections render.
-- Commit to `claude/intelligent-dijkstra-d7uzpt` and push; then stop and report exactly what's
-  on `/style-guide`. Do not start Phase 2.
+## 7. Verification
+- **Unit tests** as in §2.
+- **Emulator rules tests:**
+  - a valid staff deduction passes;
+  - denied cases:
+    - a wrong eventId (e.g. the staff member's NEW assignment rather than the shift's);
+    - a second deduction for the same shift;
+    - a deduction on another user's shift;
+    - a deduction on an open shift;
+    - an amount that doesn't match between stock, log and shift;
+    - skipping one of the three writes;
+    - staff restock, staff ink write, or staff threshold change;
+  - admin restock, correction and apply-now pass;
+  - approved users can read events and pending users can't;
+  - regression runs of the Phase 2–4 suites.
+- **Playwright against the emulators:**
+  1. Create an event in the UI; its stock docs exist.
+  2. Assign staff.
+  3. Restock 2 boxes → 216 sheets, with a log showing "2 boxes, +216".
+  4. Staff shift: sell 1.5, waste 0.5, end → **214**, log `−2 · Shift ended`, and the shift
+     shows "Deducted 2".
+  5. **Reassign staff mid-shift** to event B → the shift still deducts from **A**; B is
+     untouched.
+  6. Delete that shift → stock is restored, with a reversal log.
+  7. Correct count → delta logged.
+  8. Ink restock and low-stock banner (Overview + Inventory Global).
+  9. Seeded ended shift without a deduction → pending → Apply now.
+  10. A no-event shift is never deducted, and the note is shown.
+  11. The Global comparison table.
+  12. Deactivate an event → it's hidden from the assign dropdown.
+  13. Screenshots at 1440 and 390 px.
+- `npm test`, lint, build. Commit and push. Stop before Phase 6.
