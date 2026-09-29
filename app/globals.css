@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/*
+ * Booth Log design tokens.
+ * Chart colors are mirrored in lib/design/chart.ts — keep the two in sync.
+ */
+@theme {
+  /* Surfaces — near-black charcoal with a purple/blue undertone */
+  --color-canvas: #0f0d16;
+  --color-surface: #17141f;
+  --color-surface-2: #1f1b2a;
+  --color-line: #2a2538;
+  --color-line-strong: #3a3350;
+
+  /* Text */
+  --color-ink: #f4f1fa;
+  --color-ink-muted: #a39db8;
+  --color-ink-faint: #6e6886;
+
+  /* Primary accent (data viz + primary CTA) */
+  --color-violet: #7c3aed;
+  --color-magenta: #d946ef;
+  --color-pink: #ff4d8d;
+
+  /* Secondary accent — money / totals / key numbers (legacy brand gold) */
+  --color-gold: #ffc93c;
+  --color-gold-dim: #3a2f12;
+
+  /* Status */
+  --color-success: #4ade80;
+  --color-success-dim: #16301f;
+  --color-warning: #ffb547;
+  --color-warning-dim: #3b2b12;
+  --color-danger: #ff5c6c;
+  --color-danger-dim: #3d1a22;
+  --color-info: #5b9cff;
+  --color-info-dim: #152742;
+  --color-accent-dim: #2a1838;
+
+  /* Chart */
+  --color-chart-1: #8b5cf6;
+  --color-chart-2: #d946ef;
+  --color-chart-3: #ff4d8d;
+  --color-chart-4: #ffc93c;
+  --color-chart-5: #5b9cff;
+  --color-chart-6: #2dd4bf;
+  --color-chart-track: #262136;
+  --color-chart-grid: #221e30;
+
+  /* Frame gradient stops (pastel surface behind the panel) */
+  --color-frame-blush: #f9d5e5;
+  --color-frame-lavender: #dccff7;
+  --color-frame-blue: #c9ddfb;
+
+  /* Radii */
+  --radius-inner: 12px;
+  --radius-card: 16px;
+  --radius-panel: 28px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-panel: 0 40px 80px -30px rgb(40 20 70 / 0.55), 0 12px 30px -12px rgb(40 20 70 / 0.35);
+
+  /* Type */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, sans-serif;
+}
+
+@utility bg-accent-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-violet) 0%,
+    var(--color-magenta) 55%,
+    var(--color-pink) 100%
+  );
+}
+
+@utility text-accent-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-violet) 0%,
+    var(--color-magenta) 55%,
+    var(--color-pink) 100%
+  );
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-frame-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-frame-blush) 0%,
+    var(--color-frame-lavender) 50%,
+    var(--color-frame-blue) 100%
+  );
+}
+
+/* Diagonal hatch for non-SVG fills (progress bars etc.) */
+@utility bg-hatch {
+  background-color: var(--color-accent-dim);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-magenta) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-magenta);
+  color: white;
+}

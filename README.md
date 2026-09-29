@@ -1,5 +1,19 @@
 # Booth Log
 
+> **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
+> `PLAN.md`). Current state: Phase 1 — design system.
+>
+> ```bash
+> npm install
+> npm run dev   # then open http://localhost:3000/style-guide
+> ```
+>
+> The original single-file app now lives in `legacy/` (`legacy/index.html`,
+> `legacy/firestore.rules`). The instructions below describe that legacy app and will be
+> replaced as the rebuild progresses.
+
+## Legacy app
+
 A shift tracker for the photobooth: sheets sold (with automatic pricing), acrylic/magnetic
 frames, waste (hadr), split cash/visa payments, staff accounts with admin approval, shift
 clock in/out, and a live admin dashboard (this week / this month / all-time, per staff and
