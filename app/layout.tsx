@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${sora.variable}`}>
-      <body className="bg-frame-gradient">{children}</body>
+      <body className="bg-canvas">{children}</body>
     </html>
   );
 }
