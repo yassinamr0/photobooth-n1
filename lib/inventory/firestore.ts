@@ -177,15 +177,39 @@ async function adminAdjust(
 }
 
 /** Restock PAPER in BOXES → converted to sheets via sheetsPerBox. Logs both numbers. */
-export async function restockPaper(eventId: string, boxes: number, sheetsPerBox: number, by: Actor) {
+/**
+ * Restock PAPER in BOXES → sheets via sheetsPerBox. Each box also comes with its ink, so
+ * boxes × cartridgesPerBox cartridges are added to the SAME event's ink stock in the same
+ * transaction (both logged). cartridgesPerBox null/0 → paper only.
+ */
+export async function restockPaper(eventId: string, boxes: number, sheetsPerBox: number, by: Actor, cartridgesPerBox: number | null = null) {
   if (!Number.isInteger(boxes) || boxes <= 0) throw new Error("Enter a whole number of boxes");
   const sheets = boxesToSheets(boxes, sheetsPerBox);
-  await adminAdjust(eventId, "paper", (c) => c + sheets, () => ({
-    delta: sheets, kind: "restock", boxes, sheetsPerBox,
-    reason: `Restock: ${boxes} box${boxes === 1 ? "" : "es"}`,
-    byUid: by.uid, byName: by.name,
-  }));
-  return sheets;
+  const cartridges = cartridgesPerBox && cartridgesPerBox > 0 ? boxes * cartridgesPerBox : 0;
+  const boxWord = `${boxes} box${boxes === 1 ? "" : "es"}`;
+  await runTransaction(db(), async (tx) => {
+    const pSnap = await tx.get(stockRef(eventId, "paper"));
+    const iSnap = cartridges ? await tx.get(stockRef(eventId, "ink")) : null;
+    if (!pSnap.exists() || (iSnap && !iSnap.exists())) throw new Error("Inventory isn't set up for this event yet");
+    const bump = (ref: ReturnType<typeof stockRef>, data: DocumentData, add: number) => {
+      const q = Math.round((num(data.currentQuantity) + add) * 10) / 10;
+      tx.update(ref, { currentQuantity: q, updatedAt: serverTimestamp(), ...rearm(q, num(data.lowStockThreshold)) });
+    };
+    bump(stockRef(eventId, "paper"), pSnap.data(), sheets);
+    tx.set(doc(logsCol(eventId)), {
+      stockType: "paper", delta: sheets, kind: "restock", boxes, sheetsPerBox, reason: `Restock: ${boxWord}`,
+      byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+    });
+    if (iSnap) {
+      bump(stockRef(eventId, "ink"), iSnap.data()!, cartridges);
+      tx.set(doc(logsCol(eventId)), {
+        stockType: "ink", delta: cartridges, kind: "restock", boxes,
+        reason: `Restock: ink from ${boxWord} (${cartridgesPerBox} per box)`,
+        byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+      });
+    }
+  });
+  return { sheets, cartridges };
 }
 
 /** Restock ink or frames BY PIECE (no unit conversion). */

@@ -251,7 +251,7 @@ function StockCard({
 }: {
   eventId: string; type: StockType; stock: StockDoc; low: boolean; forecast: Forecast | null;
 }) {
-  const { paper } = useScopedInventory();
+  const { paper, cartridgesPerBox } = useScopedInventory();
   const { profile } = useAuth();
   const toast = useToast();
   const [mode, setMode] = useState<"restock" | "correct" | "threshold" | null>(null);
@@ -280,8 +280,8 @@ function StockCard({
     try {
       if (mode === "restock") {
         if (isPaper) {
-          const sheets = await restockPaper(eventId, amount, paper.sheetsPerBox, by);
-          toast(`Added ${fmtNum(amount)} box${amount === 1 ? "" : "es"} = ${fmtNum(sheets)} sheets`, "success");
+          const r = await restockPaper(eventId, amount, paper.sheetsPerBox, by, cartridgesPerBox);
+          toast(`Added ${fmtNum(amount)} box${amount === 1 ? "" : "es"} = ${fmtNum(r.sheets)} sheets${r.cartridges ? ` + ${fmtNum(r.cartridges)} ink cartridge${r.cartridges === 1 ? "" : "s"}` : ""}`, "success");
         } else {
           await restockPieces(eventId, type, amount, by);
           toast(`Added ${qtyText(type, amount)}`, "success");
@@ -359,6 +359,11 @@ function StockCard({
           {mode === "restock" && isPaper && amount !== null && amount > 0 && (
             <p data-testid="restock-preview" className="mt-2 text-sm text-ink-muted">
               {fmtNum(amount)} box{amount === 1 ? "" : "es"} × {fmtNum(paper.sheetsPerBox)} = <b className="text-ink">{fmtNum(boxesToSheets(amount, paper.sheetsPerBox))} sheets</b>
+              {cartridgesPerBox ? (
+                <> + <b className="text-ink">{fmtNum(amount * cartridgesPerBox)} ink cartridge{amount * cartridgesPerBox === 1 ? "" : "s"}</b> ({fmtNum(cartridgesPerBox)} per box)</>
+              ) : (
+                <span className="block text-xs text-ink-faint">Set “Ink cartridges in a box” in P&amp;L to add the box&apos;s ink automatically.</span>
+              )}
             </p>
           )}
           {mode === "correct" && amount !== null && (

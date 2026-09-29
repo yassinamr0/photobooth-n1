@@ -6,7 +6,7 @@ import { breakEven } from "./breakeven";
 import { paperPerSheet, type CostStep } from "./costs";
 import { describeFee, feeOn, saleFee, withFeeFrom, type FeeStep } from "./fees";
 import { pnlBreakEven, pnlByLocation, pnlProducts, pnlSummary, pnlTrend, type PnlInputs } from "./pnl";
-import { cartridgesPerSheet, productBreakdown } from "./products";
+import { productBreakdown } from "./products";
 
 const pct = (percent: number, from = "2026-01-01"): FeeStep => ({ from, mode: "percent", percent, fixed: 0 });
 const pf = (percent: number, fixed: number, from = "2026-01-01"): FeeStep => ({ from, mode: "percentPlusFixed", percent, fixed });
@@ -32,8 +32,8 @@ describe("card fees", () => {
 });
 
 describe("costs", () => {
-  it("paper per sheet uses the BOX price ÷ sheets per box", () => {
-    const c: CostStep = { from: "2026-01-01", paperBox: 1080, inkCartridge: null, acrylic: null, magnetic: null };
+  it("a printed sheet costs the BOX price (paper + its ink) ÷ sheets per box", () => {
+    const c: CostStep = { from: "2026-01-01", paperBox: 1080, cartridgesPerBox: 2, acrylic: null, magnetic: null };
     expect(paperPerSheet(c, 108)).toBe(10);
     expect(paperPerSheet({ ...c, paperBox: null }, 108)).toBeNull();
   });
@@ -64,14 +64,13 @@ const raw: RawDashboard = {
     sale("x", { sheets: 0.5, total: 200, visa: 200 }),
   ],
 };
-const costs: CostStep[] = [{ from: "2026-01-01", paperBox: 1080, inkCartridge: 900, acrylic: 120, magnetic: 60 }];
+const costs: CostStep[] = [{ from: "2026-01-01", paperBox: 1080, cartridgesPerBox: 2, acrylic: 120, magnetic: 60 }];
 const now = new Date(2026, 8, 30, 12);
 const range = customRange("range", "2026-09-10", "2026-09-16");
 
 describe("profit per product (frames at full price; prints take the difference)", () => {
   const d = scopeDashboard(raw, "A", range, now);
-  const ratio = cartridgesPerSheet(raw, "A"); // 1 cartridge / (2 sheets sold + 1 hadr) = 1/3
-  const p = productBreakdown(d, [pct(2)], costs, 108, ratio);
+  const p = productBreakdown(d, [pct(2)], costs, 108);
   const row = (k: string) => p.rows.find((r) => r.key === k)!;
   it("revenue split", () => {
     expect(row("acrylic")).toMatchObject({ units: 2, revenue: 800 });
@@ -80,9 +79,8 @@ describe("profit per product (frames at full price; prints take the difference)"
     expect(row("adjust").revenue).toBe(-50);
     expect(p.rows.reduce((s, r) => s + r.revenue, 0)).toBe(800 + 700 + 150); // = the sales total
   });
-  it("materials: paper 10/sheet + ink 900 × 1/3 per sheet; frames at cost", () => {
-    expect(ratio).toBeCloseTo(1 / 3);
-    expect(row("prints").materials).toBeCloseTo(2 * (10 + 300)); // 2 sheets
+  it("materials: 10 EGP per sheet (1,080 box ÷ 108, ink included); frames at cost", () => {
+    expect(row("prints").materials).toBeCloseTo(2 * 10); // 2 sheets
     expect(row("acrylic").materials).toBe(240);
     expect(row("magnetic").materials).toBe(60);
   });
@@ -91,12 +89,12 @@ describe("profit per product (frames at full price; prints take the difference)"
     expect(row("acrylic").fees).toBeCloseTo(8);
     expect(row("magnetic").fees).toBe(0);
   });
-  it("waste cost = hadr × (paper + ink) per sheet", () => {
+  it("waste cost = hadr × per-sheet cost (ink included)", () => {
     expect(p.waste.sheets).toBe(1);
-    expect(p.waste.cost).toBeCloseTo(310);
+    expect(p.waste.cost).toBeCloseTo(10);
   });
   it("missing costs → null materials, flagged", () => {
-    const q = productBreakdown(d, [], [{ ...costs[0], acrylic: null }], 108, ratio);
+    const q = productBreakdown(d, [], [{ ...costs[0], acrylic: null }], 108);
     expect(q.missingCosts).toBe(true);
     expect(q.rows.find((r) => r.key === "acrylic")!.materials).toBeNull();
     expect(q.materials).toBeNull();
@@ -155,7 +153,7 @@ describe("break-even", () => {
     const { be } = pnlBreakEven(inp, "A", range, now);
     expect(be.days).toBe(7);
     expect(be.fixedPerDay).toBeCloseTo(100);
-    const variable = 620 + 240 + 60 + 16; // prints + acrylic + magnetic materials + fee
+    const variable = 20 + 240 + 60 + 16; // prints + acrylic + magnetic materials + fee
     expect(be.variableShare).toBeCloseTo(variable / 1650);
   });
 });

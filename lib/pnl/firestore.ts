@@ -123,7 +123,7 @@ export function parseCostSteps(d: DocumentData | undefined): CostStep[] {
   const raw = d?.steps;
   return Array.isArray(raw)
     ? raw.filter((x) => typeof x?.from === "string").map((x) => ({
-        from: x.from, paperBox: numOrNull(x.paperBox), inkCartridge: numOrNull(x.inkCartridge), acrylic: numOrNull(x.acrylic), magnetic: numOrNull(x.magnetic),
+        from: x.from, paperBox: numOrNull(x.paperBox), cartridgesPerBox: numOrNull(x.cartridgesPerBox), acrylic: numOrNull(x.acrylic), magnetic: numOrNull(x.magnetic),
       }))
     : [];
 }
@@ -145,7 +145,7 @@ export function saveFee(steps: FeeStep[], step: FeeStep) {
 }
 
 export function saveCosts(steps: CostStep[], step: CostStep) {
-  for (const v of [step.paperBox, step.inkCartridge, step.acrylic, step.magnetic])
+  for (const v of [step.paperBox, step.cartridgesPerBox, step.acrylic, step.magnetic])
     if (v != null && !(v >= 0)) throw new Error("Costs must be 0 or more");
   return setDoc(costsDoc(), { steps: withCostsFrom(steps, step) });
 }

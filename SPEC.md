@@ -369,10 +369,12 @@ Owner-approved changes (after Phase 6):
   per card sale", charged on the Visa part of each sale (split sale = one card sale). Each
   change applies from its day; earlier days keep theirs. Shown as an automatic "Card fees"
   expense line everywhere in the P&L.
-- **Product costs** (admin-only `settings/costs`, dated history): box of paper (÷ sheets per
-  BOX), ink cartridge, acrylic frame, magnetic frame → **Profit per product** (frames at full
-  price, prints take any discount; ink per sheet from logged ink changes) and **waste cost**.
-  Analysis only — not subtracted from the headline P&L again.
+- **Product costs** (admin-only `settings/costs`, dated history): the BOX price covers the
+  paper AND the ink cartridge(s) in it (owner's correction), so a printed sheet costs box price
+  ÷ sheets per BOX (the same `settings/paper.sheetsPerBox` Inventory restocks use — editable
+  from either place); "ink cartridges in a box" is recorded too. Plus acrylic and magnetic
+  frame prices → **Profit per product** (frames at full price, prints take any discount) and
+  **waste cost**. Analysis only — not subtracted from the headline P&L again.
 - **Break-even** per location: fixed costs per day ÷ (1 − (materials + card fees) share).
 - **Ended events**: Events → "Mark as ended" / "Reopen" (status `inactive`). Ended events
   raise no low-stock / runs-out / break-even alerts on the site or in the email; history stays.
