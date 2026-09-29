@@ -75,6 +75,7 @@ function PendingDeductions() {
         {pending.map((s) => (
           <li key={s.id}>
             {fmtDateTime(s.startTime)} · {s.staffName} · {events.find((e) => e.id === s.eventId)?.name} · {sheets(s.id)} sheets
+            {s.inkChanges > 0 && ` + ${s.inkChanges} ink cartridge${s.inkChanges === 1 ? "" : "s"}`}
           </li>
         ))}
       </ul>
@@ -156,7 +157,7 @@ function EventInventory({ row }: { row: InventoryRow }) {
     <>
       <div className="grid gap-5 lg:grid-cols-2">
         <StockCard eventId={row.event.id} type="paper" stock={row.inv.paper!} low={row.paperLow} forecastDays={row.forecast?.daysLeft ?? null} avgPerDay={row.forecast?.avgPerDay ?? 0} />
-        <StockCard eventId={row.event.id} type="ink" stock={row.inv.ink!} low={row.inkLow} forecastDays={null} avgPerDay={0} />
+        <StockCard eventId={row.event.id} type="ink" stock={row.inv.ink!} low={row.inkLow} forecastDays={row.inkForecast?.daysLeft ?? null} avgPerDay={row.inkForecast?.avgPerDay ?? 0} />
       </div>
       <StockLogList logs={row.inv.logs} eventName={row.event.name} />
     </>
@@ -241,13 +242,13 @@ function StockCard({
           </span>
         )}
       </div>
-      {isPaper && (
-        <p data-testid="forecast" className="mt-2 text-sm text-ink-muted">
-          {forecastDays != null
-            ? <>At this rate (~{avgPerDay} sheets/day, last 14 days), runs out in <b className="text-ink">≈ {forecastDays} days</b>.</>
-            : "Not enough shift data yet to forecast."}
-        </p>
-      )}
+      <p data-testid={`${type}-forecast`} className="mt-2 text-sm text-ink-muted">
+        {forecastDays != null
+          ? <>At this rate (~{avgPerDay} {unit}/day, last 14 days), runs out in <b className="text-ink">≈ {forecastDays} days</b>.</>
+          : isPaper
+            ? "Not enough shift data yet to forecast."
+            : "No ink changes logged by staff recently — nothing to forecast yet."}
+      </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
         <Button size="sm" onClick={() => open("restock")}>{isPaper ? "Restock (boxes)" : "Restock (cartridges)"}</Button>

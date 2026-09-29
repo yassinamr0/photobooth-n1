@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { authErrorMessage } from "@/lib/auth/errors";
 import {
+  adjustInkChanges,
   adjustPaperChanges,
   deleteEntry,
   endShift,
@@ -118,6 +119,15 @@ function ShiftScreenInner() {
               try {
                 if (await adjustPaperChanges(shift, delta))
                   toast(delta > 0 ? "Paper change logged" : "Paper change removed", "success");
+              } catch (e) {
+                toast(`Could not update: ${authErrorMessage(e)}`, "danger");
+              }
+            }}
+            onInkChange={async (delta) => {
+              if (!shift) return;
+              try {
+                if (await adjustInkChanges(shift, delta))
+                  toast(delta > 0 ? "Ink change logged" : "Ink change removed", "success");
               } catch (e) {
                 toast(`Could not update: ${authErrorMessage(e)}`, "danger");
               }

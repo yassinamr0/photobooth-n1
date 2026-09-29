@@ -1,5 +1,5 @@
 import type { Shift } from "@/lib/shift/types";
-import { forecastPaper, type Forecast } from "./forecast";
+import { forecastStock, type Forecast } from "./forecast";
 import { pendingDeductions, unattributedShifts } from "./pending";
 import { isLow } from "./units";
 import type { EventInventory, EventRecord } from "./types";
@@ -10,7 +10,8 @@ export type InventoryRow = {
   tracked: boolean; // stock docs exist
   paperLow: boolean;
   inkLow: boolean;
-  forecast: Forecast | null;
+  forecast: Forecast | null; // paper
+  inkForecast: Forecast | null;
   pending: Shift[];
 };
 
@@ -46,7 +47,8 @@ export function scopeInventory(
         tracked: !!inv.paper && !!inv.ink,
         paperLow: isLow(inv.paper),
         inkLow: isLow(inv.ink),
-        forecast: inv.paper ? forecastPaper(inv.logs, inv.paper.currentQuantity, inv.paper.trackingSinceMs, nowMs) : null,
+        forecast: inv.paper ? forecastStock(inv.logs, "paper", inv.paper.currentQuantity, inv.paper.trackingSinceMs, nowMs) : null,
+        inkForecast: inv.ink ? forecastStock(inv.logs, "ink", inv.ink.currentQuantity, inv.ink.trackingSinceMs, nowMs) : null,
         pending: allPending.filter((s) => s.eventId === event.id),
       };
     });

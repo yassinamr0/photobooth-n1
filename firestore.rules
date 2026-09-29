@@ -72,12 +72,17 @@ service cloud.firestore {
                     // Absent is allowed (legacy app) — reconciliation then uses the setting.
                     && (request.resource.data.get('sheetsPerPack', null) == null
                         || packSizeMatchesSettings(request.resource.data.sheetsPerPack))
-                    && request.resource.data.get('stockDeduction', null) == null;
+                    && request.resource.data.get('stockDeduction', null) == null
+                    && request.resource.data.get('inkChanges', 0) == 0;
       allow update: if isAdmin()
                     || (
                       isApproved() && resource.data.uid == request.auth.uid
                       && !request.resource.data.diff(resource.data).affectedKeys()
                             .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt', 'sheetsPerPack', 'stockDeduction'])
+                      // once deducted from stock, the shift is frozen for staff
+                      && resource.data.get('stockDeduction', null) == null
+                      && request.resource.data.get('inkChanges', 0) is int
+                      && request.resource.data.get('inkChanges', 0) >= 0
                     )
                     // Phase 5 — automatic paper consumption, staff side. Only the owner, only
                     // after the shift has ended, only once, only into the shift's OWN eventId,
@@ -88,12 +93,17 @@ service cloud.firestore {
                       && resource.data.get('eventId', null) != null
                       && resource.data.get('stockDeduction', null) == null
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockDeduction'])
-                      && request.resource.data.stockDeduction.keys().hasOnly(['eventId', 'sheets'])
+                      && request.resource.data.stockDeduction.keys().hasOnly(['eventId', 'sheets', 'cartridges'])
+                      // ink: exactly the cartridges staff logged on this shift ("+ Ink change")
+                      && request.resource.data.stockDeduction.get('cartridges', 0) == resource.data.get('inkChanges', 0)
                       && request.resource.data.stockDeduction.eventId == resource.data.eventId
                       && request.resource.data.stockDeduction.sheets is number
                       && request.resource.data.stockDeduction.sheets >= 0
                       && existsAfter(/databases/$(database)/documents/events/$(resource.data.eventId)/stockLogs/$('shift_' + shiftId))
                       && isValidShiftDeduction(resource.data.eventId, shiftId, request.resource.data.stockDeduction.sheets)
+                      && (resource.data.get('inkChanges', 0) == 0
+                          || (existsAfter(/databases/$(database)/documents/events/$(resource.data.eventId)/stockLogs/$('shiftink_' + shiftId))
+                              && isValidInkDeduction(resource.data.eventId, shiftId, resource.data.inkChanges)))
                     );
       allow delete: if isAdmin();
     }
@@ -141,6 +151,12 @@ service cloud.firestore {
                            .hasOnly(['currentQuantity', 'updatedAt', 'lastShiftId'])
                       && isValidShiftDeduction(eventId, request.resource.data.lastShiftId,
                            resource.data.currentQuantity - request.resource.data.currentQuantity);
+        allow update: if isApproved()
+                      && stockType == 'ink'
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['currentQuantity', 'updatedAt', 'lastShiftId'])
+                      && isValidInkDeduction(eventId, request.resource.data.lastShiftId,
+                           resource.data.currentQuantity - request.resource.data.currentQuantity);
       }
 
       match /stockLogs/{logId} {
@@ -153,6 +169,14 @@ service cloud.firestore {
                       && logId == 'shift_' + request.resource.data.shiftId
                       && request.resource.data.byUid == request.auth.uid
                       && isValidShiftDeduction(eventId, request.resource.data.shiftId,
+                           -request.resource.data.delta);
+        // Staff: one ink log per shift, id "shiftink_<shiftId>", matching the cartridges.
+        allow create: if isApproved()
+                      && request.resource.data.kind == 'shift'
+                      && request.resource.data.stockType == 'ink'
+                      && logId == 'shiftink_' + request.resource.data.shiftId
+                      && request.resource.data.byUid == request.auth.uid
+                      && isValidInkDeduction(eventId, request.resource.data.shiftId,
                            -request.resource.data.delta);
       }
     }
@@ -176,6 +200,25 @@ service cloud.firestore {
           && after.stockDeduction.sheets == sheets
           && getAfter(paperPath).data.get('lastShiftId', null) == shiftId
           && get(paperPath).data.currentQuantity - getAfter(paperPath).data.currentQuantity == sheets;
+    }
+
+    // Ink half of the same batch: THIS event's ink stock went down by exactly the cartridges
+    // recorded on the shift (its own inkChanges), tagged with this shift.
+    function isValidInkDeduction(eventId, shiftId, cartridges) {
+      let before = get(shiftPath(shiftId)).data;
+      let after = getAfter(shiftPath(shiftId)).data;
+      let inkPath = /databases/$(database)/documents/events/$(eventId)/stock/ink;
+      return cartridges > 0
+          && before.uid == request.auth.uid
+          && before.get('eventId', null) == eventId
+          && before.get('endTime', null) != null
+          && before.get('stockDeduction', null) == null
+          && before.get('inkChanges', 0) == cartridges
+          && after.get('stockDeduction', null) != null
+          && after.stockDeduction.eventId == eventId
+          && after.stockDeduction.get('cartridges', 0) == cartridges
+          && getAfter(inkPath).data.get('lastShiftId', null) == shiftId
+          && get(inkPath).data.currentQuantity - getAfter(inkPath).data.currentQuantity == cartridges;
     }
 
     // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.

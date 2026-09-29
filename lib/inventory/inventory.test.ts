@@ -41,7 +41,7 @@ describe("pendingDeductions", () => {
   const now = Date.UTC(2026, 9, 1);
   const shift = (id: string, o: Partial<Shift>): Shift => ({
     id, uid: "u", staffName: "", eventId: "A", startTime: new Date(now - DAY).toISOString(),
-    endTime: new Date(now - 1000).toISOString(), startPaperCount: 1, paperChanges: 0, endPaperCount: 1, ...o,
+    endTime: new Date(now - 1000).toISOString(), startPaperCount: 1, paperChanges: 0, inkChanges: 0, endPaperCount: 1, ...o,
   });
   const paper: StockDoc = { type: "paper", currentQuantity: 0, lowStockThreshold: 0, trackingSinceMs: now - 2 * DAY, updatedAtMs: 0 };
   const map = new Map<string, StockDoc | null>([["A", paper]]);
@@ -51,7 +51,7 @@ describe("pendingDeductions", () => {
         shift("ok", {}),
         shift("open", { endTime: null }),
         shift("noEvent", { eventId: null }),
-        shift("done", { stockDeduction: { eventId: "A", sheets: 2 } }),
+        shift("done", { stockDeduction: { eventId: "A", sheets: 2, cartridges: 0 } }),
         shift("before", { endTime: new Date(now - 3 * DAY).toISOString() }),
         shift("untracked", { eventId: "B" }),
       ],
@@ -111,7 +111,7 @@ describe("scopeInventory — switcher scoping", () => {
   ]);
   const ended = (id: string, eventId: string | null): Shift => ({
     id, uid: "u", staffName: "", eventId, startTime: new Date(now - DAY).toISOString(), endTime: new Date(now - 1).toISOString(),
-    startPaperCount: 1, paperChanges: 0, endPaperCount: 1,
+    startPaperCount: 1, paperChanges: 0, inkChanges: 0, endPaperCount: 1,
   });
   const shifts = [ended("s1", "A"), ended("s2", "B"), ended("s3", null)];
   it("Global: every location; low banner if ANY location is low (paper or ink)", () => {
@@ -130,5 +130,18 @@ describe("scopeInventory — switcher scoping", () => {
   it("untracked event (no stock docs) is not low and has no pending", () => {
     const u = scopeInventory([ev("Z")], new Map(), [ended("z", "Z")], "global", now);
     expect(u.rows[0]).toMatchObject({ tracked: false, paperLow: false, pending: [] });
+  });
+});
+
+import { forecastStock } from "./forecast";
+
+describe("forecastStock — ink uses its own logs only", () => {
+  const now = Date.UTC(2026, 9, 1);
+  const mk = (type: "paper" | "ink", daysAgo: number, delta: number): StockLog => ({
+    id: String(Math.random()), stockType: type, delta, reason: "", kind: "shift", byUid: "", byName: "", createdAtMs: now - daysAgo * DAY,
+  });
+  it("7 cartridges over 14 days → 0.5/day → 3 left lasts 6 days; paper logs ignored", () => {
+    const logs = [...Array.from({ length: 7 }, (_, i) => mk("ink", i * 2 + 1, -1)), mk("paper", 1, -500)];
+    expect(forecastStock(logs, "ink", 3, now - 30 * DAY, now)).toEqual({ avgPerDay: 0.5, windowDays: 14, daysLeft: 6 });
   });
 });

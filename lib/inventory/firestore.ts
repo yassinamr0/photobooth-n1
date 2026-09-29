@@ -181,26 +181,49 @@ export function setThreshold(eventId: string, type: StockType, threshold: number
 
 /* ─────────────────────── Automatic shift consumption ─────────────────────── */
 
+/** Doc ids for the (at most one) paper and ink log written per shift. */
+export const shiftLogId = (shiftId: string) => `shift_${shiftId}`;
+export const shiftInkLogId = (shiftId: string) => `shiftink_${shiftId}`;
+
 /**
- * Deduct a finished shift's ACTUAL paper use (sold + hadr) from the stock of the event the
- * SHIFT was stamped with. One atomic batch; security rules allow it once per shift.
- * Returns the sheets deducted, or null when the shift has no event (never guessed).
+ * Deduct a finished shift's consumption from the stock of the event the SHIFT was stamped
+ * with, in one atomic batch (security rules allow it once per shift):
+ *   - paper: the shift's ACTUAL use (sheets sold + hadr wasted)
+ *   - ink:   the cartridges staff logged with "+ Ink change" (shift.inkChanges)
+ * Returns what was deducted, or null when the shift has no event (never guessed).
  */
-export async function applyShiftDeduction(shift: Shift, entries: Entry[], by: Actor): Promise<number | null> {
+export async function applyShiftDeduction(
+  shift: Shift,
+  entries: Entry[],
+  by: Actor,
+): Promise<{ sheets: number; cartridges: number } | null> {
   const eventId = shift.eventId; // the shift's own snapshot — NOT anyone's current assignment
   if (!eventId || shift.stockDeduction) return null;
   const sheets = shiftActualUsed(entries.filter((e) => e.shiftId === shift.id));
+  const cartridges = Math.max(0, Math.trunc(shift.inkChanges || 0));
   const b = writeBatch(db());
-  b.update(doc(db(), "shifts", shift.id), { stockDeduction: { eventId, sheets } });
+  b.update(doc(db(), "shifts", shift.id), { stockDeduction: { eventId, sheets, cartridges } });
   b.update(stockRef(eventId, "paper"), {
     currentQuantity: increment(-sheets),
     updatedAt: serverTimestamp(),
     lastShiftId: shift.id,
   });
-  b.set(doc(logsCol(eventId), `shift_${shift.id}`), {
+  b.set(doc(logsCol(eventId), shiftLogId(shift.id)), {
     stockType: "paper", delta: sheets === 0 ? 0 : -sheets, kind: "shift", reason: "Shift ended", shiftId: shift.id,
     byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
   });
+  if (cartridges > 0) {
+    b.update(stockRef(eventId, "ink"), {
+      currentQuantity: increment(-cartridges),
+      updatedAt: serverTimestamp(),
+      lastShiftId: shift.id,
+    });
+    b.set(doc(logsCol(eventId), shiftInkLogId(shift.id)), {
+      stockType: "ink", delta: -cartridges, kind: "shift",
+      reason: `Shift ended — ${cartridges} ink change${cartridges === 1 ? "" : "s"}`, shiftId: shift.id,
+      byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+    });
+  }
   await b.commit();
-  return sheets;
+  return { sheets, cartridges };
 }

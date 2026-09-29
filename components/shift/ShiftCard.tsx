@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Minus, Pencil, Play, Plus, Square } from "lucide-react";
+import { Check, Droplet, Minus, Pencil, Play, Plus, Square } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ActionButton } from "@/components/ui/ActionButton";
@@ -22,6 +22,7 @@ export function ShiftCard({
   onStart,
   onEnd,
   onPaperChange,
+  onInkChange,
   onSetStartPaper,
 }: {
   shift: Shift | null;
@@ -30,6 +31,7 @@ export function ShiftCard({
   onStart: () => void;
   onEnd: () => void;
   onPaperChange: (delta: 1 | -1) => void;
+  onInkChange: (delta: 1 | -1) => void;
   onSetStartPaper: (n: number) => Promise<void>;
 }) {
   return (
@@ -46,6 +48,7 @@ export function ShiftCard({
             sheetsPerPack={sheetsPerPack}
             onEnd={onEnd}
             onPaperChange={onPaperChange}
+            onInkChange={onInkChange}
             onSetStartPaper={onSetStartPaper}
           />
           <SummaryGrid totals={totals} />
@@ -69,12 +72,14 @@ function StatusBar({
   sheetsPerPack,
   onEnd,
   onPaperChange,
+  onInkChange,
   onSetStartPaper,
 }: {
   shift: Shift;
   sheetsPerPack: number;
   onEnd: () => void;
   onPaperChange: (delta: 1 | -1) => void;
+  onInkChange: (delta: 1 | -1) => void;
   onSetStartPaper: (n: number) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -147,6 +152,34 @@ function StatusBar({
             <span className="text-[11px] whitespace-nowrap text-ink-faint">1 pack = {sheetsPerPack} sheets</span>
           </span>
         </button>
+      </div>
+
+      {/* Ink counter: +1 per CARTRIDGE swapped in. − undoes a mis-tap. Deducted from this
+          shift's event's ink stock when the shift ends. */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Remove one ink change"
+          onClick={() => onInkChange(-1)}
+          disabled={(shift.inkChanges || 0) <= 0}
+          className="grid size-12 shrink-0 place-items-center rounded-full border border-line-strong bg-surface-2 text-ink active:scale-95 disabled:opacity-40"
+        >
+          <Minus className="size-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onInkChange(1)}
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-line-strong bg-surface-2 text-ink active:scale-[0.98]"
+        >
+          <Droplet className="size-4 shrink-0" />
+          <span className="flex flex-col items-start leading-tight">
+            <span className="font-semibold whitespace-nowrap">Ink change</span>
+            <span className="text-[11px] whitespace-nowrap text-ink-faint">1 tap = 1 cartridge</span>
+          </span>
+        </button>
+        <span data-testid="ink-changes" className="w-10 shrink-0 text-center font-display text-lg font-bold tabular-nums">
+          {shift.inkChanges || 0}×
+        </span>
       </div>
 
       <Button variant="danger" size="lg" className="w-full" leftIcon={<Square className="size-4" />} onClick={onEnd}>

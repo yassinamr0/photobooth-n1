@@ -39,12 +39,13 @@ export function parseShift(id: string, d: DocumentData): Shift {
     endTime: d.endTime ?? null,
     startPaperCount: numOrNull(d.startPaperCount),
     paperChanges: num(d.paperChanges),
+    inkChanges: num(d.inkChanges),
     endPaperCount: numOrNull(d.endPaperCount),
     sheetsPerPack: numOrNull(d.sheetsPerPack),
     paperVerified: d.paperVerified === true,
     stockDeduction:
       d.stockDeduction && typeof d.stockDeduction.eventId === "string"
-        ? { eventId: d.stockDeduction.eventId, sheets: num(d.stockDeduction.sheets) }
+        ? { eventId: d.stockDeduction.eventId, sheets: num(d.stockDeduction.sheets), cartridges: num(d.stockDeduction.cartridges) }
         : null,
     createdAt: d.createdAt ?? null,
   };
@@ -125,6 +126,7 @@ export function startShift(profile: UserProfile, startPaperCount: number, sheets
     endTime: null,
     startPaperCount,
     paperChanges: 0,
+    inkChanges: 0,
     endPaperCount: null,
     // Snapshot of the pack size in force now, so later settings changes never rewrite this
     // shift's reconciliation. Rules require it to equal settings/paper.sheetsPerPack.
@@ -144,6 +146,14 @@ export async function adjustPaperChanges(shift: Shift, delta: 1 | -1) {
   const next = Math.max(0, (shift.paperChanges || 0) + delta);
   if (next === shift.paperChanges) return false;
   await updateDoc(doc(shiftsCol(), shift.id), { paperChanges: next });
+  return true;
+}
+
+/** +1 / −1 ink CARTRIDGE swapped in. Clamped at 0. Returns false if nothing changed. */
+export async function adjustInkChanges(shift: Shift, delta: 1 | -1) {
+  const next = Math.max(0, (shift.inkChanges || 0) + delta);
+  if (next === (shift.inkChanges || 0)) return false;
+  await updateDoc(doc(shiftsCol(), shift.id), { inkChanges: next });
   return true;
 }
 

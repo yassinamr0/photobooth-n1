@@ -138,7 +138,8 @@ The owner explicitly likes this exact top-to-bottom arrangement on the staff shi
 does not want it rearranged. Build it in this order, as separate stacked cards:
 1. **"Your shift" card, at the very top of the screen.** Contains, in this order: the shift
    status bar (start time; editable "paper loaded" value; pack-change counter with +/− — see
-   below; "End shift" action) directly followed by the live current-shift summary grid (total
+   below; ink-change counter with +/−, one tap = one cartridge — owner-approved addition, see
+   Phase 5; "End shift" action) directly followed by the live current-shift summary grid (total
    EGP, cash, visa, sheets sold, hadr wasted, acrylic sold, magnetic sold). This whole card,
    summary included, sits above everything else — it's the first thing staff see and should
    stay visible/reachable at the top, not buried under the sale-logging form.
@@ -277,6 +278,10 @@ Staff never see or interact with this concept directly.
   threshold.
 - Ink: manual tracking only, per event (no automatic formula) — same restock/adjust/warning
   UI pattern, simpler since no box/sheet conversion applies.
+  - Owner-approved follow-up: staff log ink changes during a shift ("+ Ink change", one tap =
+    one cartridge, with − to undo; stored as shift.inkChanges). When the shift ends, those
+    cartridges are deducted from THAT SHIFT'S eventId's ink stock alongside the paper
+    deduction (same once-only / pending / reversal-on-delete rules).
 - Stock log history view per location, most recent first.
 - Rolling average daily consumption (e.g. last 14 days) per location → "at this rate, this
   location's stock runs out in approximately N days." Surface on the event's Inventory view

@@ -14,7 +14,7 @@ const user = (uid: string, extra: Partial<UserProfile> = {}): UserProfile => ({
 });
 const shift = (id: string, uid: string, eventId: string | null, startTime: string, extra: Partial<Shift> = {}): Shift => ({
   id, uid, staffName: uid.toUpperCase(), eventId, startTime, endTime: null,
-  startPaperCount: null, paperChanges: 0, endPaperCount: null, ...extra,
+  startPaperCount: null, paperChanges: 0, inkChanges: 0, endPaperCount: null, ...extra,
 });
 const sale = (id: string, shiftId: string, uid: string, total: number, sheets = 1, time = at(29, 13)): Entry => ({
   id, uid, staffName: uid, shiftId, time, type: "sale", sheets, frames: { Acrylic: 0, Magnetic: 0 },

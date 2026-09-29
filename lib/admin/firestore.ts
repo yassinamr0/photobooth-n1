@@ -64,7 +64,8 @@ export function setPaperVerified(shiftId: string, verified: boolean) {
 /**
  * Irreversibly delete a shift AND every entry logged under it (batched, chunked).
  * If the shift's paper was already deducted from its event's stock, the same final batch
- * puts those sheets back and logs a reversal — stock always equals restocks − existing shifts.
+ * puts those sheets (and ink cartridges) back and logs reversals — stock always equals
+ * restocks − existing shifts.
  */
 export async function deleteShiftAndEntries(
   shift: Pick<Shift, "id" | "stockDeduction">,
@@ -86,6 +87,16 @@ export async function deleteShiftAndEntries(
     });
     final.set(doc(collection(db(), "events", d.eventId, "stockLogs")), {
       stockType: "paper", delta: d.sheets, kind: "shiftReversal", reason: "Shift deleted — sheets restored",
+      shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
+    });
+  }
+  if (d && (d.cartridges ?? 0) > 0) {
+    final.update(doc(db(), "events", d.eventId, "stock", "ink"), {
+      currentQuantity: increment(d.cartridges),
+      updatedAt: serverTimestamp(),
+    });
+    final.set(doc(collection(db(), "events", d.eventId, "stockLogs")), {
+      stockType: "ink", delta: d.cartridges, kind: "shiftReversal", reason: "Shift deleted — cartridges restored",
       shiftId: shift.id, byUid: by.uid, byName: by.name, createdAt: serverTimestamp(),
     });
   }

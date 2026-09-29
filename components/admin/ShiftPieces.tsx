@@ -191,11 +191,17 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
   let text: React.ReactNode;
   let action: React.ReactNode = null;
   if (d) {
-    text = <>Deducted <b className="text-ink">{d.sheets}</b> sheet{d.sheets === 1 ? "" : "s"} from {s.eventName ?? "its event"}&apos;s paper stock</>;
+    text = (
+      <>
+        Deducted <b className="text-ink">{d.sheets}</b> sheet{d.sheets === 1 ? "" : "s"}
+        {d.cartridges > 0 && <> and <b className="text-ink">{d.cartridges}</b> ink cartridge{d.cartridges === 1 ? "" : "s"}</>} from{" "}
+        {s.eventName ?? "its event"}&apos;s stock
+      </>
+    );
   } else if (!shift.eventId) {
     text = shift.endTime ? "No event — this shift doesn't affect any location's inventory" : "No event — won't affect any location's inventory";
   } else if (!shift.endTime) {
-    text = `Paper used will be deducted from ${s.eventName}'s stock when the shift ends`;
+    text = `Paper used${shift.inkChanges ? ` and ${shift.inkChanges} ink cartridge(s)` : ""} will be deducted from ${s.eventName}'s stock when the shift ends`;
   } else if (pending.some((p) => p.id === shift.id)) {
     text = <span className="text-warning">Not yet deducted from {s.eventName}&apos;s stock</span>;
     if (!readOnly && profile)
@@ -205,7 +211,7 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
             setBusy(true);
             try {
               const n = await applyShiftDeduction(shift, entries, { uid: profile.uid, name: profile.name });
-              toast(`Deducted ${n} sheets from ${s.eventName}`, "success");
+              toast(`Deducted ${n?.sheets ?? 0} sheets${n?.cartridges ? ` + ${n.cartridges} cartridge(s)` : ""} from ${s.eventName}`, "success");
             } catch (e) {
               toast(`Could not deduct: ${authErrorMessage(e)}`, "danger");
             } finally {
@@ -219,11 +225,16 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
     text = "Ended before inventory tracking started for this event — not deducted";
   }
   return (
+    <>
     <div data-testid="stock-status" className="flex flex-wrap items-center gap-2 rounded-inner bg-surface-2 px-4 py-2.5 text-sm text-ink-muted">
       <Package className="size-4 shrink-0 text-ink-faint" />
       <span className="flex-1">{text}</span>
       {action}
     </div>
+    <p data-testid="ink-changes-admin" className="-mt-1 px-1 text-xs text-ink-faint">
+      Ink changed during this shift: {shift.inkChanges || 0}× (1 = one cartridge)
+    </p>
+    </>
   );
 }
 
@@ -245,9 +256,11 @@ function DeleteShift({ s }: { s: ScopedShift }) {
     <div role="alertdialog" aria-label="Confirm delete shift" className="rounded-inner border border-danger/40 bg-danger-dim px-4 py-3">
       <p className="text-sm font-semibold text-danger">
         Delete this shift and its {n} {n === 1 ? "entry" : "entries"}? This can&apos;t be undone.
-        {s.shift.stockDeduction && s.shift.stockDeduction.sheets > 0 && (
+        {s.shift.stockDeduction && (s.shift.stockDeduction.sheets > 0 || s.shift.stockDeduction.cartridges > 0) && (
           <span className="mt-1 block font-normal">
-            Its {s.shift.stockDeduction.sheets} deducted sheets will be put back into {s.eventName ?? "its event"}&apos;s stock.
+            Its {s.shift.stockDeduction.sheets} deducted sheets
+            {s.shift.stockDeduction.cartridges > 0 && ` and ${s.shift.stockDeduction.cartridges} ink cartridge(s)`} will be put back
+            into {s.eventName ?? "its event"}&apos;s stock.
           </span>
         )}
       </p>

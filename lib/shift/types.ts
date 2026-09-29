@@ -12,12 +12,14 @@ export type Shift = {
   startPaperCount: number | null;
   /** Number of PACKS (settings/paper.sheetsPerPack sheets each) swapped in. Never boxes. */
   paperChanges: number;
+  /** Ink CARTRIDGES swapped in during this shift (one tap = one cartridge). Legacy shifts → 0. */
+  inkChanges: number;
   endPaperCount: number | null;
   /** Pack size snapshotted when the shift started (older/legacy shifts don't have it). */
   sheetsPerPack?: number | null;
   paperVerified?: boolean;
   /** Set once when this shift's paper use was deducted from ITS OWN event's stock (Phase 5). */
-  stockDeduction?: { eventId: string; sheets: number } | null;
+  stockDeduction?: { eventId: string; sheets: number; cartridges: number } | null;
   createdAt?: Timestamp | null;
 };
 
