@@ -1,16 +1,46 @@
 # Booth Log
 
 > **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
-> `PLAN.md`). Current state: Phase 1 — design system.
->
-> ```bash
-> npm install
-> npm run dev   # then open http://localhost:3000/style-guide
-> ```
->
-> The original single-file app now lives in `legacy/` (`legacy/index.html`,
-> `legacy/firestore.rules`). The instructions below describe that legacy app and will be
-> replaced as the rebuild progresses.
+> `PLAN.md`). Current state: Phase 2 — auth & roles. The original single-file app lives in
+> `legacy/`; its instructions (further down) still apply to it.
+
+## Rebuild — setup
+
+### 1. Environment variables
+Copy `.env.example` to `.env.local` and fill in the Firebase web config (Firebase console →
+Project settings → Your apps → SDK setup). The rebuild uses the **same Firebase project as the
+legacy app**, so the values are the ones in `legacy/index.html` (`firebaseConfig`). Add the
+same six `NEXT_PUBLIC_FIREBASE_*` keys in Vercel → Project → Settings → Environment Variables.
+
+```bash
+npm install
+npm run dev     # http://localhost:3000  (style guide: /style-guide)
+```
+
+### 2. Firestore security rules
+Firebase console → Firestore Database → Rules → replace everything with the contents of
+`firestore.rules` (repo root) → Publish. It keeps the legacy `/entries` and `/shifts` rules
+unchanged, so the old app keeps working, and tightens `/users`.
+
+### 3. Authorized domains
+Firebase console → Authentication → Settings → Authorized domains → add your Vercel domain
+(`localhost` is allowed by default).
+
+### 4. Become the first admin (one-time, manual)
+1. Open the app and sign up like anyone else — you land on "Waiting for approval".
+2. Firebase console → Firestore Database → Data → `users` → your document (its ID is your
+   Auth UID; match it by the `email` field).
+3. Edit `role` → `"admin"` and `approved` → `true`. Save.
+4. The app switches over by itself — no reload needed. Approve everyone else from inside the
+   app once the admin dashboard exists (Phase 4); until then, approve via the console or the
+   legacy app's admin panel.
+
+### Testing tips
+- `npm run dev` shows a dev-only "Simulate interrupted signup" checkbox on the signup form. It
+  skips the profile write so you can see the ~4s "Setting up…" wait followed by the
+  "Finish setting up" recovery screen. It never appears in production builds.
+- Set `NEXT_PUBLIC_FIREBASE_USE_EMULATORS=true` to run against the local Firebase emulators
+  (Auth :9099, Firestore :8080) instead of the real project.
 
 ## Legacy app
 

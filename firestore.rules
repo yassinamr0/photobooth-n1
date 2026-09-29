@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function isAdmin() {
+      return isSignedIn() && myDoc().data.role == 'admin' && myDoc().data.approved == true;
+    }
+    function isApprovedStaff() {
+      return isSignedIn() && myDoc().data.approved == true;
+    }
+
+    // /users/{uid} — Booth Log rebuild (Phase 2).
+    // - Any signed-in user can read profiles (names resolve across the app).
+    // - You can create only your OWN doc, only as unapproved staff with no assigned event.
+    // - You can edit your own doc, but never your own role, approved, assignedEventId or uid.
+    //   (diff().affectedKeys() is used instead of field == field so legacy docs that lack
+    //   assignedEventId still allow harmless self-edits, and the field can't be added either.)
+    // - Only an approved admin can change those fields or delete a user doc.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId
+                    && request.resource.data.uid == userId
+                    && request.resource.data.role == 'staff'
+                    && request.resource.data.approved == false
+                    && request.resource.data.get('assignedEventId', null) == null;
+      allow update: if isAdmin() || (
+                      isSignedIn() && request.auth.uid == userId
+                      && !request.resource.data.diff(resource.data).affectedKeys()
+                            .hasAny(['role', 'approved', 'assignedEventId', 'uid'])
+                    );
+      allow delete: if isAdmin();
+    }
+
+    // Only approved users can read or write entries, and only write as themselves.
+    match /entries/{entryId} {
+      allow read: if isApprovedStaff();
+      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
+    }
+
+    // Same for shifts (clock in/out).
+    match /shifts/{shiftId} {
+      allow read: if isApprovedStaff();
+      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+  }
+}
