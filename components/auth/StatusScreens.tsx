@@ -8,6 +8,7 @@ import { Tag } from "@/components/ui/Tag";
 import { AuthShell } from "./AuthShell";
 import { LogoutButton } from "./LogoutButton";
 import { useAuth } from "./AuthProvider";
+import { StaffShiftScreen } from "@/components/shift/StaffShiftScreen";
 
 export function LoadingScreen({ message }: { message?: string }) {
   return (
@@ -50,11 +51,12 @@ export function PendingApproval() {
   );
 }
 
-/** Placeholder home for approved users until Phase 3 (staff) / Phase 4 (admin). */
+/** Approved users: staff get the shift screen; admins a placeholder until Phase 4. */
 export function ApprovedHome() {
   const { profile } = useAuth();
   if (!profile) return null;
   const isAdmin = profile.role === "admin";
+  if (!isAdmin) return <StaffShiftScreen />;
   return (
     <AuthShell
       title={`Hi, ${profile.name.split(" ")[0] || "there"}`}
@@ -65,9 +67,7 @@ export function ApprovedHome() {
         <Tag tone="success" dot>Approved</Tag>
       </div>
       <Card className="text-center text-sm text-ink-muted">
-        {isAdmin
-          ? "The admin dashboard arrives in Phase 4."
-          : "The staff shift screen arrives in Phase 3."}
+        The admin dashboard arrives in Phase 4.
       </Card>
       <LogoutButton className="self-center" />
     </AuthShell>

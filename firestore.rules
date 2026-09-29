@@ -11,7 +11,8 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && myDoc().data.role == 'admin' && myDoc().data.approved == true;
     }
-    function isApprovedStaff() {
+    // Any approved user (staff or admin). Pending signups are NOT approved.
+    function isApproved() {
       return isSignedIn() && myDoc().data.approved == true;
     }
 
@@ -37,19 +38,52 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Only approved users can read or write entries, and only write as themselves.
-    match /entries/{entryId} {
-      allow read: if isApprovedStaff();
-      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
+    // /shifts/{id} — Booth Log rebuild (Phase 3). Shared with the legacy app (same shape).
+    // - Read: approved users only (a pending signup must not see sales data).
+    // - Create: only as yourself, and eventId must be the ONE-TIME SNAPSHOT of your own
+    //   assignedEventId at this moment (missing/null on both sides = no event, which is what
+    //   legacy-app shifts look like). paperVerified can't be pre-set.
+    // - Update: admin always; staff only their own shift and never uid / eventId /
+    //   paperVerified / createdAt (eventId is never re-derived; paperVerified is admin's call).
+    // - Delete: admin only (deleting a shift would orphan its entries).
+    match /shifts/{shiftId} {
+      allow read: if isApproved();
+      allow create: if isApproved()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.get('eventId', null)
+                         == myDoc().data.get('assignedEventId', null)
+                    && request.resource.data.get('paperVerified', false) == false;
+      allow update: if isAdmin() || (
+                      isApproved() && resource.data.uid == request.auth.uid
+                      && !request.resource.data.diff(resource.data).affectedKeys()
+                            .hasAny(['uid', 'eventId', 'paperVerified', 'createdAt'])
+                    );
+      allow delete: if isAdmin();
     }
 
-    // Same for shifts (clock in/out).
-    match /shifts/{shiftId} {
-      allow read: if isApprovedStaff();
-      allow create: if isApprovedStaff() && request.resource.data.uid == request.auth.uid;
-      allow update: if isAdmin() || (isApprovedStaff() && resource.data.uid == request.auth.uid);
-      allow delete: if isAdmin();
+    // /entries/{id} — sales + waste. Shared with the legacy app.
+    // - Read: approved users only.
+    // - Create: only as yourself, and only into one of your OWN shifts.
+    // - Update/delete: admin always; staff only their own entries, and an update can never
+    //   move an entry to another user or shift.
+    match /entries/{entryId} {
+      allow read: if isApproved();
+      allow create: if isApproved()
+                    && request.resource.data.uid == request.auth.uid
+                    && get(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId))
+                         .data.uid == request.auth.uid;
+      allow update: if isAdmin() || (
+                      isApproved() && resource.data.uid == request.auth.uid
+                      && !request.resource.data.diff(resource.data).affectedKeys()
+                            .hasAny(['uid', 'shiftId', 'createdAt'])
+                    );
+      allow delete: if isAdmin() || (isApproved() && resource.data.uid == request.auth.uid);
+    }
+
+    // /settings/{doc} — e.g. settings/paper { sheetsPerPack, sheetsPerBox }.
+    match /settings/{docId} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
     }
   }
 }

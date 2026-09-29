@@ -1,7 +1,7 @@
 # Booth Log
 
 > **Rebuild in progress.** This repo is being rebuilt as a Next.js app (see `SPEC.md`,
-> `PLAN.md`). Current state: Phase 2 — auth & roles. The original single-file app lives in
+> `PLAN.md`). Current state: Phase 3 — staff shift flow. The original single-file app lives in
 > `legacy/`; its instructions (further down) still apply to it.
 
 ## Rebuild — setup
@@ -19,8 +19,9 @@ npm run dev     # http://localhost:3000  (style guide: /style-guide)
 
 ### 2. Firestore security rules
 Firebase console → Firestore Database → Rules → replace everything with the contents of
-`firestore.rules` (repo root) → Publish. It keeps the legacy `/entries` and `/shifts` rules
-unchanged, so the old app keeps working, and tightens `/users`.
+`firestore.rules` (repo root) → Publish. **Re-paste the whole file after every phase that
+changes it** (Phase 3 did). The new app shares `/shifts` and `/entries` with the legacy app,
+and the rules stay compatible with it, so both apps keep working side by side.
 
 ### 3. Authorized domains
 Firebase console → Authentication → Settings → Authorized domains → add your Vercel domain
@@ -36,6 +37,8 @@ Firebase console → Authentication → Settings → Authorized domains → add 
    legacy app's admin panel.
 
 ### Testing tips
+- `npm test` runs the unit tests for the money/time rules (sheet pricing, sale totals,
+  midnight rollover, shift totals, paper-pack math).
 - `npm run dev` shows a dev-only "Simulate interrupted signup" checkbox on the signup form. It
   skips the profile write so you can see the ~4s "Setting up…" wait followed by the
   "Finish setting up" recovery screen. It never appears in production builds.
