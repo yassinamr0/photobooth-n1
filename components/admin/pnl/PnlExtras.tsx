@@ -208,7 +208,7 @@ export function FeesCard() {
       <div role="tablist" aria-label="Fee type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {([["percent", "Percentage only"], ["percentPlusFixed", "Percentage + fixed"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={mode === k} data-testid={`fee-mode-${k}`} onClick={() => setMode(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === k ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === k ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
             {l}
           </button>
         ))}

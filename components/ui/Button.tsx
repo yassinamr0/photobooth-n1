@@ -32,7 +32,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const pillStates = {
-  on: "bg-ink text-black border-ink",
+  on: "bg-maroon text-white border-maroon",
   off: "border-line text-ink-muted hover:text-ink hover:border-line-strong",
 };
 

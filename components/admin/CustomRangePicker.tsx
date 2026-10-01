@@ -87,7 +87,7 @@ export function CustomRangePicker({
               setMode(m.id);
               if (m.id === "range" && b < a) setB(a);
             }}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === m.id ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === m.id ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
             {m.label}
           </button>
         ))}

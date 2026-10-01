@@ -335,7 +335,7 @@ function AddExpense() {
       <div role="tablist" aria-label="Expense type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {([["once", "One-off"], ["monthly", "Monthly"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} data-testid={`add-${k}`} onClick={() => setKind(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", kind === k ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", kind === k ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
             {k === "monthly" && <Repeat className="mr-1.5 inline size-3.5 -translate-y-px" />}{l}
           </button>
         ))}

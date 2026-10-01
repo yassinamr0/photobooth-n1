@@ -99,7 +99,7 @@ function DashboardInner() {
             {NAV.map((n) => (
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-inner border px-4 text-sm font-semibold",
-                  section === n.id && !historyUid ? "border-ink bg-ink text-black" : "border-line text-ink-muted")}>
+                  section === n.id && !historyUid ? "border-maroon bg-maroon text-white" : "border-line text-ink-muted")}>
                 {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.id === "pnl" ? "P&L" : n.label}
               </button>
             ))}
@@ -180,14 +180,14 @@ function ScopeBar({ section }: { section: Section }) {
         {RANGES.map((r) => (
           <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
             className={cn("h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-              range === r.id ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
+              range === r.id ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
             <span className="hidden sm:inline">{r.label}</span>
           </button>
         ))}
         <button type="button" role="tab" aria-selected={custom} data-testid="range-custom" onClick={() => setPicking((p) => !p)}
           className={cn("flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-            custom ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
+            custom ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
           <CalendarDays className="size-3.5" />
           <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
         </button>
