@@ -17,10 +17,10 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
   hadr/waste = pink `#ff4d8d` · profit = green · loss/expenses/errors = red `#ff5c6c` ·
   warnings (low stock, mismatches) = maroon box, crimson border, pearl text (owner's change).
 - No gradients anywhere (legacy `bg-accent-gradient` / `text-accent-gradient` utilities are
-  solid film-edge).
+  solid maroon / pearl).
 
 ## Frames
-- Every `Card` is a `frame`: 1px rule, 6px radius, two film-edge registration corners
+- Every `Card` is a `frame`: 1px rule, 6px radius, two velvet-crimson registration corners
   (top-left, bottom-right) drawn as crisp geometry. No shadows on cards; only floating
   layers (toasts, sheets) get an offset + blur shadow.
 - Stat cells are "prints": a 3px top bar in the stat's meaning colour + a big condensed
