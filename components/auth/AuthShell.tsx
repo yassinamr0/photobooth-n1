@@ -20,7 +20,7 @@ export function AuthShell({
         <div className="flex flex-col items-center gap-4 text-center">
           {icon ?? (
             <Image src="/icons/icon-192.png" alt="Memoire" width={64} height={64} priority
-              data-testid="auth-logo" className="size-16 rounded-[16px]" />
+              data-testid="auth-logo" className="size-16 rounded-inner" />
           )}
           <div>
             <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>

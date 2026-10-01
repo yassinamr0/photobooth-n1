@@ -69,7 +69,7 @@ export function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void })
         <Field id="su-password2" label="Confirm password" type="password" autoComplete="new-password"
           value={password2} onChange={(e) => setPassword2(e.target.value)} />
         {isDev && (
-          <label className="flex items-center gap-2 rounded-inner border border-dashed border-warning/40 px-3 py-2 text-xs text-warning">
+          <label className="flex items-center gap-2 rounded-inner border border-dashed border-warning/40 px-3 py-2 text-xs text-ink">
             <input type="checkbox" checked={simulateInterrupt} onChange={(e) => setSimulateInterrupt(e.target.checked)} />
             Dev only: simulate interrupted signup (skip profile write)
           </label>

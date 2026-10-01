@@ -78,16 +78,16 @@ export function CustomRangePicker({
       role="dialog"
       aria-label="Custom date range"
       data-testid="custom-range"
-      className="absolute top-full right-0 left-0 z-30 mt-2 rounded-card border border-line-strong bg-surface p-4 shadow-card sm:left-auto sm:w-[400px]"
+      className="absolute top-full right-0 left-0 z-30 mt-2 animate-rise rounded-card border border-line-strong bg-surface p-4 sm:left-auto sm:w-[400px]"
     >
-      <div role="tablist" aria-label="Custom range type" className="mb-4 flex gap-1 rounded-full border border-line bg-surface-2 p-1">
+      <div role="tablist" aria-label="Custom range type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {MODES.map((m) => (
           <button key={m.id} type="button" role="tab" aria-selected={mode === m.id} data-testid={`custom-mode-${m.id}`}
             onClick={() => {
               setMode(m.id);
               if (m.id === "range" && b < a) setB(a);
             }}
-            className={cn("h-8 flex-1 rounded-full px-3 text-sm font-semibold", mode === m.id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === m.id ? "bg-ink text-black" : "text-ink-muted hover:text-ink")}>
             {m.label}
           </button>
         ))}
@@ -109,12 +109,12 @@ export function CustomRangePicker({
           <span className={label}>{mode === "day" ? "Day" : "Any day in the week"}</span>
           <div className="flex items-center gap-2">
             <button type="button" aria-label={mode === "day" ? "Previous day" : "Previous week"} onClick={() => valid && step(-1)}
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-ink-muted hover:text-ink">
+              className="grid size-10 shrink-0 place-items-center rounded-inner border border-line text-ink-muted hover:text-ink">
               <ChevronLeft className="size-4" />
             </button>
             <input type="date" data-testid="custom-day" className={input} value={a} onChange={(e) => setA(e.target.value)} />
             <button type="button" aria-label={mode === "day" ? "Next day" : "Next week"} onClick={() => valid && step(1)}
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-ink-muted hover:text-ink">
+              className="grid size-10 shrink-0 place-items-center rounded-inner border border-line text-ink-muted hover:text-ink">
               <ChevronRight className="size-4" />
             </button>
           </div>

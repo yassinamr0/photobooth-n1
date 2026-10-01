@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, MapPin, Package, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, MapPin, Package, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { applyShiftDeduction } from "@/lib/inventory/firestore";
 import { describeDeduction } from "@/lib/inventory/units";
@@ -20,7 +20,7 @@ import { fmtNum, formatEGP } from "@/lib/format";
 
 export function MismatchIcon({ title = "Paper count mismatch" }: { title?: string }) {
   return (
-    <span data-testid="mismatch-icon" title={title} className="inline-grid size-6 place-items-center rounded-full bg-warning-dim text-warning">
+    <span data-testid="mismatch-icon" title={title} className="inline-grid size-6 place-items-center rounded-inner bg-warning-dim text-ink">
       <AlertTriangle className="size-3.5" aria-label={title} />
     </span>
   );
@@ -29,11 +29,11 @@ export function MismatchIcon({ title = "Paper count mismatch" }: { title?: strin
 /** The 7 stats (TOTAL · CASH · VISA · SHEETS · HADR · ACRYLIC · MAGNETIC). */
 export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: "sm" | "lg" }) {
   const cells: [string, number, string?][] = [
-    ["Total EGP", totals.total, "text-gold"],
-    ["Cash", totals.cash, "text-success"],
-    ["Visa", totals.visa, "text-info"],
+    ["Total EGP", totals.total, "text-ink"],
+    ["Cash", totals.cash],
+    ["Visa", totals.visa, "text-ink"],
     ["Sheets sold", totals.sheets],
-    ["Hadr wasted", totals.hadr, "text-pink"],
+    ["Hadr wasted", totals.hadr, "text-ink"],
     ["Acrylic", totals.acrylic],
     ["Magnetic", totals.magnetic],
   ];
@@ -45,7 +45,7 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
           className={cn(
             "rounded-inner border border-line bg-surface-2 px-3",
             size === "lg" ? "py-4" : "py-2",
-            size === "lg" && i === 0 && "col-span-2 border-gold/30 bg-gold-dim/40 sm:col-span-2 xl:col-span-1",
+            size === "lg" && i === 0 && "col-span-2 border-crimson/30 bg-gold-dim/40 sm:col-span-2 xl:col-span-1",
           )}
         >
           <div
@@ -95,7 +95,7 @@ export function PaperBlock({ s, readOnly }: { s: ScopedShift; readOnly?: boolean
     >
       <p>{text.printer}</p>
       <p>{text.logged}</p>
-      <p className={cn("mt-1 font-semibold", r.warn ? "text-warning" : r.mismatch ? "text-ink-muted" : "text-success")}>
+      <p className={cn("mt-1 font-semibold", r.warn ? "text-ink" : r.mismatch ? "text-ink-muted" : "text-success")}>
         {r.warn && <AlertTriangle className="mr-1.5 inline size-4 -translate-y-px" />}
         {text.status}
         <span className="ml-1.5 text-xs font-normal text-ink-faint">· 1 pack = {r.packSize} sheets</span>
@@ -110,7 +110,7 @@ export function PaperBlock({ s, readOnly }: { s: ScopedShift; readOnly?: boolean
             )
           ) : (
             <>
-              <span className="text-success">Checked off by admin ✓</span>
+              <span className="inline-flex items-center gap-1 text-success"><Check className="size-3.5" /> Checked off by admin</span>
               {!readOnly && (
                 <button type="button" disabled={busy} onClick={() => toggle(false)} className="text-ink-muted underline underline-offset-4 hover:text-ink">
                   Unmark
@@ -148,8 +148,8 @@ export function ShiftColumnsHeader({ showEvent }: { showEvent: boolean }) {
 function paperShort(s: ScopedShift): { text: string; tone: string } {
   const r = s.recon;
   if (!r) return { text: s.shift.endTime ? "No counts" : "—", tone: "text-ink-faint" };
-  if (r.warn) return { text: "Mismatch", tone: "text-warning" };
-  if (r.mismatch) return { text: "Checked ✓", tone: "text-success" };
+  if (r.warn) return { text: "Mismatch", tone: "text-ink" };
+  if (r.mismatch) return { text: "Checked", tone: "text-success" };
   return { text: "Matches", tone: "text-success" };
 }
 
@@ -159,7 +159,7 @@ function stockShort(s: ScopedShift, pendingIds: Set<string>): { text: string; to
   if (shift.stockDeduction) return { text: "Deducted", tone: "text-ink-muted" };
   if (!shift.eventId) return { text: "No event", tone: "text-ink-faint" };
   if (!shift.endTime) return { text: "At shift end", tone: "text-ink-faint" };
-  if (pendingIds.has(shift.id)) return { text: "Pending", tone: "text-warning" };
+  if (pendingIds.has(shift.id)) return { text: "Pending", tone: "text-ink" };
   return { text: "Not tracked", tone: "text-ink-faint" };
 }
 
@@ -197,7 +197,7 @@ export function ShiftRow({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-ink tabular-nums">
               {date}
-              {fmtTime(shift.startTime)} → {shift.endTime ? fmtTime(shift.endTime) : "now"}
+              {fmtTime(shift.startTime)} – {shift.endTime ? fmtTime(shift.endTime) : "now"}
             </span>
             <span className="truncate text-sm text-ink-muted">{s.staffName}</span>
             {s.recon?.warn && <MismatchIcon />}
@@ -211,7 +211,7 @@ export function ShiftRow({
         {/* desktop: columns */}
         <span className="hidden text-sm font-semibold whitespace-nowrap text-ink tabular-nums lg:block">
           {date}
-          {fmtTime(shift.startTime)} → {shift.endTime ? fmtTime(shift.endTime) : "now"}
+          {fmtTime(shift.startTime)} – {shift.endTime ? fmtTime(shift.endTime) : "now"}
         </span>
         <span className="hidden min-w-0 items-center gap-2 text-sm text-ink lg:flex">
           <span className="truncate">{s.staffName}</span>
@@ -223,7 +223,7 @@ export function ShiftRow({
           </span>
         )}
         <span className="hidden text-sm text-ink-muted lg:block">{dur}</span>
-        <span className="text-sm font-semibold whitespace-nowrap text-gold tabular-nums lg:text-right">{formatEGP(s.totals.total)}</span>
+        <span className="text-sm font-semibold whitespace-nowrap text-ink tabular-nums lg:text-right">{formatEGP(s.totals.total)}</span>
         <span className={cn("hidden items-center gap-1.5 text-sm lg:flex", paper.tone)}>
           {s.recon?.warn && <AlertTriangle className="size-3.5" />}{paper.text}
         </span>
@@ -233,7 +233,7 @@ export function ShiftRow({
         <ChevronDown className={cn("size-4 shrink-0 text-ink-faint transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="grid gap-3 border-t border-line px-4 py-4 lg:grid-cols-2 lg:gap-4">
+        <div className="grid animate-rise gap-3 border-t border-line px-4 py-4 lg:grid-cols-2 lg:gap-4">
           <div className="flex flex-col gap-3">
             <StatGrid totals={s.totals} />
             <PaperBlock s={s} readOnly={readOnly} />
@@ -271,7 +271,7 @@ export function StockStatus({ s, readOnly }: { s: ScopedShift; readOnly?: boolea
   } else if (!shift.endTime) {
     text = `Paper used, frames sold${shift.inkChanges ? ` and ${shift.inkChanges} ink cartridge(s)` : ""} will be deducted from ${s.eventName}'s stock when the shift ends`;
   } else if (pending.some((p) => p.id === shift.id)) {
-    text = <span className="text-warning">Not yet deducted from {s.eventName}&apos;s stock</span>;
+    text = <span className="text-ink">Not yet deducted from {s.eventName}&apos;s stock</span>;
     if (!readOnly && profile)
       action = (
         <Button size="sm" variant="secondary" loading={busy}

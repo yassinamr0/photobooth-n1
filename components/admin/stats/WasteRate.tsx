@@ -33,7 +33,7 @@ export function WasteRate({ shifts, range, scopeLabel, now }: { shifts: ScopedSh
       ) : (
         <div className="flex flex-col gap-4">
           <div>
-            <div data-testid="waste-overall" className="font-display text-5xl font-extrabold tabular-nums text-ink lg:text-4xl">{pct(overall.rate)}</div>
+            <div data-testid="waste-overall" className="font-display text-4xl font-extrabold tabular-nums text-ink lg:text-4xl">{pct(overall.rate)}</div>
             <p className="mt-1 text-sm text-ink-muted">
               {fmtNum(overall.hadr)} of {fmtNum(overall.used)} sheets wasted
             </p>
@@ -123,7 +123,7 @@ function TrendChart({ points, baseline }: { points: TrendPoint[]; baseline: numb
       </svg>
       {tooltip}
       {points.some((p) => p.high) && (
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-warning">
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-ink">
           <AlertTriangle className="size-3.5" /> Amber points are unusually high for this range
         </p>
       )}
@@ -146,7 +146,7 @@ function TrendTip({ p }: { p: TrendPoint }) {
     <>
       <b className="text-ink">{p.label}</b>
       <span className="ml-2 text-ink-muted">{pct(p.usage.rate)} · {fmtNum(p.usage.hadr)} of {fmtNum(p.usage.used)} sheets</span>
-      {p.high && <span className="ml-2 text-warning">High</span>}
+      {p.high && <span className="ml-2 text-ink">High</span>}
     </>
   );
 }

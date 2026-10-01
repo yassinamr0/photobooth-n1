@@ -56,16 +56,16 @@ function EntryRow({ entry: e, onDelete }: { entry: Entry; onDelete: (id: string)
         {confirming ? (
           <div className="flex gap-1.5">
             <button type="button" onClick={() => setConfirming(false)}
-              className="h-8 rounded-full border border-line px-3 text-xs text-ink-muted">Keep</button>
+              className="h-8 rounded-inner border border-line px-3 text-xs text-ink-muted">Keep</button>
             <button type="button" disabled={busy}
               onClick={async () => { setBusy(true); try { await onDelete(e.id); } finally { setBusy(false); setConfirming(false); } }}
-              className="h-8 rounded-full border border-danger/50 bg-danger-dim px-3 text-xs font-semibold text-danger">
+              className="h-8 rounded-inner border border-danger/50 bg-danger-dim px-3 text-xs font-semibold text-danger">
               Delete
             </button>
           </div>
         ) : (
           <button type="button" aria-label={`Delete entry ${e.desc}`} onClick={() => setConfirming(true)}
-            className="grid size-8 place-items-center rounded-full text-ink-faint hover:bg-danger-dim hover:text-danger">
+            className="grid size-8 place-items-center rounded-inner text-ink-faint hover:bg-danger-dim hover:text-danger">
             <Trash2 className="size-4" />
           </button>
         )}

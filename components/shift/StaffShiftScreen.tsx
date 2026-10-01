@@ -115,11 +115,11 @@ function ShiftScreenInner() {
       </header>
 
       {shift === undefined ? (
-        <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-magenta" /></div>
+        <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-ink" /></div>
       ) : (
         // LOCKED ORDER (SPEC Phase 3) — do not rearrange:
         // 1 Your shift (status bar + summary) · 2 New sale · 3 Waste · 4 This shift · 5 Copy summary
-        <div className="flex flex-col gap-4" data-testid="shift-screen">
+        <div className="flex animate-rise flex-col gap-4" data-testid="shift-screen">
           <ShiftCard
             shift={shift}
             totals={totals}
@@ -158,7 +158,7 @@ function ShiftScreenInner() {
           <button
             type="button"
             onClick={() => setDialog("summary")}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-full border border-line-strong bg-surface text-sm font-semibold text-ink-muted hover:text-ink"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-inner border border-line-strong bg-surface text-sm font-semibold text-ink-muted hover:text-ink"
           >
             <ClipboardCopy className="size-4" /> Copy shift summary
           </button>

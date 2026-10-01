@@ -33,7 +33,7 @@ export function SidebarRail({
       {logo && <div className="mb-4">{logo}</div>}
       {items.map((item) => {
         const className = cn(
-          "group flex w-[76px] flex-col items-center gap-1 rounded-[14px] px-1 py-2 text-center transition-colors",
+          "group flex w-[76px] flex-col items-center gap-1 rounded-inner px-1 py-2 text-center transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60",
           item.active ? "text-ink" : "text-ink-faint hover:bg-surface-2 hover:text-ink",
         );
@@ -47,8 +47,8 @@ export function SidebarRail({
           <>
             <span
               className={cn(
-                "grid size-10 place-items-center rounded-full [&_svg]:size-5",
-                item.active && "bg-accent-gradient text-white shadow-[0_8px_20px_-8px_rgb(217_70_239/0.8)]",
+                "grid size-10 place-items-center rounded-inner [&_svg]:size-5",
+                item.active && "bg-maroon text-white",
               )}
             >
               {item.icon}

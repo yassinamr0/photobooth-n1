@@ -119,7 +119,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-3 lg:grid lg:grid-cols-[40px_minmax(0,1fr)_minmax(0,1.4fr)_130px_auto] lg:gap-4">
-          <span className="grid size-10 place-items-center rounded-[10px] bg-accent-dim text-magenta"><MapPin className="size-5" /></span>
+          <span className="grid size-10 place-items-center rounded-inner bg-accent-dim text-ink"><MapPin className="size-5" /></span>
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
               <span data-testid="event-name">{ev.name}</span>
@@ -146,7 +146,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
         </div>
       )}
       {confirmDeactivate && (
-        <div role="alertdialog" className="mt-3 rounded-inner border border-warning/40 bg-warning-dim px-4 py-3 text-sm text-warning">
+        <div role="alertdialog" className="mt-3 rounded-inner border border-warning/40 bg-warning-dim px-4 py-3 text-sm text-ink">
           {assigned} staff member{assigned === 1 ? " is" : "s are"} still assigned here. Their next shift will still be tagged with {ev.name}
           until you reassign them in Staff.
           <div className="mt-2 flex gap-2">

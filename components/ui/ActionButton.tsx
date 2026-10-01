@@ -11,8 +11,8 @@ type ActionButtonProps = ComponentProps<"button"> & {
 };
 
 const tones: Record<ActionTone, string> = {
-  accent: "bg-accent-gradient text-white shadow-[0_10px_30px_-12px_rgb(217_70_239/0.8)]",
-  gold: "bg-gold text-[#1a1406] shadow-[0_10px_30px_-14px_rgb(255_201_60/0.7)]",
+  accent: "bg-maroon text-white hover:bg-crimson",
+  gold: "bg-pearl text-black",
   neutral: "bg-surface-2 text-ink border border-line-strong",
   danger: "bg-danger-dim text-danger border border-danger/50",
 };
@@ -41,7 +41,7 @@ export function ActionButton({
     <button
       type={type}
       className={cn(
-        "flex min-h-16 w-full items-center gap-4 rounded-full px-3 pr-6 text-left",
+        "flex min-h-16 w-full items-center gap-4 rounded-inner px-3 pr-6 text-left",
         "transition-[transform,filter,opacity] duration-150 active:scale-[0.98] hover:brightness-105",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60",
         "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
@@ -55,7 +55,7 @@ export function ActionButton({
       {icon && (
         <span
           className={cn(
-            "grid size-11 shrink-0 place-items-center rounded-full [&_svg]:size-5",
+            "grid size-11 shrink-0 place-items-center rounded-inner [&_svg]:size-5",
             iconWells[tone],
           )}
         >

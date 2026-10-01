@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { chartIds } from "@/lib/design/chart";
+import { chartSeries } from "@/lib/design/chart";
 import { useChartTooltip } from "./ChartTooltip";
 
 export type BarSeries = { key: string; label: string; fill: string };
@@ -111,7 +111,8 @@ export function Bars({
   );
 }
 
-export const accentFill = `url(#${chartIds.gradient})`;
+/** Primary series fill — solid light Velvet Crimson (no gradients). */
+export const accentFill = chartSeries[0];
 
 /** Rect with only the top corners rounded (data end), flat on the baseline. */
 function barPath(x: number, y: number, w: number, h: number, r: number) {

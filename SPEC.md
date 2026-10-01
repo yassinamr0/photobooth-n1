@@ -470,3 +470,12 @@ service cloud.firestore {
 - Favor explicit, readable code over cleverness — this will be maintained by someone
   non-technical asking an AI for future changes, not a professional dev team.
 - Ask before guessing on anything affecting money, inventory accuracy, or security rules.
+
+## Owner change — Memoire re-theme (Oct 2026)
+The Phase 1 visual direction is replaced by the Memoire brand: Shadow Noir #2A2A2A surfaces,
+Maroon #6A1B3A / Velvet Crimson #A64D79 accents, Pearl Pink #EDBBDB highlights (never text),
+no gradients, 4–8px radii, no decorative shadows, Albert Sans body + Nunito headings at a
+smaller base size, Lucide SVG icons only, short fade-and-rise motion (off under reduced
+motion). Text colours are strict: white (black on light fills), green = positive, red =
+negative. Charts use the validated pair #CF6AA2 / #923D69. The /style-guide page was removed
+(it documented the old look).

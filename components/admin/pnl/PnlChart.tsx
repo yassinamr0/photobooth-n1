@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { chartSeries } from "@/lib/design/chart";
 import { formatEGP } from "@/lib/format";
 import type { PnlPoint } from "@/lib/pnl/pnl";
 import { useChartTooltip } from "../stats/ChartTooltip";
@@ -9,9 +10,10 @@ import { useChartTooltip } from "../stats/ChartTooltip";
  * Revenue vs expenses per period (paired bars, 2px gap) + the profit line on the SAME EGP
  * axis (one axis — all three are money). Profit can go below zero, so the axis does too.
  * Colours validated with the dataviz palette checker on the dark surface:
- *   revenue #7c3aed (violet) · expenses #f0417f · profit = neutral ink line (not a status colour).
+ *   revenue #cf6aa2 (light Velvet Crimson) · expenses #923d69 (deep Velvet Crimson) ·
+ *   profit = white line (not a status colour). Pair re-validated for the Memoire theme.
  */
-export const PNL_COLORS = { revenue: "#7c3aed", expenses: "#f0417f", profit: "var(--color-ink)" };
+export const PNL_COLORS = { revenue: chartSeries[0], expenses: chartSeries[1], profit: "var(--color-ink)" };
 
 const compact = (n: number) => {
   const a = Math.abs(n);
@@ -61,7 +63,7 @@ export function PnlChart({ points }: { points: PnlPoint[] }) {
       <div className="mb-2 flex flex-wrap gap-4 text-xs text-ink-muted" data-testid="pnl-legend">
         <Key swatch={<span className="size-3 rounded-[3px]" style={{ background: PNL_COLORS.revenue }} />} label="Revenue" />
         <Key swatch={<span className="size-3 rounded-[3px]" style={{ background: PNL_COLORS.expenses }} />} label="Expenses" />
-        <Key swatch={<span className="h-0.5 w-4 rounded-full bg-ink" />} label="Profit" />
+        <Key swatch={<span className="h-0.5 w-4 rounded-inner bg-ink" />} label="Profit" />
       </div>
       <div ref={ref} className="relative">
         <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block max-w-full" role="img"

@@ -34,7 +34,7 @@ export function Sheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="relative max-h-[90dvh] w-full max-w-[480px] overflow-y-auto rounded-t-[28px] border border-line bg-surface p-6 pb-8 shadow-panel sm:rounded-[28px]"
+        className="relative max-h-[90dvh] w-full max-w-[480px] overflow-y-auto rounded-t-[8px] border border-line bg-surface p-6 pb-8 shadow-panel sm:rounded-inner"
       >
         <h2 id={labelledBy} className="mb-5 font-display text-xl font-bold text-ink">
           {title}

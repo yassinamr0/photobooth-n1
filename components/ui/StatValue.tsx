@@ -7,7 +7,7 @@ type Size = "md" | "lg" | "xl";
 const sizes: Record<Size, string> = {
   md: "text-xl",
   lg: "text-3xl",
-  xl: "text-4xl md:text-5xl",
+  xl: "text-4xl md:text-4xl",
 };
 
 /**
@@ -38,7 +38,7 @@ export function StatValue({
       <span
         className={cn(
           "font-display font-bold tracking-tight tabular-nums",
-          money ? "text-gold" : "text-ink",
+          money ? "text-ink" : "text-ink",
           sizes[size],
         )}
       >

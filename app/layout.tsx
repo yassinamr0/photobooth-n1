@@ -1,17 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Albert_Sans, Nunito } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 
-const inter = Inter({
-  variable: "--font-inter",
+// Body: Albert Sans — geometric like the brand's Avenir, without the generic Inter look.
+const albert = Albert_Sans({
+  variable: "--font-albert",
   subsets: ["latin"],
 });
 
-const sora = Sora({
-  variable: "--font-sora",
+// Headings: Nunito at heavy weights — rounded, echoes the Memoire wordmark.
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0d16",
+  themeColor: "#2a2a2a",
   width: "device-width",
   initialScale: 1,
   // Content can extend under the iPhone notch/home bar when installed full-screen.
@@ -37,7 +39,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+    <html lang="en" className={`${albert.variable} ${nunito.variable}`}>
       <body className="bg-canvas">
         {children}
         <ServiceWorker />

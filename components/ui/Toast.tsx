@@ -28,7 +28,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.key}
             role="status"
             className={cn(
-              "rounded-full border px-5 py-3 text-sm font-semibold shadow-panel",
+              "rounded-inner border px-5 py-3 text-sm font-semibold shadow-panel",
               "animate-[toast-in_160ms_ease-out]",
               toast.tone === "success" && "border-success/40 bg-success-dim text-success",
               toast.tone === "danger" && "border-danger/40 bg-danger-dim text-danger",
