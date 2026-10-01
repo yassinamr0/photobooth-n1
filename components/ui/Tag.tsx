@@ -5,7 +5,7 @@ export type TagTone = "neutral" | "accent" | "gold" | "success" | "warning" | "d
 
 const tones: Record<TagTone, string> = {
   neutral: "bg-surface-2 text-ink-muted border-line",
-  accent: "bg-edge-dim text-edge border-edge/40",
+  accent: "bg-edge-dim text-pearl border-crimson/50",
   gold: "bg-gold-dim text-gold border-gold/35",
   success: "bg-success-dim text-success border-success/35",
   warning: "bg-warning-dim text-warning border-warning/35",

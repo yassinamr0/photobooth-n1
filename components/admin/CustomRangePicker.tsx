@@ -78,7 +78,7 @@ export function CustomRangePicker({
       role="dialog"
       aria-label="Custom date range"
       data-testid="custom-range"
-      className="absolute top-full right-0 left-0 z-30 mt-2 rounded-card border border-line-strong bg-surface p-4 shadow-card sm:left-auto sm:w-[400px]"
+      className="absolute top-full right-0 left-0 z-30 mt-2 origin-top-right animate-pop rounded-card border border-line-strong bg-surface p-4 shadow-panel sm:left-auto sm:w-[400px]"
     >
       <div role="tablist" aria-label="Custom range type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {MODES.map((m) => (

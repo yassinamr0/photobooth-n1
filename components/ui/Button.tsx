@@ -19,11 +19,11 @@ const base =
   "transition-[background,color,border-color,box-shadow,transform,opacity] duration-150 " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edge/70 " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas " +
-  "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45";
+  "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-edge text-[#1a0f05] hover:bg-[#ff9d5c]",
+    "bg-maroon text-white hover:bg-crimson",
   secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#2a2723]",
   // pill colors depend on `selected`; see pillStates
   pill: "border",

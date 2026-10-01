@@ -48,7 +48,7 @@ export function SidebarRail({
             <span
               className={cn(
                 "grid size-10 place-items-center rounded-inner [&_svg]:size-5",
-                item.active && "frame bg-edge-dim text-edge",
+                item.active && "frame bg-maroon text-white",
               )}
             >
               {item.icon}

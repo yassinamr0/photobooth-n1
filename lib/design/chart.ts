@@ -3,7 +3,7 @@
  * Mirrored as CSS vars (--color-chart-*) in app/globals.css; keep the two in sync.
  */
 export const chartSeries = [
-  "#ff8a3d", // film edge
+  "#a64d79", // velvet crimson (brand)
   "#ffc93c", // gold
   "#ff4d8d", // pink (hadr)
   "#4ade80", // green (cash)
@@ -15,15 +15,15 @@ export const chartColors = {
   track: "#2a2723",
   grid: "#26231f",
   axisText: "#7f786c",
-  hatchBase: "#2c1c10",
-  hatchStroke: "#ff8a3d",
+  hatchBase: "#2a1420",
+  hatchStroke: "#a64d79",
 } as const;
 
 /** Stops for the primary violet → magenta → pink gradient. */
 export const chartGradientStops = [
-  // Solid film-edge orange (stops kept so existing references resolve; no visible gradient).
-  { offset: "0%", color: "#ff8a3d" },
-  { offset: "100%", color: "#ff8a3d" },
+  // Solid velvet crimson (stops kept so existing references resolve; no visible gradient).
+  { offset: "0%", color: "#a64d79" },
+  { offset: "100%", color: "#a64d79" },
 ] as const;
 
 /** Element ids rendered by <ChartDefs />; reference with fill={`url(#${id})`}. */

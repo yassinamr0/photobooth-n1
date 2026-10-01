@@ -107,7 +107,7 @@ function ShiftScreenInner() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Image src="/icons/icon-192.png" alt="Booth Log" width={36} height={36} className="size-9 shrink-0 rounded-inner" />
-            <h1 className="truncate font-display text-[1.9rem] leading-none font-semibold">Hi, <span className="text-edge">{firstName}</span></h1>
+            <h1 className="truncate font-display text-[1.9rem] leading-none font-semibold">Hi, <span className="text-pearl">{firstName}</span></h1>
           </div>
           <LogoutButton />
         </div>

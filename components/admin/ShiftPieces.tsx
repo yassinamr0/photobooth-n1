@@ -40,7 +40,7 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
     ["Magnetic", totals.magnetic, "text-ink", "border-t-line-strong"],
   ];
   return (
-    <div className={cn("grid gap-2", size === "lg" ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7" : "grid-cols-4 sm:grid-cols-7 lg:grid-cols-4 2xl:grid-cols-7")}>
+    <div className={cn("develop-stagger grid gap-2", size === "lg" ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7" : "grid-cols-4 sm:grid-cols-7 lg:grid-cols-4 2xl:grid-cols-7")}>
       {cells.map(([label, v, color, bar], i) => (
         <div
           key={label}

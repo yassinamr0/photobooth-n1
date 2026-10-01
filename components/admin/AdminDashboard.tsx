@@ -87,7 +87,7 @@ function DashboardInner() {
           <div className="flex flex-wrap items-center justify-between gap-3 lg:contents">
             <div className="lg:order-1 lg:shrink-0">
               <h1 className="font-display text-[2.1rem] leading-none font-semibold tracking-[0.01em] lg:text-[1.9rem]">
-                Hi, <span className="text-edge">{profile?.name.split(" ")[0] || "admin"}</span>
+                Hi, <span className="text-pearl">{profile?.name.split(" ")[0] || "admin"}</span>
               </h1>
             </div>
             <div className="lg:order-3"><LogoutButton /></div>
@@ -195,10 +195,10 @@ function ScopeBar({ section }: { section: Section }) {
         <CustomRangePicker range={range} onClose={() => setPicking(false)}
           onApply={(r) => { setRange(r); setPicking(false); }} />
       )}
-      <span data-testid="scope-chip" className="ml-auto font-display text-[13px] font-medium tracking-[0.08em] text-edge/80 uppercase">
+      <span data-testid="scope-chip" className="ml-auto font-display text-[13px] font-medium tracking-[0.08em] text-pearl/75 uppercase">
         {note ?? (
           <>
-            Showing: <span className="text-edge">{scopeName}</span>
+            Showing: <span className="text-pearl">{scopeName}</span>
             {note === null ? " · current stock (date range doesn't apply)" : ` · ${custom ? rangeLabel(range) : RANGES.find((r) => r.id === range)?.label}`}
           </>
         )}

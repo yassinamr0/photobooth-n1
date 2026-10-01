@@ -93,7 +93,7 @@ export function TagShiftsTool({ close }: { close: () => void }) {
           {candidates.map(({ shift, total }) => (
             <li key={shift.id} data-testid="tag-candidate">
               <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm">
-                <input type="checkbox" className="size-4 accent-[#ff8a3d]" checked={!skip.has(shift.id)}
+                <input type="checkbox" className="size-4 accent-[#a64d79]" checked={!skip.has(shift.id)}
                   onChange={(e) => {
                     setConfirming(false);
                     setSkip((prev) => {

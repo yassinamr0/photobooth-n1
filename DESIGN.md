@@ -1,4 +1,4 @@
-# Design — "Contact sheet"
+# Design — "Contact sheet" (maroon edition)
 
 Booth Log looks like a photographer's contact sheet of the business: a darkroom-black
 proof sheet where every card is a numbered frame and colour tells you what a number is.
@@ -8,12 +8,14 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
 - **Ground:** warm darkroom blacks — canvas `#100f0d`, surface `#191815`, raised `#22201c`,
   rules `#2e2b26` / `#433e36`. Text is photo-paper white `#f4efe6`, muted `#b5ad9f`,
   faint `#7f786c`. Never blue/purple-tinted greys.
-- **Film edge `#ff8a3d`** — the app's own accent, for chrome only: frame registration
-  corners, active nav, primary buttons, greeting name, scope line, focus, selection, caret.
+- **Brand chrome (owner's change: maroon replaced the film-edge orange):** Maroon `#6a1b3a`
+  fills primary buttons and the active menu item; Velvet Crimson `#a64d79` draws frame
+  registration corners, borders, hover and focus; Pearl Pink `#edbbdb` is the readable accent
+  text (greeting name, scope line, selection). Never used for data meanings.
 - **Fixed meanings (owner-binding, never reused for anything else):**
   money/totals/revenue = gold `#ffc93c` · cash = green `#4ade80` · Visa = blue `#5b9cff` ·
   hadr/waste = pink `#ff4d8d` · profit = green · loss/expenses/errors = red `#ff5c6c` ·
-  warnings = amber `#ffb547`.
+  warnings (low stock, mismatches) = maroon box, crimson border, pearl text (owner's change).
 - No gradients anywhere (legacy `bg-accent-gradient` / `text-accent-gradient` utilities are
   solid film-edge).
 
@@ -31,10 +33,12 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
   (uppercase, +0.07em), all big numerals (tabular). Never decorative mono.
 
 ## Motion
-- One authored moment: content "develops" — opacity + a brief over-exposure/blur settling
-  (`animate-develop`, 260ms expo-out) on section switch, opening a shift, a date group,
-  and the staff screen. Colour transitions 150ms on controls. All off under
-  `prefers-reduced-motion`.
+- One authored moment: content "develops" — opacity + a light blur settling
+  (`animate-develop`, 180ms, `cubic-bezier(0.23,1,0.32,1)`) on section switch, opening a
+  shift or a date group, and the staff screen; stat prints cascade 40ms apart.
+- Popovers (date picker) scale in from their trigger (0.97 + fade, 160ms).
+- Every pressable element presses to `scale(0.97)`; colour transitions 150ms; hover only on
+  real pointers. All motion off under `prefers-reduced-motion`.
 
 ## Icons
 Lucide only, one stroke weight. No text glyphs as icons.

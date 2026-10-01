@@ -17,13 +17,18 @@
   --color-ink-muted: #b5ad9f;
   --color-ink-faint: #7f786c;
 
-  /* Film edge — the app's own accent (chrome only: frame marks, active nav, primary action) */
-  --color-edge: #ff8a3d;
-  --color-edge-dim: #2c1c10;
-  /* legacy accent names now point at the film edge */
-  --color-violet: #ff8a3d;
-  --color-magenta: #ff8a3d;
-  --color-accent-dim: #2c1c10;
+  /* Brand chrome (owner: maroon instead of orange):
+     maroon = fills (primary buttons, active nav) · velvet crimson = frame corners, borders,
+     hover · pearl = readable accent text on black. Never used for data meanings. */
+  --color-maroon: #6a1b3a;
+  --color-crimson: #a64d79;
+  --color-pearl: #edbbdb;
+  --color-edge: #a64d79; /* frame registration corners, focus */
+  --color-edge-dim: #2a1420; /* maroon-tinted containers */
+  /* legacy accent names now point at the brand chrome */
+  --color-violet: #6a1b3a;
+  --color-magenta: #a64d79;
+  --color-accent-dim: #2a1420;
 
   /* FIXED MEANINGS (owner-binding): cash green · visa blue · hadr/waste pink-red ·
      totals/money gold · profit green · loss red · warnings amber */
@@ -32,15 +37,16 @@
   --color-gold-dim: #33280d;
   --color-success: #4ade80;
   --color-success-dim: #132a1b;
-  --color-warning: #ffb547;
-  --color-warning-dim: #33240f;
+  /* Warnings (low stock, mismatches): maroon box, crimson border, pearl text (owner) */
+  --color-warning: #edbbdb;
+  --color-warning-dim: #2a1420;
   --color-danger: #ff5c6c;
   --color-danger-dim: #36171c;
   --color-info: #5b9cff;
   --color-info-dim: #13223b;
 
   /* Chart */
-  --color-chart-1: #ff8a3d;
+  --color-chart-1: #a64d79;
   --color-chart-2: #ffc93c;
   --color-chart-3: #ff4d8d;
   --color-chart-4: #4ade80;
@@ -62,14 +68,15 @@
   --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-barlow), var(--font-figtree), ui-sans-serif, sans-serif;
 
-  --animate-develop: develop 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  --animate-develop: develop 180ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+  --animate-pop: pop 160ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
 }
 
 /* "Developing": content comes up out of the dark like a print in the tray. */
 @keyframes develop {
   from {
     opacity: 0;
-    filter: brightness(1.8) blur(1.5px);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
@@ -78,13 +85,33 @@
 }
 
 /* Legacy utility names, now SOLID (no gradients anywhere) */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
 @utility bg-accent-gradient {
-  background-color: var(--color-edge);
-  color: #1a0f05;
+  background-color: var(--color-maroon);
+  color: #ffffff;
 }
 
 @utility text-accent-gradient {
-  color: var(--color-edge);
+  color: var(--color-pearl);
+}
+
+/* Stat "prints" come up in a short cascade (40ms apart). */
+@utility develop-stagger {
+  & > * {
+    animation: var(--animate-develop);
+  }
+  & > :nth-child(2) { animation-delay: 40ms; }
+  & > :nth-child(3) { animation-delay: 80ms; }
+  & > :nth-child(4) { animation-delay: 120ms; }
+  & > :nth-child(5) { animation-delay: 160ms; }
+  & > :nth-child(6) { animation-delay: 200ms; }
+  & > :nth-child(7) { animation-delay: 240ms; }
 }
 
 /* Contact-sheet frame: 1px rule + film-edge registration corners (crisp geometry). */
@@ -110,13 +137,26 @@ body {
 }
 
 ::selection {
-  background: var(--color-edge);
-  color: #1a0f05;
+  background: var(--color-pearl);
+  color: #100f0d;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Press feedback on everything pressable (Emil): small, fast, ease-out. */
+button:not(:disabled):active,
+[role="button"]:active {
+  transform: scale(0.97);
+  transition-duration: 120ms;
 }
 
 html {
   font-size: 15px;
-  caret-color: var(--color-edge);
+  caret-color: var(--color-pearl);
   scrollbar-color: var(--color-line-strong) var(--color-canvas);
   font-variant-numeric: tabular-nums;
 }
@@ -128,7 +168,7 @@ input,
 select {
   transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: 150ms;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :focus-visible {
