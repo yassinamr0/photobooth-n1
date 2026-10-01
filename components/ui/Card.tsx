@@ -18,7 +18,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-card border border-line border-t-2 border-t-maroon bg-surface",
+        "frame rounded-card border border-line bg-surface",
         paddings[padding],
         className,
       )}
@@ -41,7 +41,7 @@ export function CardHeader({
   return (
     <div className={cn("mb-4 flex items-start justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h3 className="font-display text-base font-semibold text-ink">{title}</h3>
+        <h3 className="font-display text-[1.15rem] leading-tight font-semibold tracking-[0.03em] text-ink uppercase">{title}</h3>
         {subtitle && <p className="mt-0.5 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}

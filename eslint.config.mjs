@@ -7,6 +7,10 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Installed agent skill packs (third-party scripts, not app code)
+    ".agents/**",
+    ".claude/**",
+    ".impeccable/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",

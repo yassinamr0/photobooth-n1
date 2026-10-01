@@ -86,8 +86,8 @@ function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total:
         </span>
       </div>
       <div className="mt-2 flex items-center gap-3">
-        <div className="relative h-2 flex-1 overflow-hidden rounded-[2px] bg-chart-track">
-          <div className={cn("h-full rounded-[2px]", ok ? "bg-success" : "bg-danger")} style={{ width: `${(ratio / 1.5) * 100}%` }} />
+        <div className="relative h-2 flex-1 overflow-hidden rounded-[1px] bg-chart-track">
+          <div className={cn("h-full rounded-[1px]", ok ? "bg-success" : "bg-danger")} style={{ width: `${(ratio / 1.5) * 100}%` }} />
           <div aria-hidden className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(1 / 1.5) * 100}%` }} />
         </div>
         <span className={cn("flex w-40 shrink-0 items-center justify-end gap-1 text-xs font-semibold",
@@ -112,7 +112,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
   const th = "py-2 pl-4 text-right font-medium whitespace-nowrap";
   const td = "py-3 pl-4 text-right tabular-nums whitespace-nowrap";
   const perUnit = (r: (typeof p.rows)[number]) =>
-    r.units > 0 && r.key !== "adjust" ? `${egp(r.revenue / r.units)} / ${r.profit == null ? "?" : egp(r.profit / r.units)}` : "—";
+    r.units > 0 && r.key !== "adjust" ? `${egp(r.revenue / r.units)} → ${r.profit == null ? "?" : egp(r.profit / r.units)}` : "—";
   return (
     <Card padding="lg" data-testid="pnl-products">
       <CardHeader title="Profit per product" subtitle={`After materials and card fees · ${label}`} />
@@ -129,7 +129,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
                 <th className={th}>Materials</th>
                 <th className={th}>Card fees</th>
                 <th className={th}>Profit</th>
-                <th className={th}>Per unit (price / profit)</th>
+                <th className={th}>Per unit (price → profit)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -140,7 +140,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
                     {r.key === "adjust" && <span className="ml-1 text-xs font-normal text-ink-faint">(discounts on sales without prints)</span>}
                   </td>
                   <td className={td}>{r.key === "adjust" ? "—" : fmtNum(r.units)}</td>
-                  <td className={cn(td, "text-ink")}>{egp(r.revenue)}</td>
+                  <td className={cn(td, "text-gold")}>{egp(r.revenue)}</td>
                   <td className={td}>{r.materials == null ? <span className="text-ink-faint">cost not set</span> : egp(r.materials)}</td>
                   <td className={td}>{egp(r.fees)}</td>
                   <td data-testid="product-profit" className={cn(td, "font-semibold", r.profit == null ? "text-ink-faint" : r.profit < 0 ? "text-danger" : "text-success")}>
@@ -154,7 +154,7 @@ export function ProductsCard({ inp, now, label }: { inp: PnlInputs; now: Date; l
         </div>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-inner border border-line bg-surface-2 px-4 py-3 text-sm" data-testid="waste-cost">
-        <Package className="size-4 text-pearl" />
+        <Package className="size-4 text-pink" />
         {p.waste.sheets === 0 ? (
           <span className="text-ink-muted">No hadr waste in this range.</span>
         ) : p.waste.cost == null ? (
@@ -208,7 +208,7 @@ export function FeesCard() {
       <div role="tablist" aria-label="Fee type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {([["percent", "Percentage only"], ["percentPlusFixed", "Percentage + fixed"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={mode === k} data-testid={`fee-mode-${k}`} onClick={() => setMode(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === k ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === k ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
             {l}
           </button>
         ))}

@@ -10,7 +10,7 @@ const n = (v: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits:
 const egp = (v: number) => `${v < 0 ? "−" : ""}${n(Math.abs(v))} EGP`;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-const C = { ink: "#17141f", muted: "#6b6480", line: "#e8e4f0", good: "#15803d", bad: "#b91c1c", gold: "#a16207", accent: "#7c3aed" };
+const C = { ink: "#191815", muted: "#6b6480", line: "#e8e4f0", good: "#15803d", bad: "#b91c1c", gold: "#a16207", accent: "#7c3aed" };
 const th = `style="text-align:left;padding:6px 8px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:${C.muted};border-bottom:1px solid ${C.line}"`;
 const thr = th.replace("text-align:left", "text-align:right");
 const td = `style="padding:8px;border-bottom:1px solid ${C.line};font-size:14px;color:${C.ink}"`;
@@ -63,7 +63,7 @@ export function renderSummaryEmail(s: DailySummary, appUrl?: string): { subject:
   const html = `<!doctype html><html><body style="margin:0;background:#f1eef7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
 <table width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px">
 <table width="640" cellspacing="0" cellpadding="0" style="max-width:640px;width:100%;background:#fff;border-radius:16px;overflow:hidden">
-<tr><td style="background:#17141f;padding:20px 24px;color:#f4f1fa"><div style="font-size:12px;color:#b9b1cc">Booth Log · daily summary</div><div style="font-size:22px;font-weight:800;margin-top:4px">${esc(s.dayLabel)}</div></td></tr>
+<tr><td style="background:#191815;padding:20px 24px;color:#f4f1fa"><div style="font-size:12px;color:#b9b1cc">Booth Log · daily summary</div><div style="font-size:22px;font-weight:800;margin-top:4px">${esc(s.dayLabel)}</div></td></tr>
 <tr><td style="padding:20px 24px">
 <table width="100%" cellspacing="8" cellpadding="0"><tr>${kpi("Revenue", egp(s.totals.revenue), s.previous ? change(s.totals.revenue, s.previous.revenue) : "")}${kpi("Expenses", egp(s.totals.expenses))}${kpi(s.totals.profit < 0 ? "Loss" : "Profit", egp(Math.abs(s.totals.profit)), s.previous ? change(s.totals.profit, s.previous.profit) : "")}</tr></table>
 ${section("Revenue &amp; profit by location", locations)}

@@ -15,7 +15,7 @@ export function LoadingScreen({ message }: { message?: string }) {
   return (
     <AuthShell
       title={message ?? "Loading…"}
-      icon={<Spinner className="size-8 border-[3px] text-ink" />}
+      icon={<Spinner className="size-8 border-[3px] text-magenta" />}
     />
   );
 }
@@ -40,7 +40,7 @@ export function PendingApproval() {
       icon={
         <span className="relative grid size-14 place-items-center">
           <span className="absolute inset-0 animate-ping rounded-inner bg-magenta/30" />
-          <span className="relative size-5 rounded-inner bg-crimson" />
+          <span className="relative size-5 rounded-inner bg-accent-gradient" />
         </span>
       }
     >

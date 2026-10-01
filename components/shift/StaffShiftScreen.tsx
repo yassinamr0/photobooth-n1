@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { ClipboardCopy } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { Spinner } from "@/components/ui/Button";
@@ -104,9 +105,9 @@ function ShiftScreenInner() {
     <PanelFrame variant="mobile">
       <header className="mb-5">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-ink-muted">Booth Log</p>
-            <h1 className="truncate font-display text-2xl font-extrabold tracking-tight">Hi, {firstName}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <Image src="/icons/icon-192.png" alt="Booth Log" width={36} height={36} className="size-9 shrink-0 rounded-inner" />
+            <h1 className="truncate font-display text-[1.9rem] leading-none font-semibold">Hi, <span className="text-edge">{firstName}</span></h1>
           </div>
           <LogoutButton />
         </div>
@@ -115,11 +116,11 @@ function ShiftScreenInner() {
       </header>
 
       {shift === undefined ? (
-        <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-ink" /></div>
+        <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-magenta" /></div>
       ) : (
         // LOCKED ORDER (SPEC Phase 3) — do not rearrange:
         // 1 Your shift (status bar + summary) · 2 New sale · 3 Waste · 4 This shift · 5 Copy summary
-        <div className="flex animate-rise flex-col gap-4" data-testid="shift-screen">
+        <div className="flex animate-develop flex-col gap-4" data-testid="shift-screen">
           <ShiftCard
             shift={shift}
             totals={totals}

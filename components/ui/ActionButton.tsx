@@ -11,8 +11,8 @@ type ActionButtonProps = ComponentProps<"button"> & {
 };
 
 const tones: Record<ActionTone, string> = {
-  accent: "bg-maroon text-white hover:bg-crimson",
-  gold: "bg-pearl text-black",
+  accent: "bg-edge text-[#1a0f05]",
+  gold: "bg-gold text-[#1a1406]",
   neutral: "bg-surface-2 text-ink border border-line-strong",
   danger: "bg-danger-dim text-danger border border-danger/50",
 };

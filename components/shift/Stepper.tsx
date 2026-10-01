@@ -30,7 +30,7 @@ export function Stepper({
           data-testid={`${label}-qty`}
           className={cn(
             "font-display text-4xl font-extrabold tabular-nums",
-            tone === "pink" ? "text-ink" : "text-ink",
+            tone === "pink" ? "text-pink" : "text-ink",
           )}
         >
           {value}
@@ -60,7 +60,7 @@ export function Chip({
       onClick={onClick}
       className={cn(
         "h-9 rounded-inner border px-3.5 text-sm font-semibold transition-colors",
-        active ? "border-maroon bg-maroon text-white" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
+        active ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
       )}
     >
       {children}
@@ -95,9 +95,9 @@ export function NumberInput({
       className={cn(
         "h-12 w-full rounded-inner border border-line bg-surface-2 px-4 text-lg font-semibold tabular-nums text-ink outline-none",
         "focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25",
-        tone === "cash" && "text-ink",
-        tone === "visa" && "text-ink",
-        tone === "pink" && "text-ink",
+        tone === "cash" && "text-success",
+        tone === "visa" && "text-info",
+        tone === "pink" && "text-pink",
         className,
       )}
       {...rest}

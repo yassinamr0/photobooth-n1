@@ -73,7 +73,7 @@ function MismatchAlert({ go }: { go: (s: Section) => void }) {
   if (d.mismatchCount === 0) return null;
   const list = d.shifts.filter((s) => s.recon?.warn).slice(0, 4);
   return (
-    <div data-testid="mismatch-banner" className="rounded-card border border-warning/40 bg-warning-dim px-5 py-4 text-ink">
+    <div data-testid="mismatch-banner" className="rounded-card border border-warning/40 bg-warning-dim px-5 py-4 text-warning">
       <button type="button" onClick={() => go("shifts")} className="flex w-full items-center gap-3 text-left">
         <AlertTriangle className="size-5 shrink-0" />
         <span className="flex-1 font-semibold">
@@ -101,7 +101,7 @@ function PendingAlert({ go }: { go: (s: Section) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   if (pending.length === 0) return null;
   return (
-    <div data-testid="pending-alert" className="rounded-card border border-magenta/35 bg-accent-dim px-5 py-3 text-sm text-ink">
+    <div data-testid="pending-alert" className="rounded-card border border-edge/35 bg-edge-dim px-5 py-3 text-sm text-ink">
       <button type="button" onClick={() => go("pending")} className="flex w-full items-center gap-3 py-1 text-left">
         <UserCheck className="size-4" /> {fmtNum(pending.length)} signup{pending.length > 1 ? "s" : ""} waiting for approval
         <ChevronRight className="ml-auto size-4" />
@@ -148,7 +148,7 @@ function OnShiftNow() {
               <p className="truncate font-semibold text-ink">{s.staffName}</p>
               <p className="truncate text-xs text-ink-faint">{s.eventName ?? "No event"} · since {fmtTime(s.shift.startTime)}</p>
             </div>
-            <span className="font-semibold text-ink tabular-nums">{formatEGP(s.totals.total)}</span>
+            <span className="font-semibold text-gold tabular-nums">{formatEGP(s.totals.total)}</span>
           </li>
         ))}
       </ul>
@@ -308,7 +308,7 @@ export function StaffSection({ openHistory }: { openHistory: (uid: string) => vo
                   </td>
                   <td className="py-3 pl-3">{r.removed ? <span className="text-xs text-ink-faint">No account</span> : picker(r)}</td>
                   <td className="py-3 pl-3 text-right tabular-nums">{fmtNum(r.shiftCount)}</td>
-                  <td data-testid="staff-total" className="py-3 pl-3 text-right font-semibold whitespace-nowrap text-ink tabular-nums">{formatEGP(r.totals.total)}</td>
+                  <td data-testid="staff-total" className="py-3 pl-3 text-right font-semibold whitespace-nowrap text-gold tabular-nums">{formatEGP(r.totals.total)}</td>
                   <td className="py-3 pl-3 text-right tabular-nums">{fmtNum(r.totals.cash)}</td>
                   <td className="py-3 pl-3 text-right tabular-nums">{fmtNum(r.totals.visa)}</td>
                   <td className="py-3 pl-3 text-right tabular-nums">{fmtNum(r.totals.sheets)}</td>
@@ -340,7 +340,7 @@ export function StaffSection({ openHistory }: { openHistory: (uid: string) => vo
                   </p>
                   <p className="text-xs text-ink-faint">{fmtNum(r.shiftCount)} shift{r.shiftCount === 1 ? "" : "s"} in scope</p>
                 </div>
-                <span data-testid="staff-total" className="font-display text-xl font-bold text-ink tabular-nums">{formatEGP(r.totals.total)}</span>
+                <span data-testid="staff-total" className="font-display text-xl font-bold text-gold tabular-nums">{formatEGP(r.totals.total)}</span>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-6">
                 {([["Cash", r.totals.cash], ["Visa", r.totals.visa], ["Sheets", r.totals.sheets], ["Hadr", r.totals.hadr], ["Acrylic", r.totals.acrylic], ["Magnetic", r.totals.magnetic]] as const).map(([l, v]) => (
@@ -395,7 +395,7 @@ function RemoveStaff({ row }: { row: StaffRow }) {
     <div data-testid="remove-staff-confirm" className="flex max-w-[420px] flex-col gap-2 rounded-inner border border-danger/40 bg-danger-dim px-3 py-2 text-left text-xs text-ink-muted">
       <p>
         Remove <b className="text-ink">{row.name}</b> from the app? Their past shifts and sales stay in history. Also delete their
-        login in the Firebase console (Authentication), or they could sign up again.
+        login under Firebase console → Authentication, or they could sign up again.
       </p>
       <div className="flex gap-2">
         <Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>Cancel</Button>
@@ -487,11 +487,11 @@ export function ShiftsSection() {
                   <span className="font-semibold text-ink">{fmtHeading(g.key)}</span>
                   {g.hasMismatch && <MismatchIcon title="A shift this day has a paper mismatch" />}
                   <span className="ml-auto text-xs text-ink-faint">{fmtNum(g.shifts.length)} shift{g.shifts.length === 1 ? "" : "s"}</span>
-                  <span className="font-semibold text-ink tabular-nums">{formatEGP(g.totals.total)}</span>
+                  <span className="font-semibold text-gold tabular-nums">{formatEGP(g.totals.total)}</span>
                   <ChevronDown className={cn("size-4 text-ink-faint transition-transform", isOpen && "rotate-180")} />
                 </button>
                 {isOpen && (
-                  <div className="flex animate-rise flex-col gap-2 px-3 pb-3">
+                  <div className="flex animate-develop flex-col gap-2 px-3 pb-3">
                     {isDesktop && <ShiftColumnsHeader showEvent={scope === "global"} />}
                     {g.shifts.map((s) => (
                       <ShiftRow key={s.shift.id} s={s} showEvent={scope === "global"} />

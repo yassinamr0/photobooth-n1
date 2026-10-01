@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { chartSeries } from "@/lib/design/chart";
 import { formatEGP } from "@/lib/format";
 import type { PnlPoint } from "@/lib/pnl/pnl";
 import { useChartTooltip } from "../stats/ChartTooltip";
@@ -10,10 +9,11 @@ import { useChartTooltip } from "../stats/ChartTooltip";
  * Revenue vs expenses per period (paired bars, 2px gap) + the profit line on the SAME EGP
  * axis (one axis — all three are money). Profit can go below zero, so the axis does too.
  * Colours validated with the dataviz palette checker on the dark surface:
- *   revenue #cf6aa2 (light Velvet Crimson) · expenses #923d69 (deep Velvet Crimson) ·
- *   profit = white line (not a status colour). Pair re-validated for the Memoire theme.
+ *   revenue = gold (money in) · expenses = red (money out) · profit = paper-white line.
+ *   Fixed meanings are owner-binding; the pair separates for colour-blind readers and the
+ *   chart also carries a legend and labels, so colour is never the only cue.
  */
-export const PNL_COLORS = { revenue: chartSeries[0], expenses: chartSeries[1], profit: "var(--color-ink)" };
+export const PNL_COLORS = { revenue: "#ffc93c", expenses: "#ff5c6c", profit: "var(--color-ink)" };
 
 const compact = (n: number) => {
   const a = Math.abs(n);

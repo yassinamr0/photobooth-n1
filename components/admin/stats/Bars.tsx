@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { chartSeries } from "@/lib/design/chart";
 import { useChartTooltip } from "./ChartTooltip";
 
 export type BarSeries = { key: string; label: string; fill: string };
@@ -111,8 +110,8 @@ export function Bars({
   );
 }
 
-/** Primary series fill — solid light Velvet Crimson (no gradients). */
-export const accentFill = chartSeries[0];
+/** Revenue is money → gold (fixed meaning). Solid, no gradient. */
+export const accentFill = "var(--color-gold)";
 
 /** Rect with only the top corners rounded (data end), flat on the baseline. */
 function barPath(x: number, y: number, w: number, h: number, r: number) {

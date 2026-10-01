@@ -14,7 +14,7 @@ same six `NEXT_PUBLIC_FIREBASE_*` keys in Vercel → Project → Settings → En
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
+npm run dev     # http://localhost:3000  (style guide: /style-guide)
 ```
 
 ### 2. Firestore security rules

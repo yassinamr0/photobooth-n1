@@ -45,7 +45,7 @@ export function SyncPill() {
       data-state={!online ? "offline" : pending > 0 ? "syncing" : "synced"}
       className={cn(
         "mt-3 flex w-fit max-w-full items-center gap-1.5 rounded-inner border px-3 py-1 text-xs font-semibold",
-        !online ? "border-warning/40 bg-warning-dim text-ink"
+        !online ? "border-warning/40 bg-warning-dim text-warning"
           : pending > 0 ? "border-line bg-surface-2 text-ink-muted"
             : "border-success/40 bg-success-dim text-success",
       )}

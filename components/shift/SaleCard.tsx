@@ -134,7 +134,7 @@ export function SaleCard({
               )}
             >
               <div className="font-display font-bold">{t}</div>
-              <div className="text-sm text-ink">{fmtNum(FRAME_PRICES[t])} EGP</div>
+              <div className="text-sm text-gold">{fmtNum(FRAME_PRICES[t])} EGP</div>
               <div className="mt-2 flex items-center justify-between">
                 <button type="button" aria-label={`Remove ${t} frame`} disabled={n <= 0}
                   onClick={(e) => { e.stopPropagation(); setFrame(t, n - 1); }}
@@ -155,7 +155,7 @@ export function SaleCard({
 
       {/* Custom item */}
       <button type="button" onClick={() => setCustomOpen((o) => !o)}
-        className="mt-4 text-sm font-semibold text-ink hover:underline">
+        className="mt-4 text-sm font-semibold text-magenta hover:underline">
         + Add custom item
       </button>
       {customOpen && (
@@ -201,11 +201,11 @@ export function SaleCard({
       {/* Payment */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="pay-cash" className={cn(subLabel, "mb-1.5 block")}>Cash EGP</label>
+          <label htmlFor="pay-cash" className={cn(subLabel, "mb-1.5 block text-success/80")}>Cash EGP</label>
           <NumberInput id="pay-cash" value={cash} onChange={setCash} tone="cash" />
         </div>
         <div>
-          <label htmlFor="pay-visa" className={cn(subLabel, "mb-1.5 block")}>Visa EGP</label>
+          <label htmlFor="pay-visa" className={cn(subLabel, "mb-1.5 block text-info/80")}>Visa EGP</label>
           <NumberInput id="pay-visa" value={visa} onChange={setVisa} tone="visa" />
         </div>
       </div>
@@ -218,14 +218,14 @@ export function SaleCard({
       {check.hint && (
         <p data-testid="payment-hint"
           className={cn("mt-3 rounded-inner px-3 py-2 text-sm",
-            check.hint.tone === "warning" ? "bg-warning-dim text-ink" : "bg-surface-2 text-ink-muted")}>
+            check.hint.tone === "warning" ? "bg-warning-dim text-warning" : "bg-surface-2 text-ink-muted")}>
           {check.hint.text}
         </p>
       )}
 
       <div className="mt-5 flex items-baseline justify-between">
         <span className="text-sm text-ink-muted">Logging</span>
-        <span data-testid="logging-total" className="font-display text-3xl font-extrabold text-ink tabular-nums">{fmtNum(check.total)} EGP</span>
+        <span data-testid="logging-total" className="font-display text-3xl font-extrabold text-gold tabular-nums">{fmtNum(check.total)} EGP</span>
       </div>
       <Button size="lg" className="mt-3 w-full" disabled={!check.canLog} loading={busy} onClick={log}>
         Log sale

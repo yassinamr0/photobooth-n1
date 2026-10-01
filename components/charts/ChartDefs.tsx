@@ -1,9 +1,9 @@
-import { chartColors, chartIds } from "@/lib/design/chart";
+import { chartColors, chartGradientStops, chartIds } from "@/lib/design/chart";
 
 /**
  * Mount once per page (e.g. at the top of a dashboard) so every chart <svg> on the page
  * can reference the shared ids. Zero-size rather than display:none, which would break
- * pattern references in some browsers.
+ * gradient/pattern references in some browsers.
  */
 export function ChartDefsHost() {
   return (
@@ -14,12 +14,21 @@ export function ChartDefsHost() {
 }
 
 /**
- * Shared SVG <defs>: the diagonal hatch (texture for colour-blind / print readers).
- * No gradients — fills are solid brand colours.
+ * Shared SVG <defs>: the accent gradient (vertical + horizontal) and the diagonal hatch.
  */
 export function ChartDefs() {
   return (
     <defs>
+      <linearGradient id={chartIds.gradient} x1="0" y1="1" x2="0" y2="0">
+        {chartGradientStops.map((s) => (
+          <stop key={s.offset} offset={s.offset} stopColor={s.color} />
+        ))}
+      </linearGradient>
+      <linearGradient id={chartIds.gradientHorizontal} x1="0" y1="0" x2="1" y2="0">
+        {chartGradientStops.map((s) => (
+          <stop key={s.offset} offset={s.offset} stopColor={s.color} />
+        ))}
+      </linearGradient>
       <pattern
         id={chartIds.hatch}
         width="6"

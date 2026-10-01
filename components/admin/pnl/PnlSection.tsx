@@ -95,7 +95,7 @@ function Headline({ s, label }: { s: PnlSummary; label: string }) {
     <Card padding="lg" data-testid="pnl-headline">
       <CardHeader title="Profit & loss" subtitle={label} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-ink" />
+        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-gold" />
         <Tile label="Expenses" value={egp(s.expenses.total)} testid="pnl-expenses" className="text-ink" />
         <Tile label={loss ? "Net loss" : "Net profit"} value={`${loss ? "−" : ""}${egp(Math.abs(s.profit))}`} testid="pnl-profit"
           className={loss ? "text-danger" : "text-success"} highlight={loss ? "loss" : "profit"} />
@@ -162,8 +162,8 @@ function Categories({ s }: { s: PnlSummary }) {
                   <b className="font-semibold text-ink">{egp(v)}</b> · {pct(v / s.expenses.total)}
                 </span>
               </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-[2px] bg-chart-track">
-                <div className="h-full rounded-[2px]" style={{ width: `${(v / max) * 100}%`, background: "#923d69" }} />
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-[1px] bg-chart-track">
+                <div className="h-full rounded-[1px]" style={{ width: `${(v / max) * 100}%`, background: "#ff5c6c" }} />
               </div>
             </li>
           ))}
@@ -206,7 +206,7 @@ function LocationTable({ rows, rangeText }: { rows: ReturnType<typeof pnlByLocat
                       </span>
                     )}
                   </td>
-                  <td className={cn(td, "text-ink")}>{egp(r.revenue)}</td>
+                  <td className={cn(td, "text-gold")}>{egp(r.revenue)}</td>
                   <td className={td}>{egp(r.expenses)}</td>
                   <td data-testid="pnl-location-profit" className={cn(td, "font-semibold", r.profit < -0.5 ? "text-danger" : "text-success")}>
                     {r.profit < -0.5 ? "−" : ""}{egp(Math.abs(r.profit))}
@@ -218,7 +218,7 @@ function LocationTable({ rows, rangeText }: { rows: ReturnType<typeof pnlByLocat
             <tfoot className="border-t border-line-strong">
               <tr className="font-semibold">
                 <td className="py-3 text-ink">Total</td>
-                <td className={cn(td, "text-ink")}>{egp(sum.revenue)}</td>
+                <td className={cn(td, "text-gold")}>{egp(sum.revenue)}</td>
                 <td className={td}>{egp(sum.expenses)}</td>
                 <td className={cn(td, sum.revenue - sum.expenses < -0.5 ? "text-danger" : "text-success")}>
                   {sum.revenue - sum.expenses < -0.5 ? "−" : ""}{egp(Math.abs(sum.revenue - sum.expenses))}
@@ -335,7 +335,7 @@ function AddExpense() {
       <div role="tablist" aria-label="Expense type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
         {([["once", "One-off"], ["monthly", "Monthly"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} data-testid={`add-${k}`} onClick={() => setKind(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", kind === k ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
+            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", kind === k ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
             {k === "monthly" && <Repeat className="mr-1.5 inline size-3.5 -translate-y-px" />}{l}
           </button>
         ))}
@@ -481,7 +481,7 @@ function RecurringRow({ r, where, share, now }: { r: RecurringExpense; where: st
         <span className="font-semibold text-ink tabular-nums">{egp(currentAmount(r, now))}<span className="font-normal text-ink-faint">/mo</span></span>
       </div>
       <p className="mt-1 text-xs text-ink-faint">
-        {monthLabel(r.startMonth)} – {r.endMonth ? monthLabel(r.endMonth) : "ongoing"}
+        {monthLabel(r.startMonth)} → {r.endMonth ? monthLabel(r.endMonth) : "ongoing"}
         {r.amounts.length > 1 && ` · ${r.amounts.map((a) => `${egp(a.amount)} from ${monthLabel(a.from)}`).join(", ")}`}
         {" · "}<span data-testid="monthly-share" className="text-ink-muted">{egp(share)} in this range</span>
       </p>

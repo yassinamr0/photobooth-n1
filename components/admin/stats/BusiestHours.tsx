@@ -39,7 +39,7 @@ export function BusiestHours({ entries, scopeLabel }: { entries: Entry[]; scopeL
         <>
           {b.peak && (
             <p data-testid="busiest-peak" className="mb-4 flex items-center gap-2 text-sm text-ink-muted">
-              <Clock className="size-4 text-pearl" />
+              <Clock className="size-4 text-magenta" />
               Busiest:{" "}
               <b className="text-ink">
                 {WEEKDAYS[b.peak.weekday]} {hourLabel(b.peak.hour)}–{hourLabel((b.peak.hour + 1) % 24)}

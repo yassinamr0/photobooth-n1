@@ -1,19 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Albert_Sans, Nunito } from "next/font/google";
+import { Barlow_Condensed, Figtree } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 
-// Body: Albert Sans — geometric like the brand's Avenir, without the generic Inter look.
-const albert = Albert_Sans({
-  variable: "--font-albert",
-  subsets: ["latin"],
-});
+// UI workhorse: clean grotesque, comfortable word spacing at small sizes.
+const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
 
-// Headings: Nunito at heavy weights — rounded, echoes the Memoire wordmark.
-const nunito = Nunito({
-  variable: "--font-nunito",
+// Film-edge lettering: condensed caps for frame labels and big tabular numerals.
+const barlow = Barlow_Condensed({
+  variable: "--font-barlow",
   subsets: ["latin"],
-  weight: ["700", "800", "900"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -30,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2a2a2a",
+  themeColor: "#100f0d",
   width: "device-width",
   initialScale: 1,
   // Content can extend under the iPhone notch/home bar when installed full-screen.
@@ -39,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${albert.variable} ${nunito.variable}`}>
+    <html lang="en" className={`${figtree.variable} ${barlow.variable}`}>
       <body className="bg-canvas">
         {children}
         <ServiceWorker />

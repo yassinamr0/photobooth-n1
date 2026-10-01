@@ -31,15 +31,6 @@ export function PanelFrame({
         className,
       )}
     >
-      {/* Owner's request: a small maroon wash at the top of the page, fading into the noir. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(to_bottom,rgb(106_27_58/0.55),transparent)]"
-      />
-      {/* Full-height strip behind the sticky sidebar so its tint runs to the page bottom. */}
-      {variant === "dashboard" && sidebar && (
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 hidden w-[92px] border-r border-maroon/50 bg-[#2a2024] md:block" />
-      )}
       {variant === "dashboard" && sidebar}
       <main
         className={cn(

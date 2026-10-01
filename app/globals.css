@@ -5,81 +5,101 @@
  * Chart colors are mirrored in lib/design/chart.ts — keep the two in sync.
  */
 @theme {
-  /* Memoire palette. Surfaces: Fine Shadow Noir #2A2A2A and steps derived from it. */
-  --color-canvas: #2a2a2a;
-  --color-surface: #313131;
-  --color-surface-2: #383838;
-  --color-line: #444444;
-  --color-line-strong: #555555;
+  /* Darkroom: warm neutral blacks (not blue/purple), a proof sheet under a safelight */
+  --color-canvas: #100f0d;
+  --color-surface: #191815;
+  --color-surface-2: #22201c;
+  --color-line: #2e2b26;
+  --color-line-strong: #433e36;
 
-  /* Text — strict: white (opacity for hierarchy), black on light fills,
-     green = positive, red = negative. Nothing else. */
-  --color-ink: #ffffff;
-  --color-ink-muted: rgb(255 255 255 / 0.72);
-  --color-ink-faint: rgb(255 255 255 / 0.5);
-  --color-black: #000000;
+  /* Text — warm photo-paper white */
+  --color-ink: #f4efe6;
+  --color-ink-muted: #b5ad9f;
+  --color-ink-faint: #7f786c;
 
-  /* Brand accents (fills, borders, focus — never text) */
-  --color-maroon: #6a1b3a;
-  --color-crimson: #a64d79;
-  --color-pearl: #edbbdb;
-  --color-plum: #3a1b2a; /* "Shadow Light" — tinted containers */
+  /* Film edge — the app's own accent (chrome only: frame marks, active nav, primary action) */
+  --color-edge: #ff8a3d;
+  --color-edge-dim: #2c1c10;
+  /* legacy accent names now point at the film edge */
+  --color-violet: #ff8a3d;
+  --color-magenta: #ff8a3d;
+  --color-accent-dim: #2c1c10;
 
-  /* Legacy token names, remapped onto the brand so existing classes follow it */
-  --color-violet: #6a1b3a;
-  --color-magenta: #a64d79;
-  --color-pink: #a64d79;
-  --color-gold: #ffffff;
-  --color-gold-dim: #3a1b2a;
-  --color-accent-dim: #3a1b2a;
-
-  /* Status */
+  /* FIXED MEANINGS (owner-binding): cash green · visa blue · hadr/waste pink-red ·
+     totals/money gold · profit green · loss red · warnings amber */
+  --color-pink: #ff4d8d;
+  --color-gold: #ffc93c;
+  --color-gold-dim: #33280d;
   --color-success: #4ade80;
-  --color-success-dim: #1f3327;
-  --color-danger: #ff5a5f;
-  --color-danger-dim: #3d2224;
-  --color-warning: #a64d79; /* warnings = crimson border/tint + icon; text stays white */
-  --color-warning-dim: #3a1b2a;
-  --color-info: #ffffff;
-  --color-info-dim: #383838;
+  --color-success-dim: #132a1b;
+  --color-warning: #ffb547;
+  --color-warning-dim: #33240f;
+  --color-danger: #ff5c6c;
+  --color-danger-dim: #36171c;
+  --color-info: #5b9cff;
+  --color-info-dim: #13223b;
 
-  /* Chart — validated (dataviz checker, dark surface): light / deep Velvet Crimson */
-  --color-chart-1: #cf6aa2;
-  --color-chart-2: #923d69;
-  --color-chart-track: #3d3d3d;
-  --color-chart-grid: #3a3a3a;
+  /* Chart */
+  --color-chart-1: #ff8a3d;
+  --color-chart-2: #ffc93c;
+  --color-chart-3: #ff4d8d;
+  --color-chart-4: #4ade80;
+  --color-chart-5: #5b9cff;
+  --color-chart-6: #b5ad9f;
+  --color-chart-track: #2a2723;
+  --color-chart-grid: #26231f;
 
-  /* Radii — restrained */
+  /* Square-cut frames, small controls only slightly softened */
   --radius-inner: 4px;
   --radius-card: 6px;
   --radius-panel: 8px;
 
-  /* No decorative shadows: surfaces are separated by hairlines */
+  /* One elevation language: a real offset + blur, used only for floating layers */
   --shadow-card: none;
-  --shadow-panel: none;
+  --shadow-panel: 0 18px 40px -18px rgb(0 0 0 / 0.75);
 
-  /* Type: Albert Sans (body), Nunito heavy (headings — echoes the Memoire wordmark) */
-  --font-sans: var(--font-albert), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-nunito), var(--font-albert), ui-sans-serif, sans-serif;
+  /* Type: Figtree (UI workhorse) + Barlow Condensed (film-edge labels & numerals) */
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-figtree), ui-sans-serif, sans-serif;
 
-  /* Motion */
-  --animate-rise: rise 180ms ease-out backwards; /* backwards: no transform left behind (keeps fixed popups correct) */
+  --animate-develop: develop 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-@keyframes rise {
+/* "Developing": content comes up out of the dark like a print in the tray. */
+@keyframes develop {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    filter: brightness(1.8) blur(1.5px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    filter: none;
   }
+}
+
+/* Legacy utility names, now SOLID (no gradients anywhere) */
+@utility bg-accent-gradient {
+  background-color: var(--color-edge);
+  color: #1a0f05;
+}
+
+@utility text-accent-gradient {
+  color: var(--color-edge);
+}
+
+/* Contact-sheet frame: 1px rule + film-edge registration corners (crisp geometry). */
+@utility frame {
+  position: relative;
+  background-image:
+    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
+    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge));
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px);
+  background-repeat: no-repeat;
 }
 
 html {
   color-scheme: dark;
-  font-size: 15px; /* smaller type across the app (everything is rem-based) */
 }
 
 body {
@@ -90,11 +110,17 @@ body {
 }
 
 ::selection {
-  background: var(--color-pearl);
-  color: var(--color-black);
+  background: var(--color-edge);
+  color: #1a0f05;
 }
 
-/* Calm colour transitions on interactive things */
+html {
+  font-size: 15px;
+  caret-color: var(--color-edge);
+  scrollbar-color: var(--color-line-strong) var(--color-canvas);
+  font-variant-numeric: tabular-nums;
+}
+
 a,
 button,
 [role="button"],
@@ -102,7 +128,11 @@ input,
 select {
   transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: 150ms;
-  transition-timing-function: ease-out;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:focus-visible {
+  outline-color: var(--color-edge);
 }
 
 @media (prefers-reduced-motion: reduce) {

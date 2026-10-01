@@ -119,7 +119,7 @@ function StatusBar({
               type="button"
               data-testid="paper-loaded"
               onClick={() => { setDraft(shift.startPaperCount); setEditing(true); }}
-              className="mt-0.5 flex items-center gap-1.5 font-display text-lg font-bold tabular-nums hover:text-ink"
+              className="mt-0.5 flex items-center gap-1.5 font-display text-lg font-bold tabular-nums hover:text-magenta"
             >
               {shift.startPaperCount != null ? fmtNum(shift.startPaperCount) : "—"}
               <Pencil className="size-3.5 text-ink-faint" aria-label="Edit" />
@@ -191,19 +191,19 @@ function StatusBar({
 }
 
 function SummaryGrid({ totals }: { totals: ShiftTotals }) {
-  const cell = "rounded-inner border border-line bg-surface-2 px-3 py-2.5";
-  const v = "font-display text-lg font-bold tabular-nums";
-  const l = "text-[11px] text-ink-faint";
+  const cell = "rounded-inner border border-line border-t-[3px] border-t-line-strong bg-surface-2 px-3 py-2.5";
+  const v = "font-display text-[1.6rem] leading-none font-semibold tabular-nums";
+  const l = "mt-1 font-display text-[13px] font-medium tracking-[0.07em] text-ink-muted uppercase";
   return (
     <div className="mt-3 grid grid-cols-2 gap-2" data-testid="shift-summary-grid">
-      <div className={cn(cell, "col-span-2 flex items-baseline justify-between border-crimson/30 bg-gold-dim/40")}>
+      <div className={cn(cell, "col-span-2 flex items-baseline justify-between border-t-gold bg-gold-dim/50")}>
         <span className={l}>Total EGP</span>
-        <span data-testid="sum-total" className={cn(v, "text-2xl text-ink")}>{fmtNum(totals.total)}</span>
+        <span data-testid="sum-total" className={cn(v, "text-[2.2rem] text-gold")}>{fmtNum(totals.total)}</span>
       </div>
-      <div className={cell}><div data-testid="sum-cash" className={v}>{fmtNum(totals.cash)}</div><div className={l}>Cash</div></div>
-      <div className={cell}><div data-testid="sum-visa" className={cn(v, "text-ink")}>{fmtNum(totals.visa)}</div><div className={l}>Visa</div></div>
+      <div className={cn(cell, "border-t-success")}><div data-testid="sum-cash" className={cn(v, "text-success")}>{fmtNum(totals.cash)}</div><div className={l}>Cash</div></div>
+      <div className={cn(cell, "border-t-info")}><div data-testid="sum-visa" className={cn(v, "text-info")}>{fmtNum(totals.visa)}</div><div className={l}>Visa</div></div>
       <div className={cell}><div data-testid="sum-sheets" className={v}>{fmtNum(totals.sheets)}</div><div className={l}>Sheets sold</div></div>
-      <div className={cell}><div data-testid="sum-hadr" className={cn(v, "text-ink")}>{fmtNum(totals.hadr)}</div><div className={l}>Hadr wasted</div></div>
+      <div className={cn(cell, "border-t-pink")}><div data-testid="sum-hadr" className={cn(v, "text-pink")}>{fmtNum(totals.hadr)}</div><div className={l}>Hadr wasted</div></div>
       <div className={cell}><div data-testid="sum-acrylic" className={v}>{fmtNum(totals.acrylic)}</div><div className={l}>Acrylic sold</div></div>
       <div className={cell}><div data-testid="sum-magnetic" className={v}>{fmtNum(totals.magnetic)}</div><div className={l}>Magnetic sold</div></div>
     </div>

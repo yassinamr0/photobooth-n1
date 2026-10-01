@@ -16,15 +16,15 @@ type ButtonProps = ComponentProps<"button"> & {
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-inner font-semibold whitespace-nowrap " +
-  "transition-[background,color,border-color,transform,opacity] duration-150 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/70 " +
+  "transition-[background,color,border-color,box-shadow,transform,opacity] duration-150 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edge/70 " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas " +
   "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-maroon text-white hover:bg-crimson",
-  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#404040]",
+    "bg-edge text-[#1a0f05] hover:bg-[#ff9d5c]",
+  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#2a2723]",
   // pill colors depend on `selected`; see pillStates
   pill: "border",
   danger: "bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",
@@ -32,7 +32,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const pillStates = {
-  on: "bg-maroon text-white border-maroon",
+  on: "bg-ink text-canvas border-ink",
   off: "border-line text-ink-muted hover:text-ink hover:border-line-strong",
 };
 

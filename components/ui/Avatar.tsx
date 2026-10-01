@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { chartSeries } from "@/lib/design/chart";
 
 type Size = "sm" | "md" | "lg";
 
@@ -13,13 +14,10 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
-/** Brand tiles (maroon / plum / velvet crimson); initials are always white text. */
-const TILES = ["#6a1b3a", "#3a1b2a", "#7d2f55"] as const;
-
-function tileFor(name: string) {
+function colorFor(name: string) {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return TILES[h % TILES.length];
+  return chartSeries[h % chartSeries.length];
 }
 
 /** Rounded-square avatar; falls back to initials on a tinted tile. */
@@ -34,17 +32,17 @@ export function Avatar({
   size?: Size;
   className?: string;
 }) {
-  const tile = tileFor(name);
+  const color = colorFor(name);
   return (
     <span
       title={name}
       className={cn(
-        "relative inline-grid shrink-0 place-items-center overflow-hidden font-display font-bold text-white",
+        "relative inline-grid shrink-0 place-items-center overflow-hidden font-display font-bold",
         sizes[size],
         className,
       )}
       style={
-        src ? undefined : { backgroundColor: tile }
+        src ? undefined : { backgroundColor: `color-mix(in srgb, ${color} 18%, #191815)`, color }
       }
     >
       {src ? (

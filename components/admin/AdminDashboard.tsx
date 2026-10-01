@@ -86,9 +86,8 @@ function DashboardInner() {
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div className="flex flex-wrap items-center justify-between gap-3 lg:contents">
             <div className="lg:order-1 lg:shrink-0">
-              <p className="text-sm text-ink-muted lg:text-xs">Admin dashboard</p>
-              <h1 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl lg:text-2xl">
-                Hi, {profile?.name.split(" ")[0] || "admin"}
+              <h1 className="font-display text-[2.1rem] leading-none font-semibold tracking-[0.01em] lg:text-[1.9rem]">
+                Hi, <span className="text-edge">{profile?.name.split(" ")[0] || "admin"}</span>
               </h1>
             </div>
             <div className="lg:order-3"><LogoutButton /></div>
@@ -99,7 +98,7 @@ function DashboardInner() {
             {NAV.map((n) => (
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-inner border px-4 text-sm font-semibold",
-                  section === n.id && !historyUid ? "border-maroon bg-maroon text-white" : "border-line text-ink-muted")}>
+                  section === n.id && !historyUid ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted")}>
                 {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.id === "pnl" ? "P&L" : n.label}
               </button>
             ))}
@@ -108,10 +107,10 @@ function DashboardInner() {
 
         {error && <p className="rounded-inner border border-danger/40 bg-danger-dim px-4 py-3 text-sm text-danger">Sync error — {error}</p>}
 
-        {/* Re-keyed per section so each switch plays a short fade-and-rise. */}
-        <div key={historyUid ? `history-${historyUid}` : section} className="animate-rise">
+        {/* Re-keyed per section: each switch "develops" in, like a print in the tray. */}
+        <div key={historyUid ? `history-${historyUid}` : section} className="animate-develop">
           {!loaded ? (
-            <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-ink" /></div>
+            <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-magenta" /></div>
           ) : historyUid ? (
             <StaffHistoryView uid={historyUid} back={() => setHistoryUid(null)} />
           ) : section === "overview" ? (
@@ -160,7 +159,7 @@ function ScopeBar({ section }: { section: Section }) {
     <div className="relative flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 lg:py-2" data-testid="scope-bar">
       <label className="relative flex items-center">
         <span className="sr-only">Event scope</span>
-        <MapPin className="pointer-events-none absolute left-3 size-4 text-pearl" />
+        <MapPin className="pointer-events-none absolute left-3 size-4 text-magenta" />
         <select
           data-testid="event-switcher"
           value={scope}
@@ -180,14 +179,14 @@ function ScopeBar({ section }: { section: Section }) {
         {RANGES.map((r) => (
           <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
             className={cn("h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-              range === r.id ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
+              range === r.id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
             <span className="hidden sm:inline">{r.label}</span>
           </button>
         ))}
         <button type="button" role="tab" aria-selected={custom} data-testid="range-custom" onClick={() => setPicking((p) => !p)}
           className={cn("flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-            custom ? "bg-maroon text-white" : "text-ink-muted hover:text-ink")}>
+            custom ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
           <CalendarDays className="size-3.5" />
           <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
         </button>
@@ -196,10 +195,10 @@ function ScopeBar({ section }: { section: Section }) {
         <CustomRangePicker range={range} onClose={() => setPicking(false)}
           onApply={(r) => { setRange(r); setPicking(false); }} />
       )}
-      <span data-testid="scope-chip" className="ml-auto text-xs text-ink-faint">
+      <span data-testid="scope-chip" className="ml-auto font-display text-[13px] font-medium tracking-[0.08em] text-edge/80 uppercase">
         {note ?? (
           <>
-            Showing: <span className="text-ink-muted">{scopeName}</span>
+            Showing: <span className="text-edge">{scopeName}</span>
             {note === null ? " · current stock (date range doesn't apply)" : ` · ${custom ? rangeLabel(range) : RANGES.find((r) => r.id === range)?.label}`}
           </>
         )}
