@@ -43,6 +43,12 @@
       "skillPath": "skills/autoresearch/SKILL.md",
       "computedHash": "ee864fc9acb04c3a7c2629aa2a5af298e18649ee33c3d44402b42c94531bdb21"
     },
+    "brandkit": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/brandkit/SKILL.md",
+      "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
+    },
     "cancel": {
       "source": "yeachan-heo/oh-my-claudecode",
       "sourceType": "github",
@@ -73,6 +79,18 @@
       "skillPath": "skills/deepinit/SKILL.md",
       "computedHash": "c70cd5440dc6878ecd45daea0cabaa4eac251cb664a68d6b895b1f8fec790860"
     },
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "6d838b246d0e35d0b53f4f23f98ba7a1dd561937e64f7d0c7553b0928e376c3e"
+    },
+    "design-taste-frontend-v1": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill-v1/SKILL.md",
+      "computedHash": "d704ab912c4d0ca954ffa858983da755ae4cd5cad9ba22554db5557382f5bd34"
+    },
     "diagram": {
       "source": "yeachan-heo/oh-my-claudecode",
       "sourceType": "github",
@@ -97,6 +115,18 @@
       "skillPath": "skills/external-context/SKILL.md",
       "computedHash": "4addb3e31cbb6531e54473f72e448ca305bd54f0a417ddcc36a7db81d83691a5"
     },
+    "full-output-enforcement": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/output-skill/SKILL.md",
+      "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
+    },
+    "gpt-taste": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/gpt-tasteskill/SKILL.md",
+      "computedHash": "cc8f0c601d8240a124e1d11634351a2be7b8a72fd807c75e5b6bf7afcd5ddee0"
+    },
     "graph": {
       "source": "yeachan-heo/oh-my-claudecode",
       "sourceType": "github",
@@ -109,11 +139,41 @@
       "skillPath": "skills/harbor/SKILL.md",
       "computedHash": "2ed04e14964f8f4e07cbc7ada654fb564dcbfa53dfc9e0b59eab5ec5d7a7a0e0"
     },
+    "high-end-visual-design": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/soft-skill/SKILL.md",
+      "computedHash": "7db385e4c5370e5a7fca9704a1361b056e4504ea6a03924bb86f33a4f00b5c73"
+    },
     "hud": {
       "source": "yeachan-heo/oh-my-claudecode",
       "sourceType": "github",
       "skillPath": "skills/hud/SKILL.md",
       "computedHash": "1e43281ce078f49c422a91a4e2cc68a0ddc6ab13905274c6d1372781bec8628b"
+    },
+    "image-to-code": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/image-to-code-skill/SKILL.md",
+      "computedHash": "58517b03b2a01f4c9ba65861559d03df931400871bbc200978c975b24bb92c73"
+    },
+    "imagegen-frontend-mobile": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/imagegen-frontend-mobile/SKILL.md",
+      "computedHash": "9ab7f4f6ce66a3cff02bbf5894e5bd5af50bf5d6ef0adffdc88e8fab772fe44f"
+    },
+    "imagegen-frontend-web": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/imagegen-frontend-web/SKILL.md",
+      "computedHash": "65f5ae59fa317567809438310b1c54f78cd133426deb43e4d3d4ca4c8f541628"
+    },
+    "industrial-brutalist-ui": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/brutalist-skill/SKILL.md",
+      "computedHash": "8fc355c4aadb7d29c53ca28bc41be3cd6eea765d121e3737c4dc2d0f90a8effa"
     },
     "intent": {
       "source": "yeachan-heo/oh-my-claudecode",
@@ -150,6 +210,12 @@
       "sourceType": "github",
       "skillPath": "skills/minimal-prose-discipline/SKILL.md",
       "computedHash": "f0b5c6dd57ed102b50d6e01f8459361eb9a7a14cc82d0ef5c1331f24704dc730"
+    },
+    "minimalist-ui": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/minimalist-skill/SKILL.md",
+      "computedHash": "08873a3131d3be27bef9bf3304b310b16b44ca6e3561aebe532797be3443f6bd"
     },
     "omc-doctor": {
       "source": "yeachan-heo/oh-my-claudecode",
@@ -199,6 +265,12 @@
       "skillPath": "skills/ralplan/SKILL.md",
       "computedHash": "87506c39b1d8c189e36d3e9df8da4f861154ba365ce1ddebfd339735e3c8849f"
     },
+    "redesign-existing-projects": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/redesign-skill/SKILL.md",
+      "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
+    },
     "refit": {
       "source": "yeachan-heo/oh-my-claudecode",
       "sourceType": "github",
@@ -240,6 +312,12 @@
       "sourceType": "github",
       "skillPath": "skills/skillify/SKILL.md",
       "computedHash": "4f4bab8926d7cf362aa0fd3e9404c331f68d862dfd3b2f74d03ce9c245f067b6"
+    },
+    "stitch-design-taste": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/stitch-skill/SKILL.md",
+      "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
     },
     "tdd": {
       "source": "yeachan-heo/oh-my-claudecode",
