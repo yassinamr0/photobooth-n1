@@ -41,7 +41,7 @@ export function FinishSetup() {
       title="Finish setting up"
       subtitle="Your account was created, but your profile didn't finish saving. Enter your name to complete it."
       icon={
-        <span className="grid size-14 place-items-center rounded-[16px] bg-gold-dim text-gold">
+        <span className="grid size-14 place-items-center rounded-inner bg-gold-dim text-ink">
           <Zap className="size-6" />
         </span>
       }

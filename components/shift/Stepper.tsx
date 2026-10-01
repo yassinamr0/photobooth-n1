@@ -18,7 +18,7 @@ export function Stepper({
   tone?: "accent" | "pink";
 }) {
   const btn =
-    "grid size-14 shrink-0 place-items-center rounded-full border border-line-strong bg-surface-2 text-ink " +
+    "grid size-14 shrink-0 place-items-center rounded-inner border border-line-strong bg-surface-2 text-ink " +
     "active:scale-95 transition-transform disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60";
   return (
     <div className="flex items-center gap-3" role="group" aria-label={label}>
@@ -30,7 +30,7 @@ export function Stepper({
           data-testid={`${label}-qty`}
           className={cn(
             "font-display text-4xl font-extrabold tabular-nums",
-            tone === "pink" ? "text-pink" : "text-ink",
+            tone === "pink" ? "text-ink" : "text-ink",
           )}
         >
           {value}
@@ -59,8 +59,8 @@ export function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-9 rounded-full border px-3.5 text-sm font-semibold transition-colors",
-        active ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
+        "h-9 rounded-inner border px-3.5 text-sm font-semibold transition-colors",
+        active ? "border-ink bg-ink text-black" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
       )}
     >
       {children}
@@ -95,9 +95,9 @@ export function NumberInput({
       className={cn(
         "h-12 w-full rounded-inner border border-line bg-surface-2 px-4 text-lg font-semibold tabular-nums text-ink outline-none",
         "focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25",
-        tone === "cash" && "text-success",
-        tone === "visa" && "text-info",
-        tone === "pink" && "text-pink",
+        tone === "cash" && "text-ink",
+        tone === "visa" && "text-ink",
+        tone === "pink" && "text-ink",
         className,
       )}
       {...rest}

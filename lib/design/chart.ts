@@ -1,34 +1,27 @@
 /**
- * Chart color tokens — single source for anything drawn in SVG / chart libraries.
+ * Chart color tokens — single source for anything drawn in SVG.
  * Mirrored as CSS vars (--color-chart-*) in app/globals.css; keep the two in sync.
+ * Memoire palette. The first two are the validated categorical pair (dataviz checker,
+ * dark surface #313131: lightness band, chroma, CVD and normal-vision separation all pass).
  */
 export const chartSeries = [
-  "#8b5cf6", // violet
-  "#d946ef", // magenta
-  "#ff4d8d", // pink
-  "#ffc93c", // gold
-  "#5b9cff", // blue
-  "#2dd4bf", // teal
+  "#cf6aa2", // light Velvet Crimson
+  "#923d69", // deep Velvet Crimson
+  "#edbbdb", // Pearl Pink
+  "#a64d79", // Velvet Crimson
+  "#6a1b3a", // Maroon
+  "#ffffff", // white
 ] as const;
 
 export const chartColors = {
-  track: "#262136",
-  grid: "#221e30",
-  axisText: "#6e6886",
-  hatchBase: "#2a1838",
-  hatchStroke: "#d946ef",
+  track: "#3d3d3d",
+  grid: "#3a3a3a",
+  axisText: "rgb(255 255 255 / 0.5)",
+  hatchBase: "#3a1b2a",
+  hatchStroke: "#cf6aa2",
 } as const;
-
-/** Stops for the primary violet → magenta → pink gradient. */
-export const chartGradientStops = [
-  { offset: "0%", color: "#7c3aed" },
-  { offset: "55%", color: "#d946ef" },
-  { offset: "100%", color: "#ff4d8d" },
-] as const;
 
 /** Element ids rendered by <ChartDefs />; reference with fill={`url(#${id})`}. */
 export const chartIds = {
-  gradient: "bl-accent-gradient",
-  gradientHorizontal: "bl-accent-gradient-h",
   hatch: "bl-accent-hatch",
 } as const;

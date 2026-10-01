@@ -73,11 +73,11 @@ export function LowStockBanner({ compact, onOpen }: { compact?: boolean; onOpen?
     <div data-testid="low-stock-banner" data-active={alerts.length > 0 || undefined}
       className={cn("rounded-card border px-5 py-4", alerts.length > 0 ? "border-warning/40 bg-warning-dim" : "border-line bg-surface")}>
       <div className="flex items-center gap-3">
-        <AlertTriangle className={cn("size-5 shrink-0", alerts.length > 0 ? "text-warning" : "text-ink-faint")} />
-        <span className={cn("flex-1 font-semibold", alerts.length > 0 ? "text-warning" : "text-ink-muted")}>
+        <AlertTriangle className={cn("size-5 shrink-0", alerts.length > 0 ? "text-ink" : "text-ink-faint")} />
+        <span className={cn("flex-1 font-semibold", alerts.length > 0 ? "text-ink" : "text-ink-muted")}>
           {alerts.length > 0 ? `Low stock (${alerts.length})` : "No new low-stock alerts"}
         </span>
-        {onOpen && <button type="button" onClick={onOpen} className="text-sm text-warning underline underline-offset-4">Inventory</button>}
+        {onOpen && <button type="button" onClick={onOpen} className="text-sm text-ink underline underline-offset-4">Inventory</button>}
       </div>
       {shown.length > 0 && (
         <ul className={cn("mt-3 flex flex-col divide-y", alerts.length > 0 ? "divide-warning/20" : "divide-line")}>
@@ -100,7 +100,7 @@ function AlertRow({ a, compact }: { a: StockAlert; compact?: boolean }) {
   const Icon = STOCK_ICON[a.type];
   return (
     <li data-testid="low-stock-item" data-read={a.dismissed || undefined} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-      <Icon className={cn("size-4 shrink-0", a.dismissed ? "text-ink-faint" : "text-warning")} />
+      <Icon className={cn("size-4 shrink-0", a.dismissed ? "text-ink-faint" : "text-ink")} />
       <span className={cn("min-w-0 flex-1", a.dismissed ? "text-ink-faint" : "text-ink")}>
         {compact ? (
           <>
@@ -142,7 +142,7 @@ function PendingDeductions() {
   if (pending.length === 0 || !profile) return null;
   return (
     <div data-testid="pending-deductions" className="rounded-card border border-warning/40 bg-warning-dim/60 px-5 py-4 text-sm">
-      <p className="font-semibold text-warning">
+      <p className="font-semibold text-ink">
         {pending.length} ended shift{pending.length === 1 ? "" : "s"} not yet deducted from stock
       </p>
       <ul className="mt-2 flex flex-col gap-1 text-ink-muted">
@@ -177,7 +177,7 @@ function QtyCell({ row, type, testid }: { row: InventoryRow; type: StockType; te
   const s = row.inv[type];
   const low = row.low[type];
   return (
-    <td data-testid={testid} className={cn("py-3 pl-4 text-right font-semibold tabular-nums", low ? (row.alerting[type] ? "text-warning" : "text-ink-muted") : "text-ink")}>
+    <td data-testid={testid} className={cn("py-3 pl-4 text-right font-semibold tabular-nums", low ? (row.alerting[type] ? "text-ink" : "text-ink-muted") : "text-ink")}>
       {low && <AlertTriangle className="mr-1 inline size-3.5 -translate-y-px" />}
       {s ? fmtNum(s.currentQuantity) : "—"}
     </td>
@@ -305,7 +305,7 @@ function StockCard({
     <Card padding="lg" data-testid={`stock-card-${type}`} className={cn("flex flex-col", alerting && "border-warning/50")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-surface-2 text-ink-muted">
+          <span className="grid size-10 shrink-0 place-items-center rounded-inner bg-surface-2 text-ink-muted">
             <Icon className="size-5" />
           </span>
           <div className="min-w-0">
@@ -319,7 +319,7 @@ function StockCard({
       </div>
 
       <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span data-testid={`${type}-quantity`} className={cn("font-display text-5xl font-extrabold tabular-nums lg:text-4xl", alerting ? "text-warning" : "text-ink")}>
+        <span data-testid={`${type}-quantity`} className={cn("font-display text-4xl font-extrabold tabular-nums lg:text-4xl", alerting ? "text-ink" : "text-ink")}>
           {fmtNum(stock.currentQuantity)}
         </span>
         <span className="text-ink-muted">{unit}</span>
@@ -440,7 +440,7 @@ function StockLogList({ logs, eventName }: { logs: StockLog[]; eventName: string
                   <td className="py-2.5 pl-3"><Tag tone={KIND_LABEL[l.kind].tone}>{KIND_LABEL[l.kind].label}</Tag></td>
                   <td className="py-2.5 pl-3 whitespace-nowrap text-ink-muted">{STOCK_INFO[l.stockType].label}</td>
                   <td className="truncate py-2.5 pl-3 text-ink-muted" title={l.reason}>{l.reason}{l.byName && ` · ${l.byName}`}</td>
-                  <td className={cn("py-2.5 pl-3 text-right font-semibold whitespace-nowrap tabular-nums", l.delta >= 0 ? "text-success" : "text-pink")}>
+                  <td className={cn("py-2.5 pl-3 text-right font-semibold whitespace-nowrap tabular-nums", l.delta >= 0 ? "text-success" : "text-ink")}>
                     {l.delta >= 0 ? "+" : ""}{fmtNum(l.delta)} {STOCK_INFO[l.stockType].unit}
                     {l.kind === "restock" && l.boxes != null && <span className="ml-1 font-normal text-ink-faint">({fmtNum(l.boxes)} box{l.boxes === 1 ? "" : "es"})</span>}
                   </td>

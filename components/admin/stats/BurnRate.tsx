@@ -65,7 +65,7 @@ function BurnTableRow({ b }: { b: BurnRow }) {
   const r = b.row;
   const anyLow = STOCK_TYPES.some((t) => r.low[t]);
   const daysCell = (t: StockType, testid?: string) => (
-    <td data-testid={testid} className={cn("py-3 pl-4 text-right font-semibold whitespace-nowrap", runsOutSoon(b.days[t]) || r.low[t] ? "text-warning" : "text-ink")}>
+    <td data-testid={testid} className={cn("py-3 pl-4 text-right font-semibold whitespace-nowrap", runsOutSoon(b.days[t]) || r.low[t] ? "text-ink" : "text-ink")}>
       {days(b.days[t])}
     </td>
   );
@@ -75,7 +75,7 @@ function BurnTableRow({ b }: { b: BurnRow }) {
         <span className="font-semibold text-ink">{r.event.name}</span>
         {b.warn && <Tag tone="warning" icon={<AlertTriangle />} className="ml-2">{anyLow ? "Low stock" : "Runs out soon"}</Tag>}
       </td>
-      <td className={cn("py-3 pl-4 text-right tabular-nums", r.low.paper ? "text-warning" : "text-ink")}>{r.inv.paper ? fmtNum(r.inv.paper.currentQuantity) : "—"}</td>
+      <td className={cn("py-3 pl-4 text-right tabular-nums", r.low.paper ? "text-ink" : "text-ink")}>{r.inv.paper ? fmtNum(r.inv.paper.currentQuantity) : "—"}</td>
       <td className="py-3 pl-4 text-right tabular-nums text-ink-muted">{r.forecasts.paper?.avgPerDay ? fmtNum(r.forecasts.paper.avgPerDay) : "—"}</td>
       {daysCell("paper", "burn-paper-days")}
       {daysCell("ink")}

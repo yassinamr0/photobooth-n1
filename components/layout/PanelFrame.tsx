@@ -31,11 +31,6 @@ export function PanelFrame({
         className,
       )}
     >
-      {/* faint top glow for depth */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,rgb(124_58_237/0.12),transparent)]"
-      />
       {variant === "dashboard" && sidebar}
       <main
         className={cn(

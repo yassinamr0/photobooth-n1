@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     // Splash screen: the logo's crimson, so the launch screen matches the icon.
     background_color: "#9a1031",
-    theme_color: "#0f0d16",
+    theme_color: "#2a2a2a",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

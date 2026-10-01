@@ -15,16 +15,16 @@ type ButtonProps = ComponentProps<"button"> & {
 };
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap " +
-  "transition-[background,color,border-color,box-shadow,transform,opacity] duration-150 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60 " +
+  "inline-flex items-center justify-center gap-2 rounded-inner font-semibold whitespace-nowrap " +
+  "transition-[background,color,border-color,transform,opacity] duration-150 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/70 " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas " +
   "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent-gradient text-white shadow-[0_8px_24px_-10px_rgb(217_70_239/0.7)] hover:brightness-110",
-  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#262134]",
+    "bg-maroon text-white hover:bg-crimson",
+  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#404040]",
   // pill colors depend on `selected`; see pillStates
   pill: "border",
   danger: "bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",
@@ -32,7 +32,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const pillStates = {
-  on: "bg-ink text-canvas border-ink",
+  on: "bg-ink text-black border-ink",
   off: "border-line text-ink-muted hover:text-ink hover:border-line-strong",
 };
 

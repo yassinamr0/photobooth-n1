@@ -15,7 +15,7 @@ export function LoadingScreen({ message }: { message?: string }) {
   return (
     <AuthShell
       title={message ?? "Loading…"}
-      icon={<Spinner className="size-8 border-[3px] text-magenta" />}
+      icon={<Spinner className="size-8 border-[3px] text-ink" />}
     />
   );
 }
@@ -39,8 +39,8 @@ export function PendingApproval() {
       }
       icon={
         <span className="relative grid size-14 place-items-center">
-          <span className="absolute inset-0 animate-ping rounded-full bg-magenta/30" />
-          <span className="relative size-5 rounded-full bg-accent-gradient" />
+          <span className="absolute inset-0 animate-ping rounded-inner bg-magenta/30" />
+          <span className="relative size-5 rounded-inner bg-crimson" />
         </span>
       }
     >
@@ -66,7 +66,7 @@ export function AuthErrorScreen() {
       title="Couldn't load your account"
       subtitle={error ?? undefined}
       icon={
-        <span className="grid size-14 place-items-center rounded-[16px] bg-danger-dim text-danger">
+        <span className="grid size-14 place-items-center rounded-inner bg-danger-dim text-danger">
           <AlertTriangle className="size-6" />
         </span>
       }
@@ -82,7 +82,7 @@ export function FirebaseNotConfigured() {
       title="Firebase not configured"
       subtitle="Set these environment variables (see .env.example and the README), then restart."
       icon={
-        <span className="grid size-14 place-items-center rounded-[16px] bg-surface-2 text-ink-muted">
+        <span className="grid size-14 place-items-center rounded-inner bg-surface-2 text-ink-muted">
           <Settings2 className="size-6" />
         </span>
       }

@@ -24,7 +24,7 @@ export function useChartTooltip<T extends HTMLElement = HTMLDivElement>() {
     <div
       role="tooltip"
       data-testid="chart-tooltip"
-      className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-[10px] border border-line-strong bg-surface-2 px-3 py-2 text-xs whitespace-nowrap text-ink shadow-panel"
+      className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-inner border border-line-strong bg-surface-2 px-3 py-2 text-xs whitespace-nowrap text-ink shadow-panel"
       style={{ left: tip.x, top: tip.y - 8 }}
     >
       {tip.content}

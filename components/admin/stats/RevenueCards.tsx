@@ -24,7 +24,7 @@ export function RevenueTrend({ scoped, raw, scope, range, scopeLabel, now }: {
       <CardHeader title="Revenue" subtitle={`Sales income over time · ${scopeLabel}`} />
       <div className="mb-4 flex flex-wrap items-end gap-x-6 gap-y-2">
         <div>
-          <div data-testid="revenue-total" className="font-display text-5xl font-extrabold tabular-nums text-gold lg:text-4xl">{formatEGP(scoped.overview.total)}</div>
+          <div data-testid="revenue-total" className="font-display text-4xl font-extrabold tabular-nums text-ink lg:text-4xl">{formatEGP(scoped.overview.total)}</div>
           <p className="mt-1 text-sm text-ink-muted">
             {fmtNum(salesCount)} sale{salesCount === 1 ? "" : "s"}
             {salesCount ? ` · average ${formatEGP(Math.round(scoped.overview.total / salesCount))}` : ""}
@@ -73,7 +73,7 @@ function ComparisonChip({ c }: { c: NonNullable<ReturnType<typeof revenueCompari
   const Icon = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
   return (
     <p data-testid="revenue-change" className="flex items-center gap-2 pb-2 text-sm text-ink-muted">
-      <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold",
+      <span className={cn("inline-flex items-center gap-1 rounded-inner border px-2.5 py-1 font-semibold",
         up ? "border-success/40 bg-success-dim text-success" : down ? "border-danger/40 bg-danger-dim text-danger" : "border-line bg-surface-2 text-ink")}>
         <Icon className="size-4" />
         {up ? "+" : ""}{pct(c.change)}
@@ -96,21 +96,21 @@ export function PaymentSplit({ scoped, range, scopeLabel, now }: { scoped: Scope
       ) : (
         <>
           <div className="mb-3 flex flex-wrap gap-6" data-testid="payment-split">
-            <Legend swatch="bg-success" label="Cash" value={cash} share={cash / paid} />
-            <Legend swatch="bg-info" label="Visa" value={visa} share={visa / paid} />
+            <Legend swatch="bg-chart-1" label="Cash" value={cash} share={cash / paid} />
+            <Legend swatch="bg-chart-2" label="Visa" value={visa} share={visa / paid} />
           </div>
           {/* share bar */}
-          <div className="mb-5 flex h-2 gap-[2px] overflow-hidden rounded-full">
-            {cash > 0 && <div className="bg-success" style={{ width: `${(cash / paid) * 100}%` }} />}
-            {visa > 0 && <div className="bg-info" style={{ width: `${(visa / paid) * 100}%` }} />}
+          <div className="mb-5 flex h-2 gap-[2px] overflow-hidden rounded-[2px]">
+            {cash > 0 && <div className="bg-chart-1" style={{ width: `${(cash / paid) * 100}%` }} />}
+            {visa > 0 && <div className="bg-chart-2" style={{ width: `${(visa / paid) * 100}%` }} />}
           </div>
           <h4 className="mb-1 text-xs font-medium tracking-wide text-ink-faint uppercase">{GRAN[granularityFor(range)]} split</h4>
           <Bars
             testid="payment-chart"
             ariaLabel="Cash and visa by period"
             series={[
-              { key: "cash", label: "Cash", fill: "var(--color-success)" },
-              { key: "visa", label: "Visa", fill: "var(--color-info)" },
+              { key: "cash", label: "Cash", fill: "var(--color-chart-1)" },
+              { key: "visa", label: "Visa", fill: "var(--color-chart-2)" },
             ]}
             format={compactEGP}
             data={trend.map((p) => ({
@@ -189,9 +189,9 @@ export function LocationComparison({ raw, scope, range, now, rangeLabel }: {
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        <span data-testid="location-revenue" className="w-24 font-semibold tabular-nums text-gold">{formatEGP(r.revenue)}</span>
-                        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-chart-track">
-                          <div className="h-full rounded-full bg-violet" style={{ width: `${(r.revenue / maxRev) * 100}%` }} />
+                        <span data-testid="location-revenue" className="w-24 font-semibold tabular-nums text-ink">{formatEGP(r.revenue)}</span>
+                        <div className="h-1.5 w-24 overflow-hidden rounded-[2px] bg-chart-track">
+                          <div className="h-full rounded-[2px] bg-violet" style={{ width: `${(r.revenue / maxRev) * 100}%` }} />
                         </div>
                       </div>
                     </td>

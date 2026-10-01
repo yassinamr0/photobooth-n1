@@ -123,7 +123,7 @@ export function EndShiftDialog({
         {preview && (
           <p data-testid="shift-length" className="rounded-inner bg-surface-2 px-4 py-2.5 text-sm text-ink-muted">
             Shift length: <span className="font-semibold text-ink">{fmtDuration(preview.durationMs)}</span>
-            {preview.crossesMidnight && <span className="text-warning"> · ends next day</span>}
+            {preview.crossesMidnight && <span className="text-ink"> · ends next day</span>}
           </p>
         )}
         <div>
