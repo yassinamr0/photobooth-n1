@@ -114,30 +114,15 @@
   & > :nth-child(7) { animation-delay: 240ms; }
 }
 
-/* Film grain: a real raster noise tile (public/grain.png, ~6% strength), painted as a
-   BACKGROUND layer so text and controls sit on top of it and it can never catch a tap. */
-@utility grain {
-  background-image: url("/grain.png");
-  background-size: 128px 128px;
-}
-
-/* Contact-sheet frame: 1px rule + crimson registration corners (crisp geometry) + grain. */
+/* Contact-sheet frame: 1px rule + crimson registration corners (crisp geometry). */
 @utility frame {
   position: relative;
   background-image:
     linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    url("/grain.png");
-  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 128px 128px;
-  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px), 0 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
-}
-
-@media print {
-  .grain,
-  .frame {
-    background-image: none;
-  }
+    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge));
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px);
+  background-repeat: no-repeat;
 }
 
 html {

@@ -9,9 +9,6 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
   maroon/crimson chrome (the earlier bronze blacks clashed with it) — canvas `#0f0c0e`,
   surface `#181316`, raised `#21191d`, rules `#33272d` / `#4a3a42`. Text is pearl-white
   `#f6eff3`, muted `#b9a9b2`, faint `#937f8b`. Never warm/bronze or blue greys.
-- **Film grain:** a real raster noise tile (`public/grain.png`, 128px) painted as a
-  background layer on the page, the sidebar and every frame (`grain` utility, built into
-  `frame`). Never an overlay that could catch taps; never SVG/feTurbulence; off for print.
 - **Brand chrome (owner's change: maroon replaced the film-edge orange):** Maroon `#6a1b3a`
   fills primary buttons and the active menu item; Velvet Crimson `#a64d79` draws frame
   registration corners, borders, hover and focus; Pearl Pink `#edbbdb` is the readable accent

@@ -28,7 +28,7 @@ export function SidebarRail({
   return (
     <nav
       aria-label="Main"
-      className="sticky top-0 z-10 hidden h-dvh w-[92px] shrink-0 flex-col items-center gap-1 overflow-y-auto grain border-r border-line bg-canvas py-5 md:flex"
+      className="sticky top-0 z-10 hidden h-dvh w-[92px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-line bg-canvas py-5 md:flex"
     >
       {logo && <div className="mb-4">{logo}</div>}
       {items.map((item) => {
