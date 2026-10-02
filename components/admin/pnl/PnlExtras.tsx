@@ -49,7 +49,12 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
   const missing = items.some((i) => i.materialsMissing);
   return (
     <Card padding="lg" data-testid="pnl-breakeven">
-      <CardHeader title="Break-even" subtitle={`How much each location has to sell a day to pay for itself · ${label}`} />
+      <CardHeader title="Break-even" subtitle={`The daily sales each location needs, every day, to pay for itself · ${label}`} />
+      <p className="-mt-1 mb-2 text-sm leading-relaxed text-ink-muted">
+        Costs come in every day (rent and salaries are spread across the month), so this is a{" "}
+        <b className="text-ink">daily target with no end date</b>: on every day a booth is open, it needs to sell at least the
+        &quot;Needed&quot; amount to cover that day&apos;s costs. Sell more and it makes a profit that day.
+      </p>
       {items.length === 0 ? (
         <Empty>{scope !== "global" && ended.has(scope) ? "This event has ended — break-even isn't shown." : "No active locations."}</Empty>
       ) : (
@@ -59,8 +64,8 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
       )}
       <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />
-        &quot;Needs&quot; = your fixed costs per day (rent, salaries, other expenses — monthly ones spread over the month), plus
-        enough extra to cover paper, ink and card fees on those sales. If a location sells more than that a day, it&apos;s profitable.
+        &quot;These N days&quot; = the days in the dates you picked, up to today. The daily target stays the same every day as long as
+        your costs stay the same; add or change an expense and it updates.
         {missing && " Some product costs aren't set yet, so paper/ink are left out where missing."}
       </p>
     </Card>
@@ -91,20 +96,30 @@ function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total:
         <p className="mt-2 text-sm text-danger">Paper, ink and card fees cost more than the sales bring in, so no amount of sales covers the costs.</p>
       ) : (
         <>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-ink-faint">Needs to sell</div>
-              <div className="font-display text-xl font-bold tabular-nums text-ink"><span data-testid="breakeven-need">{egp(need)}</span><span className="text-sm font-medium text-ink-muted"> /day</span></div>
-              {be.printsPerDay != null && need > 0 && <div className="text-xs text-ink-faint">≈ {fmtNum(Math.ceil(be.printsPerDay))} half-sheet print{Math.ceil(be.printsPerDay) === 1 ? "" : "s"} a day</div>}
-            </div>
-            <div>
-              <div className="text-xs text-ink-faint">Actually selling</div>
-              <div className={cn("font-display text-xl font-bold tabular-nums", none ? "text-ink" : ok ? "text-success" : "text-danger")}>
-                {egp(be.avgPerDay)}<span className="text-sm font-medium text-ink-muted"> /day</span>
-              </div>
-              <div className="text-xs text-ink-faint">average over {fmtNum(be.days)} day{be.days === 1 ? "" : "s"}</div>
-            </div>
-          </div>
+          <table className="mt-2 w-full max-w-md text-sm">
+            <thead>
+              <tr className="text-xs text-ink-faint">
+                <th className="py-1 text-left font-medium"></th>
+                <th className="py-1 text-right font-medium">Needed</th>
+                <th className="py-1 text-right font-medium">Actually sold</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              <tr>
+                <td className="py-1 text-ink-muted">Each day</td>
+                <td className="py-1 text-right font-semibold text-ink" data-testid="breakeven-need">
+                  {egp(need)}
+                  {be.printsPerDay != null && need > 0 && <span className="block text-[11px] font-normal text-ink-faint">≈ {fmtNum(Math.ceil(be.printsPerDay))} half-sheet print{Math.ceil(be.printsPerDay) === 1 ? "" : "s"}</span>}
+                </td>
+                <td className={cn("py-1 text-right font-semibold", none ? "text-ink" : ok ? "text-success" : "text-danger")}>{egp(be.avgPerDay)} <span className="text-xs font-normal text-ink-faint">avg</span></td>
+              </tr>
+              <tr>
+                <td className="py-1 text-ink-muted">These {fmtNum(be.days)} day{be.days === 1 ? "" : "s"}</td>
+                <td className="py-1 text-right text-ink">{egp(Math.round(need) * be.days)}</td>
+                <td className={cn("py-1 text-right", none ? "text-ink" : ok ? "text-success" : "text-danger")}>{egp(be.avgPerDay * be.days)}</td>
+              </tr>
+            </tbody>
+          </table>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-chart-track" aria-hidden>
             <div className={cn("h-full rounded-full", none ? "bg-line-strong" : ok ? "bg-success" : "bg-danger")} style={{ width: `${progress * 100}%` }} />
           </div>
