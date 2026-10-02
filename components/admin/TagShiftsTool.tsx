@@ -70,12 +70,12 @@ export function TagShiftsTool({ close }: { close: () => void }) {
         <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide text-ink-faint uppercase">
           Day
           <input type="date" data-testid="tag-day" value={day} onChange={(e) => { setDay(e.target.value); setSkip(new Set()); setConfirming(false); }}
-            className="h-10 rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink normal-case outline-none [color-scheme:dark] focus:border-magenta/70" />
+            className="h-10 rounded-inner border border-white/[0.06] well px-3 text-sm text-ink normal-case outline-none [color-scheme:dark] focus:border-magenta/70" />
         </label>
         <label className="flex flex-col gap-1.5 text-xs font-medium tracking-wide text-ink-faint uppercase">
           Event
           <select data-testid="tag-event" value={eventId} onChange={(e) => { setEventId(e.target.value); setConfirming(false); }}
-            className="h-10 min-w-[200px] rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink normal-case outline-none focus:border-magenta/70">
+            className="h-10 min-w-[200px] rounded-inner border border-white/[0.06] well px-3 text-sm text-ink normal-case outline-none focus:border-magenta/70">
             <option value="">Choose an event…</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>{ev.name}{ev.status === "inactive" ? " (ended)" : ""}</option>
@@ -85,7 +85,7 @@ export function TagShiftsTool({ close }: { close: () => void }) {
       </div>
 
       {candidates.length === 0 ? (
-        <p data-testid="tag-empty" className="mt-4 rounded-inner border border-dashed border-line px-4 py-6 text-center text-sm text-ink-faint">
+        <p data-testid="tag-empty" className="mt-4 empty-state">
           No shifts without an event on this day.
         </p>
       ) : (

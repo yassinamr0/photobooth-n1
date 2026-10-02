@@ -34,7 +34,7 @@ export function BusiestHours({ entries, scopeLabel }: { entries: Entry[]; scopeL
     <Card padding="lg" data-testid="stat-busiest">
       <CardHeader title="Busiest hours" subtitle={`Sales by hour of day and day of week · ${scopeLabel}`} />
       {b.total.sales === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No sales in this range.</p>
+        <p className="empty-state">No sales in this range.</p>
       ) : (
         <>
           {b.peak && (

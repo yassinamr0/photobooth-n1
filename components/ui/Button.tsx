@@ -16,23 +16,25 @@ type ButtonProps = ComponentProps<"button"> & {
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-inner font-semibold whitespace-nowrap " +
-  "transition-[background,color,border-color,box-shadow,transform,opacity] duration-150 " +
+  "transition-[background,color,border-color,box-shadow,transform,translate,opacity,text-decoration-color] duration-150 " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edge/70 " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas " +
   "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
 
+// Tactile keys (taste "tactile feedback" + emil press physics): raised with a light-catch
+// edge and a lip; pressing sinks them 1px. See the key / key-primary utilities.
 const variants: Record<ButtonVariant, string> = {
-  primary:
-    "bg-maroon text-white hover:bg-crimson",
-  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#2b2126]",
+  primary: "key-primary bg-maroon text-white hover:bg-[#7c2247]",
+  secondary: "key bg-surface-2 text-ink border border-white/[0.07] hover:border-line-strong hover:bg-[#2b2126]",
   // pill colors depend on `selected`; see pillStates
   pill: "border",
-  danger: "bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",
-  ghost: "text-ink-muted hover:text-ink hover:bg-surface-2",
+  danger: "key bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",
+  ghost:
+    "text-ink-muted hover:text-ink hover:bg-surface-2 underline decoration-transparent underline-offset-4 hover:decoration-crimson/70 [transition-property:color,background-color,text-decoration-color,transform]",
 };
 
 const pillStates = {
-  on: "bg-ink text-canvas border-ink",
+  on: "key-primary bg-maroon text-white border-transparent",
   off: "border-line text-ink-muted hover:text-ink hover:border-line-strong",
 };
 

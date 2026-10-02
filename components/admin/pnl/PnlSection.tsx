@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NumberInput } from "@/components/shift/Stepper";
 import { cn } from "@/lib/cn";
+import { SegThumb } from "@/components/ui/Segmented";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { dayKey, parseDay, rangeLabel } from "@/lib/admin/range";
 import { formatEGP } from "@/lib/format";
@@ -30,7 +31,7 @@ const egp = (n: number) => formatEGP(Math.round(n));
 const monthLabel = (m: string) => parseDay(`${m}-01`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
 const input =
-  "h-11 w-full min-w-0 rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
+  "h-11 w-full min-w-0 rounded-inner border border-white/[0.06] well px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
 const lbl = "mb-1.5 block text-xs font-medium tracking-wide text-ink-faint uppercase";
 
 /**
@@ -85,7 +86,7 @@ export function PnlSection() {
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
+  return <p className="empty-state">{children}</p>;
 }
 
 /* ─────────────── Headline ─────────────── */
@@ -95,8 +96,8 @@ function Headline({ s, label }: { s: PnlSummary; label: string }) {
     <Card padding="lg" data-testid="pnl-headline">
       <CardHeader title="Profit & loss" subtitle={label} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-gold" />
-        <Tile label="Expenses" value={egp(s.expenses.total)} testid="pnl-expenses" className="text-ink" />
+        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-gold" tint="gold" />
+        <Tile label="Expenses" value={egp(s.expenses.total)} testid="pnl-expenses" className="text-ink" tint="loss" />
         <Tile label={loss ? "Net loss" : "Net profit"} value={`${loss ? "−" : ""}${egp(Math.abs(s.profit))}`} testid="pnl-profit"
           className={loss ? "text-danger" : "text-success"} highlight={loss ? "loss" : "profit"} />
         <Tile label="Margin" value={s.margin == null ? "—" : pct(s.margin)} testid="pnl-margin" className="text-ink"
@@ -107,14 +108,16 @@ function Headline({ s, label }: { s: PnlSummary; label: string }) {
   );
 }
 
-function Tile({ label, value, testid, className, hint, highlight }: {
-  label: string; value: string; testid: string; className?: string; hint?: string; highlight?: "profit" | "loss";
+// Bento tiles tinted with their meaning colour (same language as the Overview KPIs).
+function Tile({ label, value, testid, className, hint, highlight, tint }: {
+  label: string; value: string; testid: string; className?: string; hint?: string; highlight?: "profit" | "loss"; tint?: "gold" | "loss";
 }) {
   return (
-    <div className={cn("rounded-inner border px-4 py-3",
-      highlight === "loss" ? "border-danger/40 bg-danger-dim/50" : highlight === "profit" ? "border-success/35 bg-success-dim/40" : "border-line bg-surface-2")}>
-      <div className="text-xs text-ink-faint">{label}</div>
-      <div data-testid={testid} className={cn("font-display text-3xl font-extrabold tabular-nums lg:text-2xl", className)}>{value}</div>
+    <div className={cn("rounded-[8px] border px-4 py-3.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]",
+      highlight === "loss" ? "border-danger/30 bg-danger/[0.08]" : highlight === "profit" ? "border-success/25 bg-success/[0.07]"
+        : tint === "gold" ? "border-gold/20 bg-gold/[0.06]" : tint === "loss" ? "border-danger/15 bg-danger/[0.04]" : "border-white/[0.07] bg-white/[0.025]")}>
+      <div className="mb-1.5 text-[13px] font-medium text-ink-muted">{label}</div>
+      <div data-testid={testid} className={cn("font-display text-[2.2rem] leading-none font-semibold tracking-[-0.01em] tabular-nums", className)}>{value}</div>
       {hint && <div className="text-[11px] text-ink-faint">{hint}</div>}
     </div>
   );
@@ -332,10 +335,11 @@ function AddExpense() {
   return (
     <Card padding="lg" data-testid="pnl-add" className="self-start">
       <CardHeader title="Add an expense" />
-      <div role="tablist" aria-label="Expense type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
+      <div role="tablist" aria-label="Expense type" className="mb-4 flex gap-1 relative rounded-inner border border-white/[0.06] well p-1">
+        <SegThumb />
         {([["once", "One-off"], ["monthly", "Monthly"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} data-testid={`add-${k}`} onClick={() => setKind(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", kind === k ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", kind === k ? "text-white" : "text-ink-muted hover:text-ink")}>
             {k === "monthly" && <Repeat className="mr-1.5 inline size-3.5 -translate-y-px" />}{l}
           </button>
         ))}

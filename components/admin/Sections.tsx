@@ -26,7 +26,7 @@ import { TagShiftsTool } from "./TagShiftsTool";
 export type Section = "overview" | "pending" | "staff" | "shifts" | "inventory" | "events" | "statistics" | "pnl";
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
+  return <p className="empty-state">{children}</p>;
 }
 
 const rangeWords = rangeLabel;
@@ -73,7 +73,7 @@ function MismatchAlert({ go }: { go: (s: Section) => void }) {
   if (d.mismatchCount === 0) return null;
   const list = d.shifts.filter((s) => s.recon?.warn).slice(0, 4);
   return (
-    <div data-testid="mismatch-banner" className="rounded-card border border-warning/40 bg-warning-dim px-5 py-4 text-warning">
+    <div data-testid="mismatch-banner" className="alert-plate rounded-card px-5 py-4 text-warning">
       <button type="button" onClick={() => go("shifts")} className="flex w-full items-center gap-3 text-left">
         <AlertTriangle className="size-5 shrink-0" />
         <span className="flex-1 font-semibold">
@@ -101,9 +101,9 @@ function PendingAlert({ go }: { go: (s: Section) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   if (pending.length === 0) return null;
   return (
-    <div data-testid="pending-alert" className="rounded-card border border-edge/35 bg-edge-dim px-5 py-3 text-sm text-ink">
+    <div data-testid="pending-alert" className="alert-plate rounded-card px-5 py-3 text-sm text-ink">
       <button type="button" onClick={() => go("pending")} className="flex w-full items-center gap-3 py-1 text-left">
-        <UserCheck className="size-4" /> {fmtNum(pending.length)} signup{pending.length > 1 ? "s" : ""} waiting for approval
+        <span aria-hidden className="led" /><UserCheck className="size-4" /> {fmtNum(pending.length)} signup{pending.length > 1 ? "s" : ""} waiting for approval
         <ChevronRight className="ml-auto size-4" />
       </button>
       <ul className="mt-1 hidden flex-col divide-y divide-magenta/20 lg:flex">
@@ -252,7 +252,7 @@ export function StaffSection({ openHistory }: { openHistory: (uid: string) => vo
       aria-label={`Assigned event for ${r.name}`}
       value={r.assignedEventId ?? ""}
       onChange={(e) => changeAssignment(r.uid, e.target.value || null)}
-      className="h-9 max-w-[180px] rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink outline-none focus:border-magenta/70"
+      className="h-9 max-w-[180px] rounded-inner border border-white/[0.06] well px-3 text-sm text-ink outline-none focus:border-magenta/70"
     >
       <option value="">No event</option>
       {/* Only ACTIVE events can be assigned (keep showing the current one if it has ended). */}

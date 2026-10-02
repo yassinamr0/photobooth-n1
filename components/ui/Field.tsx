@@ -14,7 +14,7 @@ export function Field({
       <input
         id={id}
         className={cn(
-          "h-12 rounded-inner border border-line bg-surface-2 px-4 text-base text-ink",
+          "h-12 rounded-inner border border-white/[0.06] well px-4 text-base text-ink",
           "placeholder:text-ink-faint transition-colors outline-none",
           "hover:border-line-strong focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25",
           className,

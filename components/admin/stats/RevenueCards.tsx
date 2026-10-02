@@ -33,7 +33,7 @@ export function RevenueTrend({ scoped, raw, scope, range, scopeLabel, now }: {
         {cmp && <ComparisonChip c={cmp} />}
       </div>
       {scoped.overview.total === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No sales in this range.</p>
+        <p className="empty-state">No sales in this range.</p>
       ) : (
         <>
           <h4 className="mb-1 text-xs font-medium tracking-wide text-ink-faint uppercase">{GRAN[granularityFor(range)]} revenue</h4>
@@ -92,7 +92,7 @@ export function PaymentSplit({ scoped, range, scopeLabel, now }: { scoped: Scope
     <Card padding="lg" data-testid="stat-payment">
       <CardHeader title="Cash vs Visa" subtitle={`How customers paid · ${scopeLabel}`} />
       {paid === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No payments in this range.</p>
+        <p className="empty-state">No payments in this range.</p>
       ) : (
         <>
           <div className="mb-3 flex flex-wrap gap-6" data-testid="payment-split">
@@ -161,7 +161,7 @@ export function LocationComparison({ raw, scope, range, now, rangeLabel }: {
         subtitle={`Every location side by side · ${rangeLabel}${scope !== "global" ? " · selected location highlighted" : ""}`}
       />
       {rows.length === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">Create events to compare locations.</p>
+        <p className="empty-state">Create events to compare locations.</p>
       ) : (
         <div className="-mx-2 overflow-x-auto px-2">
           <table data-testid="locations-table" className="w-full min-w-[760px] text-left text-sm">

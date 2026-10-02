@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { CheckCircle2, CircleAlert, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 type Tone = "neutral" | "success" | "danger";
@@ -40,14 +41,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.key}
             role="status"
             className={cn(
-              "rounded-inner border px-5 py-3 text-sm font-semibold shadow-panel",
+              // Small glass pill with a tone icon.
+              "flex items-center gap-2.5 rounded-full border py-2.5 pr-5 pl-3.5 text-sm font-semibold backdrop-blur-xl",
+              "shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_18px_40px_-18px_rgb(0_0_0/0.9)]",
               "animate-[toast-in_160ms_ease-out] transition-[opacity,transform] duration-150 ease-in-out",
               toast.leaving && "translate-y-2 opacity-0",
-              toast.tone === "success" && "border-success/40 bg-success-dim text-success",
-              toast.tone === "danger" && "border-danger/40 bg-danger-dim text-danger",
-              toast.tone === "neutral" && "border-line-strong bg-surface-2 text-ink",
+              toast.tone === "success" && "border-success/35 bg-success-dim/85 text-success",
+              toast.tone === "danger" && "border-danger/40 bg-danger-dim/85 text-danger",
+              toast.tone === "neutral" && "border-white/[0.1] bg-surface-2/85 text-ink",
             )}
           >
+            {toast.tone === "success" ? <CheckCircle2 aria-hidden className="size-4 shrink-0" />
+              : toast.tone === "danger" ? <CircleAlert aria-hidden className="size-4 shrink-0" />
+              : <Info aria-hidden className="size-4 shrink-0 text-pearl" />}
             {toast.msg}
           </div>
         )}

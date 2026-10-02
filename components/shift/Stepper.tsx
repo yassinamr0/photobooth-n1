@@ -18,7 +18,7 @@ export function Stepper({
   tone?: "accent" | "pink";
 }) {
   const btn =
-    "grid size-14 shrink-0 place-items-center rounded-inner border border-line-strong bg-surface-2 text-ink " +
+    "grid size-14 shrink-0 place-items-center key rounded-inner border border-white/[0.08] bg-surface-2 text-ink " +
     "active:scale-95 transition-transform disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/60";
   return (
     <div className="flex items-center gap-3" role="group" aria-label={label}>
@@ -60,7 +60,7 @@ export function Chip({
       onClick={onClick}
       className={cn(
         "h-9 rounded-inner border px-3.5 text-sm font-semibold transition-colors",
-        active ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
+        active ? "key-primary border-transparent bg-maroon text-white" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
       )}
     >
       {children}
@@ -93,7 +93,7 @@ export function NumberInput({
       onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
       onFocus={(e) => e.target.select()}
       className={cn(
-        "h-12 w-full rounded-inner border border-line bg-surface-2 px-4 text-lg font-semibold tabular-nums text-ink outline-none",
+        "h-12 w-full rounded-inner border border-white/[0.06] well px-4 text-lg font-semibold tabular-nums text-ink outline-none",
         "focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25",
         tone === "cash" && "text-success",
         tone === "visa" && "text-info",

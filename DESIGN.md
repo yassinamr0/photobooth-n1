@@ -1,4 +1,4 @@
-# Design — "Contact sheet" (maroon edition)
+# Design — "Contact sheet" (maroon edition, machined)
 
 Booth Log looks like a photographer's contact sheet of the business: a darkroom-black
 proof sheet where every card is a numbered frame and colour tells you what a number is.
@@ -20,13 +20,29 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
 - No gradients anywhere (legacy `bg-accent-gradient` / `text-accent-gradient` utilities are
   solid maroon / pearl).
 
-## Frames
-- Every `Card` is a `frame`: 1px rule, 6px radius, two velvet-crimson registration corners
-  (top-left, bottom-right) drawn as crisp geometry. No shadows on cards; only floating
-  layers (toasts, sheets) get an offset + blur shadow.
-- Stat cells are "prints": a 3px top bar in the stat's meaning colour + a big condensed
-  numeral (tracking −0.01em) in the same colour; neutral counts use a grey bar and white numeral.
-- Radii: controls 4px, cards 6px, panels 8px. Round only for dots, spinners, badges.
+## Background
+- Plum-black canvas with ambient maroon light pooling from the top, a faint crimson bounce
+  bottom-right and a vignette (`ambient` utility on PanelFrame).
+- Reactive dot field (`components/layout/DotField.tsx`): a fine dot matrix like a light-table
+  grid. Admin: dots near the mouse brighten crimson→pearl with a lagged follow, a faint light
+  sweep crosses every ~12s, dots breathe slightly. Staff phones / reduced motion: static.
+  Canvas is fixed, aria-hidden, pointer-events none; paused when the tab is hidden.
+
+## Materials (taste: high-end-visual-design · emil · apple-design)
+- **plate** (every Card): translucent plate inside a machined double bezel — the shell ring is
+  box-shadow on the same element (no extra DOM). Crimson registration corners sit just inside
+  the curve. A soft crimson spotlight follows the mouse (`components/ui/Spotlight.tsx`).
+- **alert-plate**: maroon plate with a crimson leading spine; live alerts get a pulsing `led`.
+- **well**: recessed inputs, selects and segmented tracks.
+- **key / key-primary**: raised buttons with a light-catch edge and a lip; press sinks 1px.
+- Segmented controls: a maroon thumb slides under the selected tab (`components/ui/Segmented.tsx`).
+- KPI bento: hero gold Total tile (with a cash/Visa split bar), Cash and Visa medium tiles,
+  compact count tiles; each tile washed in its meaning colour with a Lucide icon.
+- Tables: header band; rows lift on hover with a crimson leading indicator.
+- Desktop admin header is a sticky glass bar (blur). Sheets dim + blur the page and rise on
+  the iOS drawer curve; popovers materialize (scale + blur); toasts are glass pills with icons.
+- Empty states: recessed panel with a lens mark. Loading: skeletons with a light sweep.
+- Radii: controls 4px, tiles 8px, cards 10px (+6px bezel), sheets 12–14px.
 
 ## Type
 - **Figtree** — UI text (15px base).

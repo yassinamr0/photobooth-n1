@@ -105,7 +105,7 @@ export function EndShiftDialog({
   }
 
   const timeInput =
-    "h-12 w-full rounded-inner border border-line bg-surface-2 px-4 text-lg font-semibold tabular-nums text-ink outline-none focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25 [color-scheme:dark]";
+    "h-12 w-full rounded-inner border border-white/[0.06] well px-4 text-lg font-semibold tabular-nums text-ink outline-none focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25 [color-scheme:dark]";
 
   return (
     <Sheet open={open} onClose={onClose} title="End shift" labelledBy="end-shift-title">

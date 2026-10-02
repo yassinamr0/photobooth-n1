@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, MapPin, Package, Trash2 } from "lucide-react";
+import { AlertTriangle, Banknote, CheckCircle2, ChevronDown, Coins, CreditCard, Frame, Layers, Magnet, MapPin, Package, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { applyShiftDeduction } from "@/lib/inventory/firestore";
 import { describeDeduction } from "@/lib/inventory/units";
@@ -27,39 +27,76 @@ export function MismatchIcon({ title = "Paper count mismatch" }: { title?: strin
 }
 
 /** The 7 stats (TOTAL · CASH · VISA · SHEETS · HADR · ACRYLIC · MAGNETIC). */
+// Tile tints carry the fixed meanings: gold total, green cash, blue visa, pink hadr; counts
+// stay neutral. Each tile is a ~6% wash of its colour + matching hairline (taste: bento
+// background diversity), with a light-catch top edge.
+const TONES = {
+  gold: { text: "text-gold", tile: "bg-gold/[0.06] border-gold/20" },
+  cash: { text: "text-success", tile: "bg-success/[0.06] border-success/20" },
+  visa: { text: "text-info", tile: "bg-info/[0.06] border-info/20" },
+  hadr: { text: "text-pink", tile: "bg-pink/[0.06] border-pink/20" },
+  ink: { text: "text-ink", tile: "bg-white/[0.025] border-white/[0.07]" },
+} as const;
+
 export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: "sm" | "lg" }) {
-  // [label, value, number colour, "print" bar colour] — fixed meanings: gold total,
-  // green cash, blue visa, pink hadr; counts stay paper-white on a neutral bar.
-  const cells: [string, number, string, string][] = [
-    ["Total EGP", totals.total, "text-gold", "border-t-gold"],
-    ["Cash", totals.cash, "text-success", "border-t-success"],
-    ["Visa", totals.visa, "text-info", "border-t-info"],
-    ["Sheets sold", totals.sheets, "text-ink", "border-t-line-strong"],
-    ["Hadr wasted", totals.hadr, "text-pink", "border-t-pink"],
-    ["Acrylic", totals.acrylic, "text-ink", "border-t-line-strong"],
-    ["Magnetic", totals.magnetic, "text-ink", "border-t-line-strong"],
+  const cells: { label: string; v: number; tone: keyof typeof TONES; icon: React.ReactNode; span: string }[] = [
+    { label: "Total EGP", v: totals.total, tone: "gold", icon: <Coins />, span: "col-span-2 sm:row-span-2" },
+    { label: "Cash", v: totals.cash, tone: "cash", icon: <Banknote />, span: "sm:col-span-2" },
+    { label: "Visa", v: totals.visa, tone: "visa", icon: <CreditCard />, span: "sm:col-span-2" },
+    { label: "Sheets sold", v: totals.sheets, tone: "ink", icon: <Layers />, span: "" },
+    { label: "Hadr wasted", v: totals.hadr, tone: "hadr", icon: <Trash2 />, span: "" },
+    { label: "Acrylic", v: totals.acrylic, tone: "ink", icon: <Frame />, span: "" },
+    { label: "Magnetic", v: totals.magnetic, tone: "ink", icon: <Magnet />, span: "" },
   ];
+  const lg = size === "lg";
+  const paid = totals.cash + totals.visa;
   return (
-    <div className={cn("develop-stagger grid gap-2", size === "lg" ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-7" : "grid-cols-4 sm:grid-cols-7 lg:grid-cols-4 2xl:grid-cols-7")}>
-      {cells.map(([label, v, color, bar], i) => (
-        <div
-          key={label}
-          className={cn(
-            "rounded-inner border border-line border-t-[3px] bg-surface-2 px-3",
-            bar,
-            size === "lg" ? "py-3.5" : "py-2",
-            size === "lg" && i === 0 && "col-span-2 bg-gold-dim/50 sm:col-span-2 xl:col-span-1",
-          )}
-        >
+    <div className={cn("develop-stagger grid gap-2.5", lg ? "grid-cols-2 sm:grid-cols-4 xl:grid-cols-6" : "grid-cols-4 sm:grid-cols-7 lg:grid-cols-4 2xl:grid-cols-7")}>
+      {cells.map(({ label, v, tone, icon, span }, i) => {
+        const hero = lg && i === 0;
+        return (
           <div
-            data-testid={`stat-${label.split(" ")[0].toLowerCase()}`}
-            className={cn("font-display font-semibold tracking-[-0.01em] tabular-nums leading-none", size === "lg" ? "text-[2rem]" : "text-[1.3rem]", color)}
+            key={label}
+            className={cn(
+              "relative flex flex-col overflow-hidden rounded-[8px] border shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]",
+              TONES[tone].tile,
+              lg ? "px-4 py-3.5" : "px-3 py-2",
+              lg && span,
+              hero && "justify-between gap-4 py-4",
+            )}
           >
-            {fmtNum(v)}
+            {lg && (
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[13px] font-medium text-ink-muted">{label}</span>
+                <span aria-hidden className={cn("opacity-80 [&_svg]:size-4", TONES[tone].text)}>{icon}</span>
+              </div>
+            )}
+            <div
+              data-testid={`stat-${label.split(" ")[0].toLowerCase()}`}
+              className={cn(
+                "font-display font-semibold tracking-[-0.01em] tabular-nums leading-none",
+                hero ? "text-[3.4rem] sm:text-[4rem]" : lg ? "text-[2rem]" : "text-[1.3rem]",
+                TONES[tone].text,
+              )}
+            >
+              {fmtNum(v)}
+            </div>
+            {!lg && <div className="mt-1.5 font-display text-[13px] font-medium tracking-[0.07em] text-ink-muted uppercase">{label}</div>}
+            {hero && (
+              // Cash vs Visa split of the total (decorative; the exact numbers sit beside it).
+              <div aria-hidden className="flex h-1.5 w-full gap-[2px] overflow-hidden rounded-full bg-white/[0.05]"
+                title={paid ? `Cash ${Math.round((totals.cash / paid) * 100)}% · Visa ${Math.round((totals.visa / paid) * 100)}%` : undefined}>
+                {paid > 0 && (
+                  <>
+                    <span className="h-full rounded-full bg-success" style={{ width: `${(totals.cash / paid) * 100}%` }} />
+                    <span className="h-full rounded-full bg-info" style={{ width: `${(totals.visa / paid) * 100}%` }} />
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          <div className="mt-1.5 font-display text-[13px] font-medium tracking-[0.07em] text-ink-muted uppercase">{label}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

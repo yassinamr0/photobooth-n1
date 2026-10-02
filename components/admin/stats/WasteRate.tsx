@@ -29,7 +29,7 @@ export function WasteRate({ shifts, range, scopeLabel, now }: { shifts: ScopedSh
     <Card padding="lg" data-testid="stat-waste">
       <CardHeader title="Waste rate" subtitle={`Hadr wasted as a share of all sheets used (sold + wasted) · ${scopeLabel}`} />
       {overall.used === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No sheets sold or wasted in this range.</p>
+        <p className="empty-state">No sheets sold or wasted in this range.</p>
       ) : (
         <div className="flex flex-col gap-4">
           <div>

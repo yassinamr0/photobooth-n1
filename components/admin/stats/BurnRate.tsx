@@ -25,7 +25,7 @@ export function BurnRate({ rows, global }: { rows: InventoryRow[]; global: boole
         subtitle={global ? "Every location · soonest to run out first" : `${rows[0]?.event.name ?? ""} · projected from the last 14 days`}
       />
       {burn.length === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No locations with inventory tracking yet.</p>
+        <p className="empty-state">No locations with inventory tracking yet.</p>
       ) : global ? (
         <div className="-mx-2 overflow-x-auto px-2">
           <table data-testid="burn-table" className="w-full min-w-[820px] text-left text-sm">

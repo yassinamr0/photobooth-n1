@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { SegThumb } from "@/components/ui/Segmented";
 import {
   customRange,
   dayKey,
@@ -22,7 +23,7 @@ const MODES: { id: CustomMode; label: string }[] = [
 ];
 
 const input =
-  "h-10 w-full min-w-0 rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
+  "h-10 w-full min-w-0 rounded-inner border border-white/[0.06] well px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
 const label = "mb-1.5 block text-xs font-medium tracking-wide text-ink-faint uppercase";
 
 /**
@@ -78,16 +79,17 @@ export function CustomRangePicker({
       role="dialog"
       aria-label="Custom date range"
       data-testid="custom-range"
-      className="absolute top-full right-0 left-0 z-30 mt-2 origin-top-right animate-pop rounded-card border border-line-strong bg-surface p-4 shadow-panel sm:left-auto sm:w-[400px]"
+      className="absolute top-full right-0 left-0 z-30 mt-2 origin-top-right animate-pop rounded-card border border-white/[0.09] bg-surface/95 p-4 backdrop-blur-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_0_0_5px_rgb(255_236_246/0.03),0_0_0_6px_rgb(255_236_246/0.07),0_30px_60px_-24px_rgb(0_0_0/0.9)] sm:left-auto sm:w-[400px]"
     >
-      <div role="tablist" aria-label="Custom range type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
+      <div role="tablist" aria-label="Custom range type" className="mb-4 flex gap-1 relative rounded-inner border border-white/[0.06] well p-1">
+        <SegThumb />
         {MODES.map((m) => (
           <button key={m.id} type="button" role="tab" aria-selected={mode === m.id} data-testid={`custom-mode-${m.id}`}
             onClick={() => {
               setMode(m.id);
               if (m.id === "range" && b < a) setB(a);
             }}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === m.id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", mode === m.id ? "text-white" : "text-ink-muted hover:text-ink")}>
             {m.label}
           </button>
         ))}

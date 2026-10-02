@@ -138,14 +138,14 @@ function StatusBar({
           aria-label="Remove one paper change"
           onClick={() => onPaperChange(-1)}
           disabled={shift.paperChanges <= 0}
-          className="grid size-12 shrink-0 place-items-center rounded-inner border border-line-strong bg-surface-2 text-ink active:scale-95 disabled:opacity-40"
+          className="grid size-12 shrink-0 place-items-center key rounded-inner border border-white/[0.08] bg-surface-2 text-ink active:scale-95 disabled:opacity-40"
         >
           <Minus className="size-5" />
         </button>
         <button
           type="button"
           onClick={() => onPaperChange(1)}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-inner border border-line-strong bg-surface-2 text-ink active:scale-[0.98]"
+          className="flex h-12 flex-1 items-center justify-center gap-2 key rounded-inner border border-white/[0.08] bg-surface-2 text-ink active:scale-[0.98]"
         >
           <Plus className="size-4 shrink-0" />
           <span className="flex flex-col items-start leading-tight">
@@ -163,14 +163,14 @@ function StatusBar({
           aria-label="Remove one ink change"
           onClick={() => onInkChange(-1)}
           disabled={(shift.inkChanges || 0) <= 0}
-          className="grid size-12 shrink-0 place-items-center rounded-inner border border-line-strong bg-surface-2 text-ink active:scale-95 disabled:opacity-40"
+          className="grid size-12 shrink-0 place-items-center key rounded-inner border border-white/[0.08] bg-surface-2 text-ink active:scale-95 disabled:opacity-40"
         >
           <Minus className="size-5" />
         </button>
         <button
           type="button"
           onClick={() => onInkChange(1)}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-inner border border-line-strong bg-surface-2 text-ink active:scale-[0.98]"
+          className="flex h-12 flex-1 items-center justify-center gap-2 key rounded-inner border border-white/[0.08] bg-surface-2 text-ink active:scale-[0.98]"
         >
           <Droplet className="size-4 shrink-0" />
           <span className="flex flex-col items-start leading-tight">

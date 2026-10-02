@@ -3,14 +3,15 @@ import { cn } from "@/lib/cn";
 
 export type TagTone = "neutral" | "accent" | "gold" | "success" | "warning" | "danger" | "info";
 
+// Refined chips: a ~7% wash of the tone colour, a matching hairline, a 3px radius.
 const tones: Record<TagTone, string> = {
-  neutral: "bg-surface-2 text-ink-muted border-line",
-  accent: "bg-edge-dim text-pearl border-crimson/50",
-  gold: "bg-gold-dim text-gold border-gold/35",
-  success: "bg-success-dim text-success border-success/35",
-  warning: "bg-warning-dim text-warning border-warning/35",
-  danger: "bg-danger-dim text-danger border-danger/40",
-  info: "bg-info-dim text-info border-info/35",
+  neutral: "bg-white/[0.04] text-ink-muted border-white/[0.08]",
+  accent: "bg-crimson/[0.12] text-pearl border-crimson/40",
+  gold: "bg-gold/[0.08] text-gold border-gold/30",
+  success: "bg-success/[0.08] text-success border-success/30",
+  warning: "bg-crimson/[0.12] text-warning border-crimson/40",
+  danger: "bg-danger/[0.08] text-danger border-danger/35",
+  info: "bg-info/[0.08] text-info border-info/30",
 };
 
 type TagProps = ComponentProps<"span"> & {
@@ -25,7 +26,7 @@ export function Tag({ tone = "neutral", dot, icon, className, children, ...props
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1.5 rounded-inner border px-2.5 text-xs font-semibold",
+        "inline-flex h-6 items-center gap-1.5 rounded-[3px] border px-2 text-xs font-semibold tracking-[0.01em]",
         "whitespace-nowrap [&_svg]:size-3.5",
         tones[tone],
         className,

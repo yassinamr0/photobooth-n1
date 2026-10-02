@@ -68,7 +68,7 @@ export function EventsSection() {
       <Card padding="lg">
         <CardHeader title="Events" subtitle={`${events.length} location${events.length === 1 ? "" : "s"} · the list the top switcher uses`} />
         {events.length === 0 ? (
-          <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">No events yet.</p>
+          <p className="empty-state">No events yet.</p>
         ) : (
           <ul className="flex flex-col gap-3 lg:gap-0 lg:divide-y lg:divide-line">
             {events.map((ev) => (

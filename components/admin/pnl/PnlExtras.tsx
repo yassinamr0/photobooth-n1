@@ -8,6 +8,7 @@ import { FormError } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { NumberInput } from "@/components/shift/Stepper";
 import { cn } from "@/lib/cn";
+import { SegThumb } from "@/components/ui/Segmented";
 import { firebase } from "@/lib/firebase/client";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { dayKey, parseDay } from "@/lib/admin/range";
@@ -24,11 +25,11 @@ import { usePnl } from "../DashboardData";
 const egp = (n: number) => formatEGP(Math.round(n));
 const dayText = (k: string) => parseDay(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const input =
-  "h-11 w-full min-w-0 rounded-inner border border-line bg-surface-2 px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
+  "h-11 w-full min-w-0 rounded-inner border border-white/[0.06] well px-3 text-sm text-ink outline-none [color-scheme:dark] focus:border-magenta/70";
 const lbl = "mb-1.5 block text-xs font-medium tracking-wide text-ink-faint uppercase";
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">{children}</p>;
+  return <p className="empty-state">{children}</p>;
 }
 
 /* ─────────────── Break-even ─────────────── */
@@ -205,10 +206,11 @@ export function FeesCard() {
     <Card padding="lg" data-testid="fees-card">
       <CardHeader title="Card machine fees" subtitle={<>Now: <b className="text-ink" data-testid="fee-now">{describeFee(current)}</b></>}
         action={<CreditCard className="size-5 text-ink-faint" />} />
-      <div role="tablist" aria-label="Fee type" className="mb-4 flex gap-1 rounded-inner border border-line bg-surface-2 p-1">
+      <div role="tablist" aria-label="Fee type" className="mb-4 flex gap-1 relative rounded-inner border border-white/[0.06] well p-1">
+        <SegThumb />
         {([["percent", "Percentage only"], ["percentPlusFixed", "Percentage + fixed"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={mode === k} data-testid={`fee-mode-${k}`} onClick={() => setMode(k)}
-            className={cn("h-8 flex-1 rounded-inner px-3 text-sm font-semibold", mode === k ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", mode === k ? "text-white" : "text-ink-muted hover:text-ink")}>
             {l}
           </button>
         ))}

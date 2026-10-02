@@ -71,8 +71,9 @@ export function LowStockBanner({ compact, onOpen }: { compact?: boolean; onOpen?
   const shown = showRead ? [...alerts, ...readAlerts] : alerts;
   return (
     <div data-testid="low-stock-banner" data-active={alerts.length > 0 || undefined}
-      className={cn("rounded-card border px-5 py-4", alerts.length > 0 ? "border-warning/40 bg-warning-dim" : "border-line bg-surface")}>
+      className={cn("rounded-card border px-5 py-4", alerts.length > 0 ? "alert-plate" : "plate border-white/[0.07]")}>
       <div className="flex items-center gap-3">
+        {alerts.length > 0 && <span aria-hidden className="led" />}
         <AlertTriangle className={cn("size-5 shrink-0", alerts.length > 0 ? "text-warning" : "text-ink-faint")} />
         <span className={cn("flex-1 font-semibold", alerts.length > 0 ? "text-warning" : "text-ink-muted")}>
           {alerts.length > 0 ? `Low stock (${alerts.length})` : "No new low-stock alerts"}
@@ -141,7 +142,7 @@ function PendingDeductions() {
   const [busy, setBusy] = useState(false);
   if (pending.length === 0 || !profile) return null;
   return (
-    <div data-testid="pending-deductions" className="rounded-card border border-warning/40 bg-warning-dim/60 px-5 py-4 text-sm">
+    <div data-testid="pending-deductions" className="alert-plate rounded-card px-5 py-4 text-sm">
       <p className="font-semibold text-warning">
         {pending.length} ended shift{pending.length === 1 ? "" : "s"} not yet deducted from stock
       </p>
@@ -191,7 +192,7 @@ function ComparisonTable({ rows }: { rows: InventoryRow[] }) {
     <Card padding="lg">
       <CardHeader title="All locations" subtitle="Side-by-side stock · pick an event in the switcher to restock or adjust" />
       {rows.length === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-8 text-center text-sm text-ink-faint">Create an event to start tracking inventory.</p>
+        <p className="empty-state">Create an event to start tracking inventory.</p>
       ) : (
         <div className="-mx-2 overflow-x-auto px-2">
           <table data-testid="inventory-table" className="w-full min-w-[760px] text-left text-sm">
@@ -420,7 +421,7 @@ function StockLogList({ logs, eventName }: { logs: StockLog[]; eventName: string
     <Card padding="lg">
       <CardHeader title="Stock history" subtitle={`${eventName} · most recent first`} />
       {logs.length === 0 ? (
-        <p className="rounded-inner border border-dashed border-line px-4 py-6 text-center text-sm text-ink-faint">No stock changes yet.</p>
+        <p className="empty-state">No stock changes yet.</p>
       ) : (
         <div className="-mx-2 overflow-x-auto px-2">
           <table data-testid="stock-log" className="w-full min-w-[640px] table-fixed text-left text-sm">

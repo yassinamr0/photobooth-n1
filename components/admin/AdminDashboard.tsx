@@ -6,6 +6,8 @@ import { Wallet, BarChart3, Boxes, CalendarClock, CalendarDays, ChevronDown, Lay
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { ToastProvider } from "@/components/ui/Toast";
+import { Spotlight } from "@/components/ui/Spotlight";
+import { SegThumb } from "@/components/ui/Segmented";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/cn";
@@ -21,6 +23,7 @@ import { PnlSection } from "./pnl/PnlSection";
 export function AdminDashboard() {
   return (
     <ToastProvider>
+      <Spotlight />
       <DashboardDataProvider>
         <DashboardInner />
       </DashboardDataProvider>
@@ -82,7 +85,11 @@ function DashboardInner() {
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 lg:gap-5">
         {/* Top bar — the switcher is ALWAYS visible, above every section.
             Desktop: greeting · switcher · logout in one row. */}
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <header className={cn("flex flex-col gap-4 lg:flex-row lg:items-center",
+          // Desktop: a translucent glass bar that stays put while content scrolls under it
+          // (apple-design materials) — same elements, same order.
+          "lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:px-8 lg:py-3 lg:bg-canvas/65 lg:backdrop-blur-xl lg:backdrop-saturate-150",
+          "lg:shadow-[0_1px_0_rgb(255_255_255/0.04),0_18px_30px_-24px_rgb(0_0_0/0.9)]")}>
           <div className="flex flex-wrap items-center justify-between gap-3 lg:contents">
             <div className="lg:order-1 lg:shrink-0">
               <h1 className="font-display text-[2.1rem] leading-none font-semibold tracking-[0.01em] lg:text-[1.9rem]">
@@ -97,7 +104,7 @@ function DashboardInner() {
             {NAV.map((n) => (
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-inner border px-4 text-sm font-semibold",
-                  section === n.id && !historyUid ? "border-ink bg-ink text-canvas" : "border-line text-ink-muted")}>
+                  section === n.id && !historyUid ? "key-primary border-transparent bg-maroon text-white" : "border-white/[0.08] bg-white/[0.02] text-ink-muted")}>
                 {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.id === "pnl" ? "P&L" : n.label}
               </button>
             ))}
@@ -161,15 +168,15 @@ function ScopeBar({ section }: { section: Section }) {
           ? null
           : undefined;
   return (
-    <div className="relative flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 lg:py-2" data-testid="scope-bar">
+    <div className="relative flex flex-wrap items-center gap-3 rounded-card border border-white/[0.07] bg-white/[0.025] px-4 py-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)] lg:py-2" data-testid="scope-bar">
       <label className="relative flex items-center">
         <span className="sr-only">Event scope</span>
-        <MapPin className="pointer-events-none absolute left-3 size-4 text-magenta" />
+        <span aria-hidden className="pointer-events-none absolute left-1.5 grid size-7 place-items-center rounded-full bg-maroon/60 shadow-[inset_0_1px_0_rgb(237_187_219/0.25)]"><MapPin className="size-3.5 text-pearl" /></span>
         <select
           data-testid="event-switcher"
           value={scope}
           onChange={(e) => setScope(e.target.value)}
-          className="h-10 appearance-none rounded-inner border border-line-strong bg-surface-2 pr-9 pl-9 font-semibold text-ink outline-none focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25"
+          className="h-10 appearance-none rounded-inner border border-white/[0.06] well pr-9 pl-11 font-semibold text-ink outline-none focus:border-magenta/70 focus:ring-2 focus:ring-magenta/25"
         >
           <option value="global">Global — all locations</option>
           {events.map((ev) => (
@@ -180,18 +187,19 @@ function ScopeBar({ section }: { section: Section }) {
         </select>
         <ChevronDown className="pointer-events-none absolute right-3 size-4 text-ink-faint" />
       </label>
-      <div role="tablist" aria-label="Date range" className="flex w-full gap-1 rounded-inner border border-line bg-surface-2 p-1 sm:w-auto">
+      <div role="tablist" aria-label="Date range" className="flex w-full gap-1 relative rounded-inner border border-white/[0.06] well p-1 sm:w-auto">
+        <SegThumb />
         {RANGES.map((r) => (
           <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
-            className={cn("h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-              range === r.id ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
+              range === r.id ? "text-white" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
             <span className="hidden sm:inline">{r.label}</span>
           </button>
         ))}
         <button type="button" role="tab" aria-selected={custom} data-testid="range-custom" onClick={() => setPicking((p) => !p)}
-          className={cn("flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-            custom ? "bg-ink text-canvas" : "text-ink-muted hover:text-ink")}>
+          className={cn("relative z-[1] flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
+            custom ? "text-white" : "text-ink-muted hover:text-ink")}>
           <CalendarDays className="size-3.5" />
           <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
         </button>

@@ -162,7 +162,7 @@ export function SaleCard({
         <div className="mt-2 flex gap-2">
           <input aria-label="Custom item name" placeholder="Item name" value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            className="h-12 min-w-0 flex-[2] rounded-inner border border-line bg-surface-2 px-3 text-ink outline-none focus:border-magenta/70" />
+            className="h-12 min-w-0 flex-[2] rounded-inner border border-white/[0.06] well px-3 text-ink outline-none focus:border-magenta/70" />
           <NumberInput id="custom-price" aria-label="Custom item price" placeholder="EGP" value={customPrice}
             onChange={setCustomPrice} className="flex-1" />
           <Button variant="secondary" size="lg" onClick={addCustom}

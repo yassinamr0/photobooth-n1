@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { DotField } from "./DotField";
 
 /**
  * The app's page frame: full-screen dark canvas, edge to edge.
@@ -26,11 +27,13 @@ export function PanelFrame({
   return (
     <div
       className={cn(
-        "relative flex min-h-dvh bg-canvas",
+        "ambient relative flex min-h-dvh",
         "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
         className,
       )}
     >
+      {/* Decorative background: animated on the admin dashboard, static on staff phones. */}
+      <DotField animated={variant === "dashboard"} />
       {variant === "dashboard" && sidebar}
       <main
         className={cn(
