@@ -30,7 +30,8 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
 - Reactive dot field (`components/layout/DotField.tsx`): a fine dot matrix like a light-table
   grid. Admin: dots near the mouse brighten crimson→pearl with a lagged follow, a faint light
   sweep crosses every ~12s, dots breathe slightly. Staff phones / reduced motion: static.
-  Canvas is fixed, aria-hidden, pointer-events none; paused when the tab is hidden.
+  Canvas is fixed, aria-hidden, pointer-events none; paused when the tab is hidden. Desktop
+  users can switch the animation off in the theme menu ("Background animation", per device).
 
 ## Materials (taste: high-end-visual-design · emil · apple-design)
 - **plate** (every Card): translucent plate inside a machined double bezel — the shell ring is

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { MOTION_EVENT, motionEnabled } from "@/lib/design/themes";
 
 /**
  * Background dot field: a fine dot matrix like a darkroom cutting mat / light-table grid.
@@ -20,6 +21,13 @@ const FRAME_MS = 1000 / 30;
 
 export function DotField({ animated }: { animated: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Desktop users can switch the pointer/sweep animation off in the theme menu.
+  const [motionOn, setMotionOn] = useState(motionEnabled);
+  useEffect(() => {
+    const on = () => setMotionOn(motionEnabled());
+    window.addEventListener(MOTION_EVENT, on);
+    return () => window.removeEventListener(MOTION_EVENT, on);
+  }, []);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -27,7 +35,7 @@ export function DotField({ animated }: { animated: boolean }) {
     if (!canvas || !ctx) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const live = animated && !reduce;
+    const live = animated && motionOn && !reduce;
     let w = 0;
     let h = 0;
     let raf = 0;
@@ -146,7 +154,7 @@ export function DotField({ animated }: { animated: boolean }) {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [animated]);
+  }, [animated, motionOn]);
 
   return <canvas ref={ref} aria-hidden data-testid="dot-field" className="pointer-events-none fixed inset-0 size-full print:hidden" />;
 }

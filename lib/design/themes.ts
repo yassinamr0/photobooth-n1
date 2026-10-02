@@ -13,3 +13,22 @@ export const THEME_KEY = "booth-theme";
 
 /** Runs before first paint (inlined in <head>) so a saved theme never flashes the default. */
 export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem("${THEME_KEY}");if(t&&t!=="${DEFAULT_THEME}")document.documentElement.dataset.theme=t}catch(e){}`;
+
+/** Background dot-field animation toggle (per device; on by default). */
+export const MOTION_KEY = "booth-bg-motion";
+export const MOTION_EVENT = "booth-bg-motion";
+export function motionEnabled(): boolean {
+  try {
+    return typeof window === "undefined" || localStorage.getItem(MOTION_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+export function setMotionEnabled(on: boolean) {
+  try {
+    localStorage.setItem(MOTION_KEY, on ? "on" : "off");
+  } catch {
+    /* private mode: applies for this visit only */
+  }
+  window.dispatchEvent(new Event(MOTION_EVENT));
+}

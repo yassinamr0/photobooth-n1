@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Palette } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { DEFAULT_THEME, THEMES, THEME_KEY, type ThemeId } from "@/lib/design/themes";
+import { DEFAULT_THEME, THEMES, THEME_KEY, motionEnabled, setMotionEnabled, type ThemeId } from "@/lib/design/themes";
 
 function readTheme(): ThemeId {
   if (typeof document === "undefined") return DEFAULT_THEME;
@@ -32,6 +32,7 @@ export function ThemePicker({ placement = "below", compact }: { placement?: "bel
   const [open, setOpen] = useState(false);
   // Nothing theme-dependent renders until the menu is opened, so reading on the client is safe.
   const [theme, setTheme] = useState<ThemeId>(readTheme);
+  const [motion, setMotion] = useState(motionEnabled);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,6 +101,28 @@ export function ThemePicker({ placement = "below", compact }: { placement?: "bel
               {theme === t.id && <Check className="size-4 text-accent-text" />}
             </button>
           ))}
+          {/* Background animation (the dot light that follows the mouse) — desktop only. */}
+          <div className="mt-1 hidden border-t border-line pt-1 md:block">
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={motion}
+              data-testid="bg-motion-toggle"
+              onClick={() => {
+                setMotionEnabled(!motion);
+                setMotion(!motion);
+              }}
+              className="flex w-full items-center gap-3 rounded-inner px-2.5 py-2 text-left hover:bg-surface-2"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink">Background animation</span>
+                <span className="block truncate text-xs text-ink-faint">Dots that light up under the mouse</span>
+              </span>
+              <span aria-hidden className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", motion ? "bg-primary" : "bg-line-strong")}>
+                <span className={cn("absolute top-0.5 left-0.5 size-4 rounded-full bg-canvas transition-transform duration-200", motion && "translate-x-4")} />
+              </span>
+            </button>
+          </div>
         </div>
       )}
     </div>
