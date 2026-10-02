@@ -78,8 +78,8 @@ export function PnlChart({ points }: { points: PnlPoint[] }) {
             <g key={p.key} data-testid="pnl-bar" tabIndex={p.revenue || p.expenses ? 0 : -1} className="outline-none"
               onMouseEnter={(e) => show(e, tip(p))} onFocus={(e) => show(e, tip(p))} onMouseLeave={hide} onBlur={hide}>
               <rect x={cx(i) - colW / 2} y={pad.t} width={colW} height={innerH} fill="transparent" />
-              {p.revenue > 0 && <path d={bar(cx(i) - barW - 1, y(p.revenue), barW, y(0) - y(p.revenue))} fill={PNL_COLORS.revenue} />}
-              {p.expenses > 0 && <path d={bar(cx(i) + 1, y(p.expenses), barW, y(0) - y(p.expenses))} fill={PNL_COLORS.expenses} />}
+              {p.revenue > 0 && <path d={bar(cx(i) - barW - 1, y(p.revenue), barW, y(0) - y(p.revenue))} fill={PNL_COLORS.revenue} className="bar-grow" />}
+              {p.expenses > 0 && <path d={bar(cx(i) + 1, y(p.expenses), barW, y(0) - y(p.expenses))} fill={PNL_COLORS.expenses} className="bar-grow" />}
               <text x={cx(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-ink-faint)">
                 {i % labelEvery === 0 ? p.label : ""}
               </text>

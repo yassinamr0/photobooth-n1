@@ -192,7 +192,7 @@ function StatusBar({
 
 function SummaryGrid({ totals }: { totals: ShiftTotals }) {
   const cell = "rounded-inner border border-line border-t-[3px] border-t-line-strong bg-surface-2 px-3 py-2.5";
-  const v = "font-display text-[1.6rem] leading-none font-semibold tabular-nums";
+  const v = "font-display text-[1.6rem] leading-none font-semibold tracking-[-0.01em] tabular-nums";
   const l = "mt-1 font-display text-[13px] font-medium tracking-[0.07em] text-ink-muted uppercase";
   return (
     <div className="mt-3 grid grid-cols-2 gap-2" data-testid="shift-summary-grid">

@@ -5,17 +5,17 @@
  * Chart colors are mirrored in lib/design/chart.ts — keep the two in sync.
  */
 @theme {
-  /* Darkroom: warm neutral blacks (not blue/purple), a proof sheet under a safelight */
-  --color-canvas: #100f0d;
-  --color-surface: #191815;
-  --color-surface-2: #22201c;
-  --color-line: #2e2b26;
-  --color-line-strong: #433e36;
+  /* Darkroom blacks with a plum undertone, so they sit in the maroon/crimson family */
+  --color-canvas: #0f0c0e;
+  --color-surface: #181316;
+  --color-surface-2: #21191d;
+  --color-line: #33272d;
+  --color-line-strong: #4a3a42;
 
-  /* Text — warm photo-paper white */
-  --color-ink: #f4efe6;
-  --color-ink-muted: #b5ad9f;
-  --color-ink-faint: #7f786c;
+  /* Text — pearl-tinted whites (all ≥ 4.5:1 on surface and raised) */
+  --color-ink: #f6eff3;
+  --color-ink-muted: #b9a9b2;
+  --color-ink-faint: #937f8b;
 
   /* Brand chrome (owner: maroon instead of orange):
      maroon = fills (primary buttons, active nav) · velvet crimson = frame corners, borders,
@@ -24,7 +24,7 @@
   --color-crimson: #a64d79;
   --color-pearl: #edbbdb;
   --color-edge: #a64d79; /* frame registration corners, focus */
-  --color-edge-dim: #2a1420; /* maroon-tinted containers */
+  --color-edge-dim: #2d1421; /* maroon-tinted containers */
   /* legacy accent names now point at the brand chrome */
   --color-violet: #6a1b3a;
   --color-magenta: #a64d79;
@@ -51,9 +51,9 @@
   --color-chart-3: #ff4d8d;
   --color-chart-4: #4ade80;
   --color-chart-5: #5b9cff;
-  --color-chart-6: #b5ad9f;
-  --color-chart-track: #2a2723;
-  --color-chart-grid: #26231f;
+  --color-chart-6: #b9a9b2;
+  --color-chart-track: #2b2126;
+  --color-chart-grid: #271e23;
 
   /* Square-cut frames, small controls only slightly softened */
   --radius-inner: 4px;
@@ -114,15 +114,30 @@
   & > :nth-child(7) { animation-delay: 240ms; }
 }
 
-/* Contact-sheet frame: 1px rule + film-edge registration corners (crisp geometry). */
+/* Film grain: a real raster noise tile (public/grain.png, ~6% strength), painted as a
+   BACKGROUND layer so text and controls sit on top of it and it can never catch a tap. */
+@utility grain {
+  background-image: url("/grain.png");
+  background-size: 128px 128px;
+}
+
+/* Contact-sheet frame: 1px rule + crimson registration corners (crisp geometry) + grain. */
 @utility frame {
   position: relative;
   background-image:
     linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge));
-  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
-  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px);
-  background-repeat: no-repeat;
+    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
+    url("/grain.png");
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 128px 128px;
+  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px), 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+}
+
+@media print {
+  .grain,
+  .frame {
+    background-image: none;
+  }
 }
 
 html {
@@ -175,12 +190,72 @@ select {
   outline-color: var(--color-edge);
 }
 
+/* Reduced motion: no movement (no scale, slide, grow or blur), but fades stay so state
+   changes are still never abrupt. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
+    animation-name: fade !important;
+    transition-property: color, background-color, border-color, opacity !important;
+  }
+  button:not(:disabled):active,
+  [role="button"]:active {
+    transform: none;
+  }
+  .skeleton {
     animation: none !important;
-    transition: none !important;
+  }
+  /* A spinner's turn is the feedback itself, so it keeps turning. */
+  .animate-spin {
+    animation-name: spin !important;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Chart bars rise from the baseline once, when the chart first mounts (not on re-render). */
+@keyframes bar-grow {
+  from {
+    opacity: 0;
+    transform: scaleY(0.15);
+  }
+}
+
+.bar-grow {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: bar-grow 260ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Loading placeholders shaped like the content that is coming (no full-page spinner). */
+@keyframes skeleton {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton {
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+
+/* Data tables: the row under the pointer lifts slightly so the eye can follow it across. */
+@media (hover: hover) and (pointer: fine) {
+  table[data-testid] tbody tr:hover > td,
+  table[data-testid] tbody tr:hover > th {
+    background-color: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
   }
 }
 

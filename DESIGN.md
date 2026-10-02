@@ -5,9 +5,13 @@ proof sheet where every card is a numbered frame and colour tells you what a num
 Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.ts`.
 
 ## Colour
-- **Ground:** warm darkroom blacks — canvas `#100f0d`, surface `#191815`, raised `#22201c`,
-  rules `#2e2b26` / `#433e36`. Text is photo-paper white `#f4efe6`, muted `#b5ad9f`,
-  faint `#7f786c`. Never blue/purple-tinted greys.
+- **Ground:** plum-tinted darkroom blacks, so the neutrals sit in the same family as the
+  maroon/crimson chrome (the earlier bronze blacks clashed with it) — canvas `#0f0c0e`,
+  surface `#181316`, raised `#21191d`, rules `#33272d` / `#4a3a42`. Text is pearl-white
+  `#f6eff3`, muted `#b9a9b2`, faint `#937f8b`. Never warm/bronze or blue greys.
+- **Film grain:** a real raster noise tile (`public/grain.png`, 128px) painted as a
+  background layer on the page, the sidebar and every frame (`grain` utility, built into
+  `frame`). Never an overlay that could catch taps; never SVG/feTurbulence; off for print.
 - **Brand chrome (owner's change: maroon replaced the film-edge orange):** Maroon `#6a1b3a`
   fills primary buttons and the active menu item; Velvet Crimson `#a64d79` draws frame
   registration corners, borders, hover and focus; Pearl Pink `#edbbdb` is the readable accent
@@ -24,7 +28,7 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
   (top-left, bottom-right) drawn as crisp geometry. No shadows on cards; only floating
   layers (toasts, sheets) get an offset + blur shadow.
 - Stat cells are "prints": a 3px top bar in the stat's meaning colour + a big condensed
-  numeral in the same colour; neutral counts use a grey bar and white numeral.
+  numeral (tracking −0.01em) in the same colour; neutral counts use a grey bar and white numeral.
 - Radii: controls 4px, cards 6px, panels 8px. Round only for dots, spinners, badges.
 
 ## Type
@@ -37,8 +41,14 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
   (`animate-develop`, 180ms, `cubic-bezier(0.23,1,0.32,1)`) on section switch, opening a
   shift or a date group, and the staff screen; stat prints cascade 40ms apart.
 - Popovers (date picker) scale in from their trigger (0.97 + fade, 160ms).
+- Toasts rise in from below and leave the same way (transition, 160ms).
+- Chart bars rise from the baseline once on mount (260ms); chart tooltips fade in the first
+  time, then re-point instantly while moving across adjacent bars.
+- Loading shows skeleton blocks shaped like the coming layout, never a full-page spinner.
+- Data-table rows lift on hover (pointer devices only).
 - Every pressable element presses to `scale(0.97)`; colour transitions 150ms; hover only on
-  real pointers. All motion off under `prefers-reduced-motion`.
+  real pointers. Under `prefers-reduced-motion` all movement (scale, slide, grow, blur) is
+  removed but fades stay.
 
 ## Icons
 Lucide only, one stroke weight. No text glyphs as icons.

@@ -8,13 +8,13 @@ export const chartSeries = [
   "#ff4d8d", // pink (hadr)
   "#4ade80", // green (cash)
   "#5b9cff", // blue (visa)
-  "#b5ad9f", // paper grey
+  "#b9a9b2", // pearl grey
 ] as const;
 
 export const chartColors = {
-  track: "#2a2723",
-  grid: "#26231f",
-  axisText: "#7f786c",
+  track: "#2b2126",
+  grid: "#271e23",
+  axisText: "#937f8b",
   hatchBase: "#2a1420",
   hatchStroke: "#a64d79",
 } as const;

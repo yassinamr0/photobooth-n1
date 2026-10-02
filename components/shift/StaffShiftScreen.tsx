@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ClipboardCopy } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
-import { Spinner } from "@/components/ui/Button";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -116,7 +115,10 @@ function ShiftScreenInner() {
       </header>
 
       {shift === undefined ? (
-        <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-magenta" /></div>
+        <div aria-busy="true" aria-label="Loading" className="flex flex-col gap-4">
+          <div className="skeleton h-64" />
+          <div className="skeleton h-96" />
+        </div>
       ) : (
         // LOCKED ORDER (SPEC Phase 3) — do not rearrange:
         // 1 Your shift (status bar + summary) · 2 New sale · 3 Waste · 4 This shift · 5 Copy summary

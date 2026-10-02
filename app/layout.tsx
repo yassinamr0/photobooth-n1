@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#100f0d",
+  themeColor: "#0f0c0e",
   width: "device-width",
   initialScale: 1,
   // Content can extend under the iPhone notch/home bar when installed full-screen.

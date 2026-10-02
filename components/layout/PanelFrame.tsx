@@ -26,7 +26,7 @@ export function PanelFrame({
   return (
     <div
       className={cn(
-        "relative flex min-h-dvh bg-canvas",
+        "grain relative flex min-h-dvh bg-canvas",
         "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
         className,
       )}

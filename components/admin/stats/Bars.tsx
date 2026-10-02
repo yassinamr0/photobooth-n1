@@ -74,6 +74,7 @@ export function Bars({
             >
               {/* generous hit target */}
               <rect x={cx - colW / 2} y={pad.t} width={colW} height={innerH} fill="transparent" />
+              <g className="bar-grow">
               {series.map((s, si) => {
                 const v = d.values[s.key] || 0;
                 if (v <= 0) return null;
@@ -85,6 +86,7 @@ export function Bars({
                   <path key={s.key} d={barPath(cx - barW / 2, top, barW, Math.max(1, h), isTop ? 4 : 0)} fill={s.fill} />
                 );
               })}
+              </g>
               <text x={cx} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-ink-faint)">
                 {i % labelEvery === 0 ? d.label : ""}
               </text>

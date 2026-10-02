@@ -53,7 +53,7 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
         >
           <div
             data-testid={`stat-${label.split(" ")[0].toLowerCase()}`}
-            className={cn("font-display font-semibold tabular-nums leading-none", size === "lg" ? "text-[2rem]" : "text-[1.3rem]", color)}
+            className={cn("font-display font-semibold tracking-[-0.01em] tabular-nums leading-none", size === "lg" ? "text-[2rem]" : "text-[1.3rem]", color)}
           >
             {fmtNum(v)}
           </div>

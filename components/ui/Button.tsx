@@ -24,7 +24,7 @@ const base =
 const variants: Record<ButtonVariant, string> = {
   primary:
     "bg-maroon text-white hover:bg-crimson",
-  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#2a2723]",
+  secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-[#2b2126]",
   // pill colors depend on `selected`; see pillStates
   pill: "border",
   danger: "bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",

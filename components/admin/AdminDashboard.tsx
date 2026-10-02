@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Wallet, BarChart3, Boxes, CalendarClock, CalendarDays, ChevronDown, LayoutGrid, MapPin, UserCheck, Users } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
-import { Spinner } from "@/components/ui/Button";
 import { ToastProvider } from "@/components/ui/Toast";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -110,7 +109,13 @@ function DashboardInner() {
         {/* Re-keyed per section: each switch "develops" in, like a print in the tray. */}
         <div key={historyUid ? `history-${historyUid}` : section} className="animate-develop">
           {!loaded ? (
-            <div className="grid place-items-center py-24"><Spinner className="size-8 border-[3px] text-magenta" /></div>
+            <div aria-busy="true" aria-label="Loading" className="flex flex-col gap-5">
+              <div className="skeleton h-36" />
+              <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+                <div className="skeleton h-80" />
+                <div className="skeleton h-40" />
+              </div>
+            </div>
           ) : historyUid ? (
             <StaffHistoryView uid={historyUid} back={() => setHistoryUid(null)} />
           ) : section === "overview" ? (
