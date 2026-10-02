@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { SPOTLIGHT_EVENT, spotlightEnabled } from "@/lib/design/themes";
 
 /**
  * Pointer spotlight for card plates (taste: "Spotlight Border Card"). One passive
@@ -9,8 +10,15 @@ import { useEffect } from "react";
  * skipped for touch and reduced motion. Renders nothing.
  */
 export function Spotlight() {
+  // Can be switched off per device in the theme menu.
+  const [on, setOn] = useState(spotlightEnabled);
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const sync = () => setOn(spotlightEnabled());
+    window.addEventListener(SPOTLIGHT_EVENT, sync);
+    return () => window.removeEventListener(SPOTLIGHT_EVENT, sync);
+  }, []);
+  useEffect(() => {
+    if (!on || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let current: HTMLElement | null = null;
     let raf = 0;
     let lastEvent: PointerEvent | null = null;
@@ -44,6 +52,6 @@ export function Spotlight() {
       document.documentElement.removeEventListener("pointerleave", clear);
       clear();
     };
-  }, []);
+  }, [on]);
   return null;
 }

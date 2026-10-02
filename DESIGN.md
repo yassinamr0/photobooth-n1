@@ -35,7 +35,7 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
 
 ## Materials (taste: high-end-visual-design · emil · apple-design)
 - **plate** (every Card): translucent plate inside a machined double bezel — the shell ring is
-  box-shadow on the same element (no extra DOM). A soft accent-coloured spotlight follows the mouse (`components/ui/Spotlight.tsx`).
+  box-shadow on the same element (no extra DOM). A soft accent-coloured spotlight follows the mouse (`components/ui/Spotlight.tsx`); switchable per device in the theme menu ("Card light").
 - **alert-plate**: warning-tinted plate with a warning-colour leading spine; live alerts get a pulsing `led`.
 - **well**: recessed inputs, selects and segmented tracks.
 - **key / key-primary**: raised buttons with a light-catch edge and a lip; press sinks 1px.

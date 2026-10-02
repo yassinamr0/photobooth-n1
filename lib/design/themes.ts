@@ -32,3 +32,22 @@ export function setMotionEnabled(on: boolean) {
   }
   window.dispatchEvent(new Event(MOTION_EVENT));
 }
+
+/** Card spotlight (the soft light that follows the mouse over cards) toggle — same pattern. */
+export const SPOTLIGHT_KEY = "booth-spotlight";
+export const SPOTLIGHT_EVENT = "booth-spotlight";
+export function spotlightEnabled(): boolean {
+  try {
+    return typeof window === "undefined" || localStorage.getItem(SPOTLIGHT_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+export function setSpotlightEnabled(on: boolean) {
+  try {
+    localStorage.setItem(SPOTLIGHT_KEY, on ? "on" : "off");
+  } catch {
+    /* private mode: applies for this visit only */
+  }
+  window.dispatchEvent(new Event(SPOTLIGHT_EVENT));
+}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Palette } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { DEFAULT_THEME, THEMES, THEME_KEY, motionEnabled, setMotionEnabled, type ThemeId } from "@/lib/design/themes";
+import { DEFAULT_THEME, THEMES, THEME_KEY, motionEnabled, setMotionEnabled, setSpotlightEnabled, spotlightEnabled, type ThemeId } from "@/lib/design/themes";
 
 function readTheme(): ThemeId {
   if (typeof document === "undefined") return DEFAULT_THEME;
@@ -33,6 +33,7 @@ export function ThemePicker({ placement = "below", compact }: { placement?: "bel
   // Nothing theme-dependent renders until the menu is opened, so reading on the client is safe.
   const [theme, setTheme] = useState<ThemeId>(readTheme);
   const [motion, setMotion] = useState(motionEnabled);
+  const [spot, setSpot] = useState(spotlightEnabled);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function ThemePicker({ placement = "below", compact }: { placement?: "bel
           role="menu"
           aria-label="Choose a theme"
           className={cn(
-            "absolute z-40 w-60 animate-pop rounded-card border border-white/[0.09] bg-surface/95 p-1.5 backdrop-blur-xl",
+            "absolute z-40 w-64 animate-pop rounded-card border border-white/[0.09] bg-surface/95 p-1.5 backdrop-blur-xl",
             "shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_0_0_5px_rgb(255_255_255/0.03),0_0_0_6px_rgb(255_255_255/0.07),0_30px_60px_-24px_rgb(0_0_0/0.9)]",
             placement === "side" ? "bottom-0 left-full ml-3 origin-bottom-left" : "top-full right-0 mt-2 origin-top-right",
           )}
@@ -101,30 +102,36 @@ export function ThemePicker({ placement = "below", compact }: { placement?: "bel
               {theme === t.id && <Check className="size-4 text-accent-text" />}
             </button>
           ))}
-          {/* Background animation (the dot light that follows the mouse) — desktop only. */}
+          {/* Desktop-only effects that follow the mouse. */}
           <div className="mt-1 hidden border-t border-line pt-1 md:block">
-            <button
-              type="button"
-              role="menuitemcheckbox"
-              aria-checked={motion}
-              data-testid="bg-motion-toggle"
-              onClick={() => {
-                setMotionEnabled(!motion);
-                setMotion(!motion);
-              }}
-              className="flex w-full items-center gap-3 rounded-inner px-2.5 py-2 text-left hover:bg-surface-2"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-ink">Background animation</span>
-                <span className="block truncate text-xs text-ink-faint">Dots that light up under the mouse</span>
-              </span>
-              <span aria-hidden className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", motion ? "bg-primary" : "bg-line-strong")}>
-                <span className={cn("absolute top-0.5 left-0.5 size-4 rounded-full bg-canvas transition-transform duration-200", motion && "translate-x-4")} />
-              </span>
-            </button>
+            <Toggle testid="spotlight-toggle" label="Card light" note="Soft light that follows the mouse over cards" on={spot}
+              onChange={(v) => { setSpotlightEnabled(v); setSpot(v); }} />
+            <Toggle testid="bg-motion-toggle" label="Background animation" note="Dots that light up under the mouse" on={motion}
+              onChange={(v) => { setMotionEnabled(v); setMotion(v); }} />
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function Toggle({ label, note, on, onChange, testid }: { label: string; note: string; on: boolean; onChange: (v: boolean) => void; testid: string }) {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={on}
+      data-testid={testid}
+      onClick={() => onChange(!on)}
+      className="flex w-full items-center gap-3 rounded-inner px-2.5 py-2 text-left hover:bg-surface-2"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span className="block truncate text-xs text-ink-faint">{note}</span>
+      </span>
+      <span aria-hidden className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", on ? "bg-primary" : "bg-line-strong")}>
+        <span className={cn("absolute top-0.5 left-0.5 size-4 rounded-full bg-canvas transition-transform duration-200", on && "translate-x-4")} />
+      </span>
+    </button>
   );
 }
