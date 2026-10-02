@@ -49,7 +49,7 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
   const missing = items.some((i) => i.materialsMissing);
   return (
     <Card padding="lg" data-testid="pnl-breakeven">
-      <CardHeader title="Break-even" subtitle={`What each location needs a day to cover its costs · ${label}`} />
+      <CardHeader title="Break-even" subtitle={`How much each location has to sell a day to pay for itself · ${label}`} />
       {items.length === 0 ? (
         <Empty>{scope !== "global" && ended.has(scope) ? "This event has ended — break-even isn't shown." : "No active locations."}</Empty>
       ) : (
@@ -59,9 +59,9 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
       )}
       <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />
-        Fixed costs = your expenses (monthly ones spread per day) averaged over the days in this range up to today. Materials and
-        card fees grow with sales, so they&apos;re counted as a share of revenue.
-        {missing && " Product costs aren't fully set yet, so materials are left out where missing."}
+        &quot;Needs&quot; = your fixed costs per day (rent, salaries, other expenses — monthly ones spread over the month), plus
+        enough extra to cover paper, ink and card fees on those sales. If a location sells more than that a day, it&apos;s profitable.
+        {missing && " Some product costs aren't set yet, so paper/ink are left out where missing."}
       </p>
     </Card>
   );
@@ -69,39 +69,58 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
 
 function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total: boolean }) {
   const need = be.breakEvenPerDay;
-  const ratio = need && need > 0 ? Math.min(1.5, be.avgPerDay / need) : be.avgPerDay > 0 ? 1.5 : 0;
   const ok = be.covered === true;
+  const none = be.covered === null;
+  // Progress toward the daily goal (capped at the goal; the surplus is shown as text).
+  const progress = need && need > 0 ? Math.min(1, be.avgPerDay / need) : be.avgPerDay > 0 ? 1 : 0;
+  const gap = need != null ? be.avgPerDay - need : 0;
   return (
-    <li data-testid="breakeven-row" data-covered={ok || undefined} className={cn("py-3", total && "font-medium")}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+    <li data-testid="breakeven-row" data-covered={ok || undefined} className={cn("py-4", total && "rounded-[8px] bg-white/[0.02] px-3")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold text-ink">{name}</span>
-        <span className="text-ink-muted">
-          {need == null ? (
-            <span className="text-danger">Materials + card fees take all revenue — can&apos;t break even</span>
-          ) : (
-            <>
-              needs <b data-testid="breakeven-need" className="text-ink tabular-nums">{egp(need)}</b>/day · averaging{" "}
-              <b className="text-ink tabular-nums">{egp(be.avgPerDay)}</b>/day
-            </>
-          )}
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+          none ? "bg-white/[0.04] text-ink-faint" : ok ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
+          {none ? "No costs or sales yet"
+            : ok ? <><CheckCircle2 className="size-3.5" /> Profitable · {egp(gap)}/day above</>
+              : need == null ? <><AlertTriangle className="size-3.5" /> Costs take all the money</>
+                : <><AlertTriangle className="size-3.5" /> Losing · {egp(-gap)}/day short</>}
         </span>
       </div>
-      <div className="mt-2 flex items-center gap-3">
-        <div className="relative h-2 flex-1 overflow-hidden rounded-[1px] bg-chart-track">
-          <div className={cn("h-full rounded-[1px]", ok ? "bg-success" : "bg-danger")} style={{ width: `${(ratio / 1.5) * 100}%` }} />
-          <div aria-hidden className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(1 / 1.5) * 100}%` }} />
-        </div>
-        <span className={cn("flex w-40 shrink-0 items-center justify-end gap-1 text-xs font-semibold",
-          be.covered === null ? "text-ink-faint" : ok ? "text-success" : "text-danger")}>
-          {be.covered === null ? "No costs or sales yet" : ok ? <><CheckCircle2 className="size-3.5" /> Covering costs</> : need != null && (
-            <><AlertTriangle className="size-3.5" /> Short {egp(need - be.avgPerDay)}/day</>
-          )}
-        </span>
-      </div>
-      <p className="mt-1 text-xs text-ink-faint">
-        Fixed {egp(be.fixedPerDay)}/day · materials + card fees {be.variableShare == null ? "—" : pct(be.variableShare)} of sales
-        {be.printsPerDay != null && ` · ≈ ${fmtNum(Math.ceil(be.printsPerDay))} prints' worth a day`} · {fmtNum(be.days)} day{be.days === 1 ? "" : "s"}
-      </p>
+
+      {need == null ? (
+        <p className="mt-2 text-sm text-danger">Paper, ink and card fees cost more than the sales bring in, so no amount of sales covers the costs.</p>
+      ) : (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-ink-faint">Needs to sell</div>
+              <div className="font-display text-xl font-bold tabular-nums text-ink"><span data-testid="breakeven-need">{egp(need)}</span><span className="text-sm font-medium text-ink-muted"> /day</span></div>
+              {be.printsPerDay != null && need > 0 && <div className="text-xs text-ink-faint">≈ {fmtNum(Math.ceil(be.printsPerDay))} half-sheet print{Math.ceil(be.printsPerDay) === 1 ? "" : "s"} a day</div>}
+            </div>
+            <div>
+              <div className="text-xs text-ink-faint">Actually selling</div>
+              <div className={cn("font-display text-xl font-bold tabular-nums", none ? "text-ink" : ok ? "text-success" : "text-danger")}>
+                {egp(be.avgPerDay)}<span className="text-sm font-medium text-ink-muted"> /day</span>
+              </div>
+              <div className="text-xs text-ink-faint">average over {fmtNum(be.days)} day{be.days === 1 ? "" : "s"}</div>
+            </div>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-chart-track" aria-hidden>
+            <div className={cn("h-full rounded-full", none ? "bg-line-strong" : ok ? "bg-success" : "bg-danger")} style={{ width: `${progress * 100}%` }} />
+          </div>
+          <div className="mt-1 flex justify-between text-[11px] text-ink-faint">
+            <span>0</span>
+            <span>{ok ? "goal reached" : `${Math.round(progress * 100)}% of the goal`}</span>
+          </div>
+        </>
+      )}
+      <details className="mt-2 text-xs text-ink-faint">
+        <summary className="cursor-pointer select-none hover:text-ink-muted">How this is worked out</summary>
+        <p className="mt-1.5 leading-relaxed">
+          Fixed costs: {egp(be.fixedPerDay)} a day. Paper, ink and card fees: {be.variableShare == null ? "not known yet (no sales)" : `${pct(be.variableShare)} of every sale`}.
+          So the booth has to sell {need == null ? "more than it ever can" : `${egp(need)} a day`} to cover both.
+        </p>
+      </details>
     </li>
   );
 }

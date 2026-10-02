@@ -25,6 +25,7 @@ import {
 import { CATEGORY_LABEL, EXPENSE_CATEGORIES, type Expense, type ExpenseCategory, type RecurringExpense } from "@/lib/pnl/types";
 import { useDashboardScope, usePnl } from "../DashboardData";
 import { PnlChart } from "./PnlChart";
+import { ExpenseDonut } from "./ExpenseDonut";
 
 /** Whole pounds for display (spread rent produces fractions). */
 const egp = (n: number) => formatEGP(Math.round(n));
@@ -142,35 +143,41 @@ function Compare({ s }: { s: PnlSummary }) {
 }
 
 /* ─────────────── Expenses by category ─────────────── */
+// Expenses are "money out" (red family): one warm ramp so the slices read as one meaning,
+// the legend carries the exact numbers.
+const SLICE_COLORS = ["#ff5c6c", "#ff9a6b", "#f5c06a", "#d9667f", "#a8505c", "#ffb3ba", "#7d3a44"];
+
 function Categories({ s }: { s: PnlSummary }) {
   const cats = ([...EXPENSE_CATEGORIES, "cardFees"] as PnlCategory[])
     .map((c) => ({ c, v: s.expenses.byCategory[c] }))
     .filter((x) => x.v > 0.004)
     .sort((a, b) => b.v - a.v);
-  const max = Math.max(1, ...cats.map((x) => x.v));
+  const slices = cats.map(({ c, v }, i) => ({
+    key: c, value: v, color: SLICE_COLORS[i % SLICE_COLORS.length],
+    label: c === "cardFees" ? "Card fees" : CATEGORY_LABEL[c],
+  }));
   return (
     <Card padding="lg" data-testid="pnl-categories">
       <CardHeader title="Expenses by category" subtitle={`Total ${egp(s.expenses.total)}`} />
       {cats.length === 0 ? (
         <Empty>No expenses in this range.</Empty>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {cats.map(({ c, v }) => (
-            <li key={c} data-testid="pnl-category">
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="text-ink">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+          <ExpenseDonut slices={slices} total={s.expenses.total} centerLabel={egp(s.expenses.total)} />
+          <ul className="flex w-full min-w-0 flex-1 flex-col gap-2.5">
+            {cats.map(({ c, v }, i) => (
+              <li key={c} data-testid="pnl-category" className="flex items-center gap-3 text-sm">
+                <span aria-hidden className="size-3 shrink-0 rounded-[3px]" style={{ background: slices[i].color }} />
+                <span className="min-w-0 flex-1 truncate text-ink">
                   {c === "cardFees" ? <>Card fees <span className="text-xs text-ink-faint">(automatic)</span></> : CATEGORY_LABEL[c]}
                 </span>
-                <span className="tabular-nums text-ink-muted">
+                <span className="shrink-0 tabular-nums text-ink-muted">
                   <b className="font-semibold text-ink">{egp(v)}</b> · {pct(v / s.expenses.total)}
                 </span>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-[1px] bg-chart-track">
-                <div className="h-full rounded-[1px]" style={{ width: `${(v / max) * 100}%`, background: "#ff5c6c" }} />
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </Card>
   );
