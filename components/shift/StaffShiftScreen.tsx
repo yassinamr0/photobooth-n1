@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ClipboardCopy } from "lucide-react";
 import { PanelFrame } from "@/components/layout/PanelFrame";
+import { ThemePicker } from "@/components/ui/ThemePicker";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -106,9 +107,9 @@ function ShiftScreenInner() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Image src="/icons/icon-192.png" alt="Booth Log" width={36} height={36} className="size-9 shrink-0 rounded-inner" />
-            <h1 className="truncate font-display text-[1.9rem] leading-none font-semibold">Hi, <span className="text-pearl">{firstName}</span></h1>
+            <h1 className="truncate font-display text-[1.7rem] leading-none font-bold tracking-[-0.03em]">Hi, <span className="text-pearl">{firstName}</span></h1>
           </div>
-          <LogoutButton />
+          <div className="flex shrink-0 items-center gap-1"><ThemePicker compact /><LogoutButton /></div>
         </div>
         {/* Offline / syncing status — part of the header, not a section (locked layout untouched). */}
         <SyncPill />

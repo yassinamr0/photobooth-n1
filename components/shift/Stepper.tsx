@@ -60,7 +60,7 @@ export function Chip({
       onClick={onClick}
       className={cn(
         "h-9 rounded-inner border px-3.5 text-sm font-semibold transition-colors",
-        active ? "key-primary border-transparent bg-maroon text-white" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
+        active ? "key-primary border-transparent bg-maroon text-on-primary" : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
       )}
     >
       {children}

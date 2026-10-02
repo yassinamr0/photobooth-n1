@@ -1,24 +1,28 @@
-# Design — "Contact sheet" (maroon edition, machined)
+# Design — Booth Log (machined, themeable)
 
 Booth Log looks like a photographer's contact sheet of the business: a darkroom-black
 proof sheet where every card is a numbered frame and colour tells you what a number is.
 Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.ts`.
 
-## Colour
-- **Ground:** plum-tinted darkroom blacks, so the neutrals sit in the same family as the
-  maroon/crimson chrome (the earlier bronze blacks clashed with it) — canvas `#0f0c0e`,
-  surface `#181316`, raised `#21191d`, rules `#33272d` / `#4a3a42`. Text is pearl-white
-  `#f6eff3`, muted `#b9a9b2`, faint `#937f8b`. Never warm/bronze or blue greys.
-- **Brand chrome (owner's change: maroon replaced the film-edge orange):** Maroon `#6a1b3a`
-  fills primary buttons and the active menu item; Velvet Crimson `#a64d79` draws frame
-  registration corners, borders, hover and focus; Pearl Pink `#edbbdb` is the readable accent
-  text (greeting name, scope line, selection). Never used for data meanings.
-- **Fixed meanings (owner-binding, never reused for anything else):**
-  money/totals/revenue = gold `#ffc93c` · cash = green `#4ade80` · Visa = blue `#5b9cff` ·
-  hadr/waste = pink `#ff4d8d` · profit = green · loss/expenses/errors = red `#ff5c6c` ·
-  warnings (low stock, mismatches) = maroon box, crimson border, pearl text (owner's change).
-- No gradients anywhere (legacy `bg-accent-gradient` / `text-accent-gradient` utilities are
-  solid maroon / pearl).
+## Colour & themes
+- Five per-device themes (palette button beside Log out; `components/ui/ThemePicker.tsx`,
+  values in `app/globals.css` `:root[data-theme]`, list in `lib/design/themes.ts`):
+  **Ink** (default: navy ink + warm-white buttons + periwinkle accent), **Forest** (green
+  charcoal + cream + sage), **Graphite** (charcoal + amber), **Memoire** (the original
+  maroon/pink), **Mono** (greys only). A boot script applies the saved theme before paint.
+- Components use ROLE tokens only: canvas/surface/surface-2/line/well, ink tiers,
+  `primary` + `on-primary` (button & selected fills), `accent` + `accent-text` (focus, hover
+  borders, spotlight, dot highlights), warning, ambient. Legacy names (maroon, crimson,
+  pearl, edge) alias these roles.
+- **Fixed meanings (owner-binding, identical in every theme):** money/totals gold `#ffc93c` ·
+  cash green `#4ade80` · Visa blue `#5b9cff` · hadr pink `#ff4d8d` · profit green ·
+  loss/expenses red `#ff5c6c`.
+- No corner marks (removed at the owner's request).
+
+## Type
+- **Figtree** for UI text; **Plus Jakarta Sans** for headings, card titles and big numerals
+  (bold, tracking −0.03em, tabular). Sentence case for titles and stat labels; only tiny form
+  labels / table headers stay small caps. (Barlow Condensed was dropped: too sharp.)
 
 ## Background
 - Plum-black canvas with ambient maroon light pooling from the top, a faint crimson bounce
@@ -30,24 +34,18 @@ Source of truth for tokens: `app/globals.css` (`@theme`) and `lib/design/chart.t
 
 ## Materials (taste: high-end-visual-design · emil · apple-design)
 - **plate** (every Card): translucent plate inside a machined double bezel — the shell ring is
-  box-shadow on the same element (no extra DOM). Crimson registration corners sit just inside
-  the curve. A soft crimson spotlight follows the mouse (`components/ui/Spotlight.tsx`).
-- **alert-plate**: maroon plate with a crimson leading spine; live alerts get a pulsing `led`.
+  box-shadow on the same element (no extra DOM). A soft accent-coloured spotlight follows the mouse (`components/ui/Spotlight.tsx`).
+- **alert-plate**: warning-tinted plate with a warning-colour leading spine; live alerts get a pulsing `led`.
 - **well**: recessed inputs, selects and segmented tracks.
 - **key / key-primary**: raised buttons with a light-catch edge and a lip; press sinks 1px.
-- Segmented controls: a maroon thumb slides under the selected tab (`components/ui/Segmented.tsx`).
+- Segmented controls: a primary-colour thumb slides under the selected tab (`components/ui/Segmented.tsx`).
 - KPI bento: hero gold Total tile (with a cash/Visa split bar), Cash and Visa medium tiles,
   compact count tiles; each tile washed in its meaning colour with a Lucide icon.
-- Tables: header band; rows lift on hover with a crimson leading indicator.
+- Tables: header band; rows lift on hover with an accent leading indicator.
 - Desktop admin header is a sticky glass bar (blur). Sheets dim + blur the page and rise on
   the iOS drawer curve; popovers materialize (scale + blur); toasts are glass pills with icons.
 - Empty states: recessed panel with a lens mark. Loading: skeletons with a light sweep.
 - Radii: controls 4px, tiles 8px, cards 10px (+6px bezel), sheets 12–14px.
-
-## Type
-- **Figtree** — UI text (15px base).
-- **Barlow Condensed** — film-edge lettering: card titles (uppercase, +0.03em), stat labels
-  (uppercase, +0.07em), all big numerals (tabular). Never decorative mono.
 
 ## Motion
 - One authored moment: content "develops" — opacity + a light blur settling

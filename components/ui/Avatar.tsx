@@ -42,7 +42,7 @@ export function Avatar({
         className,
       )}
       style={
-        src ? undefined : { backgroundColor: `color-mix(in srgb, ${color} 18%, #181316)`, color }
+        src ? undefined : { backgroundColor: `color-mix(in srgb, ${color} 18%, var(--color-surface))`, color }
       }
     >
       {src ? (

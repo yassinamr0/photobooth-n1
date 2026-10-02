@@ -210,7 +210,7 @@ export function FeesCard() {
         <SegThumb />
         {([["percent", "Percentage only"], ["percentPlusFixed", "Percentage + fixed"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={mode === k} data-testid={`fee-mode-${k}`} onClick={() => setMode(k)}
-            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", mode === k ? "text-white" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", mode === k ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             {l}
           </button>
         ))}

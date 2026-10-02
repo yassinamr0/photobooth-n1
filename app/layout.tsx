@@ -1,17 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow_Condensed, Figtree } from "next/font/google";
+import { Figtree, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
+import { THEME_BOOT_SCRIPT } from "@/lib/design/themes";
 
 // UI workhorse: clean grotesque, comfortable word spacing at small sizes.
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
 
-// Film-edge lettering: condensed caps for frame labels and big tabular numerals.
-const barlow = Barlow_Condensed({
-  variable: "--font-barlow",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
+// Headings & big numerals: soft, rounded geometric sans with real tabular figures.
+const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
   title: "Booth Log",
@@ -27,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0c0e",
+  themeColor: "#0e111a",
   width: "device-width",
   initialScale: 1,
   // Content can extend under the iPhone notch/home bar when installed full-screen.
@@ -36,7 +33,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${figtree.variable} ${barlow.variable}`}>
+    // suppressHydrationWarning: the boot script may set data-theme before React hydrates.
+    <html lang="en" className={`${figtree.variable} ${jakarta.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="bg-canvas">
         {children}
         <ServiceWorker />

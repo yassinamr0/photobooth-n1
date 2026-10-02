@@ -32,6 +32,17 @@ export function DotField({ animated }: { animated: boolean }) {
     let h = 0;
     let raf = 0;
     let last = 0;
+    // Colours come from the active theme (CSS variables), re-read when the theme changes.
+    let dot: number[] = [138, 144, 166];
+    let lo: number[] = [169, 177, 214];
+    let hi: number[] = [201, 207, 238];
+    const readColours = () => {
+      const cs = getComputedStyle(document.documentElement);
+      dot = hex(cs.getPropertyValue("--color-ink-faint")) ?? dot;
+      lo = hex(cs.getPropertyValue("--color-accent")) ?? lo;
+      hi = hex(cs.getPropertyValue("--color-accent-text")) ?? hi;
+    };
+    readColours();
     const target = { x: -9999, y: -9999 };
     const cur = { x: -9999, y: -9999 };
 
@@ -66,18 +77,18 @@ export function DotField({ animated }: { animated: boolean }) {
             if (d < REACH) near = (1 - d / REACH) ** 2;
           }
           if (near > 0.02) {
-            // crimson → pearl as the pointer gets closer
+            // accent → accent-text as the pointer gets closer
             const p = near;
-            const R = Math.round(166 + (237 - 166) * p);
-            const G = Math.round(77 + (187 - 77) * p);
-            const B = Math.round(121 + (219 - 121) * p);
+            const R = Math.round(lo[0] + (hi[0] - lo[0]) * p);
+            const G = Math.round(lo[1] + (hi[1] - lo[1]) * p);
+            const B = Math.round(lo[2] + (hi[2] - lo[2]) * p);
             ctx!.fillStyle = `rgba(${R},${G},${B},${Math.min(0.85, a + near * 0.7)})`;
             r = 0.75 + near * 1.1;
             ctx!.beginPath();
             ctx!.arc(x, y, r, 0, Math.PI * 2);
             ctx!.fill();
           } else {
-            ctx!.fillStyle = `rgba(185,169,178,${a})`;
+            ctx!.fillStyle = `rgba(${dot[0]},${dot[1]},${dot[2]},${a * 0.9})`;
             ctx!.fillRect(x - r, y - r, r * 2, r * 2);
           }
         }
@@ -114,8 +125,13 @@ export function DotField({ animated }: { animated: boolean }) {
       if (!document.hidden && live) raf = requestAnimationFrame(loop);
     };
 
+    const onTheme = () => {
+      readColours();
+      if (!live) draw(0);
+    };
     resize();
     window.addEventListener("resize", resize);
+    window.addEventListener("booth-theme", onTheme);
     if (live) {
       window.addEventListener("pointermove", onMove, { passive: true });
       document.documentElement.addEventListener("pointerleave", onLeave);
@@ -125,6 +141,7 @@ export function DotField({ animated }: { animated: boolean }) {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("booth-theme", onTheme);
       window.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("visibilitychange", onVis);
@@ -132,4 +149,12 @@ export function DotField({ animated }: { animated: boolean }) {
   }, [animated]);
 
   return <canvas ref={ref} aria-hidden data-testid="dot-field" className="pointer-events-none fixed inset-0 size-full print:hidden" />;
+}
+
+/** "#a9b1d6" → [169, 177, 214] (theme tokens are plain 6-digit hex). */
+function hex(v: string): number[] | null {
+  const m = v.trim().match(/^#([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }

@@ -7,6 +7,7 @@ import { PanelFrame } from "@/components/layout/PanelFrame";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Spotlight } from "@/components/ui/Spotlight";
+import { ThemePicker } from "@/components/ui/ThemePicker";
 import { SegThumb } from "@/components/ui/Segmented";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -92,11 +93,11 @@ function DashboardInner() {
           "lg:shadow-[0_1px_0_rgb(255_255_255/0.04),0_18px_30px_-24px_rgb(0_0_0/0.9)]")}>
           <div className="flex flex-wrap items-center justify-between gap-3 lg:contents">
             <div className="lg:order-1 lg:shrink-0">
-              <h1 className="font-display text-[2.1rem] leading-none font-semibold tracking-[0.01em] lg:text-[1.9rem]">
+              <h1 className="font-display text-[1.9rem] leading-none font-bold tracking-[-0.03em] lg:text-[1.7rem]">
                 Hi, <span className="text-pearl">{profile?.name.split(" ")[0] || "admin"}</span>
               </h1>
             </div>
-            <div className="lg:order-3"><LogoutButton /></div>
+            <div className="flex items-center gap-1 lg:order-3"><ThemePicker compact /><LogoutButton /></div>
           </div>
           <div className="min-w-0 lg:order-2 lg:flex-1"><ScopeBar section={historyUid ? "staff" : section} /></div>
           {/* Phone-width nav (the rail is hidden below md) */}
@@ -104,7 +105,7 @@ function DashboardInner() {
             {NAV.map((n) => (
               <button key={n.id} type="button" onClick={() => go(n.id)}
                 className={cn("h-9 shrink-0 rounded-inner border px-4 text-sm font-semibold",
-                  section === n.id && !historyUid ? "key-primary border-transparent bg-maroon text-white" : "border-white/[0.08] bg-white/[0.02] text-ink-muted")}>
+                  section === n.id && !historyUid ? "key-primary border-transparent bg-maroon text-on-primary" : "border-white/[0.08] bg-white/[0.02] text-ink-muted")}>
                 {n.id === "pending" ? `Pending${pending.length ? ` (${pending.length})` : ""}` : n.id === "pnl" ? "P&L" : n.label}
               </button>
             ))}
@@ -192,14 +193,14 @@ function ScopeBar({ section }: { section: Section }) {
         {RANGES.map((r) => (
           <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
             className={cn("relative z-[1] h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-              range === r.id ? "text-white" : "text-ink-muted hover:text-ink")}>
+              range === r.id ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
             <span className="hidden sm:inline">{r.label}</span>
           </button>
         ))}
         <button type="button" role="tab" aria-selected={custom} data-testid="range-custom" onClick={() => setPicking((p) => !p)}
           className={cn("relative z-[1] flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-            custom ? "text-white" : "text-ink-muted hover:text-ink")}>
+            custom ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
           <CalendarDays className="size-3.5" />
           <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
         </button>
@@ -208,10 +209,10 @@ function ScopeBar({ section }: { section: Section }) {
         <CustomRangePicker range={range} onClose={() => setPicking(false)}
           onApply={(r) => { setRange(r); setPicking(false); }} />
       )}
-      <span data-testid="scope-chip" className="ml-auto font-display text-[13px] font-medium tracking-[0.08em] text-pearl/75 uppercase">
+      <span data-testid="scope-chip" className="ml-auto text-[13px] font-medium text-ink-faint">
         {note ?? (
           <>
-            Showing: <span className="text-pearl">{scopeName}</span>
+            Showing: <span className="text-ink">{scopeName}</span>
             {note === null ? " · current stock (date range doesn't apply)" : ` · ${custom ? rangeLabel(range) : RANGES.find((r) => r.id === range)?.label}`}
           </>
         )}

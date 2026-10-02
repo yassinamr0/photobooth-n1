@@ -5,55 +5,61 @@
  * Chart colors are mirrored in lib/design/chart.ts — keep the two in sync.
  */
 @theme {
-  /* Darkroom blacks with a plum undertone, so they sit in the maroon/crimson family */
-  --color-canvas: #0f0c0e;
-  --color-surface: #181316;
-  --color-surface-2: #21191d;
-  --color-line: #33272d;
-  --color-line-strong: #4a3a42;
+  /* ROLE TOKENS — default theme "Ink" (navy ink + warm white). Other themes override these
+     same variables under :root[data-theme="…"] below; components only use the names. */
+  --color-canvas: #0e111a;
+  --color-surface: #161a25;
+  --color-surface-2: #1e2330;
+  --color-line: #2a3040;
+  --color-line-strong: #3a4256;
+  --color-well: #0b0e15;
 
-  /* Text — pearl-tinted whites (all ≥ 4.5:1 on surface and raised) */
-  --color-ink: #f6eff3;
-  --color-ink-muted: #b9a9b2;
-  --color-ink-faint: #937f8b;
+  --color-ink: #f3f1ec;
+  --color-ink-muted: #b3b8c8;
+  --color-ink-faint: #8a90a6;
 
-  /* Brand chrome (owner: maroon instead of orange):
-     maroon = fills (primary buttons, active nav) · velvet crimson = frame corners, borders,
-     hover · pearl = readable accent text on black. Never used for data meanings. */
-  --color-maroon: #6a1b3a;
-  --color-crimson: #a64d79;
-  --color-pearl: #edbbdb;
-  --color-edge: #a64d79; /* frame registration corners, focus */
-  --color-edge-dim: #2d1421; /* maroon-tinted containers */
-  /* legacy accent names now point at the brand chrome */
-  --color-violet: #6a1b3a;
-  --color-magenta: #a64d79;
-  --color-accent-dim: #2a1420;
+  /* primary = button / selected-thumb fill, on-primary = its text; accent = focus, hover
+     borders, spotlight, dot highlights; accent-text = readable accent on dark. */
+  --color-primary: #f3f1ec;
+  --color-primary-hover: #ffffff;
+  --color-on-primary: #12151f;
+  --color-accent: #a9b1d6;
+  --color-accent-text: #c9cfee;
+  --color-accent-dim: #1d2236;
+  --color-ambient: #33447f;
 
-  /* FIXED MEANINGS (owner-binding): cash green · visa blue · hadr/waste pink-red ·
-     totals/money gold · profit green · loss red · warnings amber */
+  /* Legacy names → roles (so no component class names change) */
+  --color-maroon: var(--color-primary);
+  --color-violet: var(--color-primary);
+  --color-crimson: var(--color-accent);
+  --color-magenta: var(--color-accent);
+  --color-edge: var(--color-accent);
+  --color-pearl: var(--color-accent-text);
+  --color-edge-dim: var(--color-accent-dim);
+
+  /* FIXED DATA MEANINGS (owner-binding, identical in every theme): cash green · visa blue ·
+     hadr/waste pink · totals/money gold · profit green · loss red */
   --color-pink: #ff4d8d;
   --color-gold: #ffc93c;
   --color-gold-dim: #33280d;
   --color-success: #4ade80;
   --color-success-dim: #132a1b;
-  /* Warnings (low stock, mismatches): maroon box, crimson border, pearl text (owner) */
-  --color-warning: #edbbdb;
-  --color-warning-dim: #2a1420;
+  --color-warning: #f5b54a;
+  --color-warning-dim: #2b2414;
   --color-danger: #ff5c6c;
   --color-danger-dim: #36171c;
   --color-info: #5b9cff;
   --color-info-dim: #13223b;
 
   /* Chart */
-  --color-chart-1: #a64d79;
+  --color-chart-1: var(--color-accent);
   --color-chart-2: #ffc93c;
   --color-chart-3: #ff4d8d;
   --color-chart-4: #4ade80;
   --color-chart-5: #5b9cff;
-  --color-chart-6: #b9a9b2;
-  --color-chart-track: #2b2126;
-  --color-chart-grid: #271e23;
+  --color-chart-6: var(--color-ink-muted);
+  --color-chart-track: var(--color-surface-2);
+  --color-chart-grid: var(--color-line);
 
   /* Square-cut frames, small controls only slightly softened */
   --radius-inner: 4px;
@@ -64,12 +70,93 @@
   --shadow-card: none;
   --shadow-panel: 0 18px 40px -18px rgb(0 0 0 / 0.75);
 
-  /* Type: Figtree (UI workhorse) + Barlow Condensed (film-edge labels & numerals) */
+  /* Type: Figtree (UI) + Plus Jakarta Sans (headings & big numerals: soft, rounded, tabular) */
   --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-barlow), var(--font-figtree), ui-sans-serif, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-figtree), ui-sans-serif, sans-serif;
 
   --animate-develop: develop 180ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
   --animate-pop: pop 160ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+
+
+/* ---- Themes (picked per device in components/ui/ThemePicker.tsx) ---------------------- */
+:root[data-theme="forest"] {
+  --color-canvas: #0f1311;
+  --color-surface: #171c19;
+  --color-surface-2: #20261f;
+  --color-line: #2b332d;
+  --color-line-strong: #3b463e;
+  --color-well: #0b0f0d;
+  --color-ink: #f2efe6;
+  --color-ink-muted: #b4bcb3;
+  --color-ink-faint: #8a958b;
+  --color-primary: #ede6d6;
+  --color-primary-hover: #fffaf0;
+  --color-on-primary: #141a16;
+  --color-accent: #9db8a4;
+  --color-accent-text: #c3d8c8;
+  --color-accent-dim: #1b2620;
+  --color-ambient: #2f5a43;
+}
+:root[data-theme="graphite"] {
+  --color-canvas: #121212;
+  --color-surface: #1b1b1c;
+  --color-surface-2: #242425;
+  --color-line: #303032;
+  --color-line-strong: #424245;
+  --color-well: #0d0d0d;
+  --color-ink: #f4f4f2;
+  --color-ink-muted: #b5b5b2;
+  --color-ink-faint: #8c8c89;
+  --color-primary: #f5a524;
+  --color-primary-hover: #ffb740;
+  --color-on-primary: #1a1205;
+  --color-accent: #f5a524;
+  --color-accent-text: #ffc46b;
+  --color-accent-dim: #2a2010;
+  --color-ambient: #5a3d0e;
+  --color-warning: #ff9f5a;
+  --color-warning-dim: #2c1d12;
+}
+:root[data-theme="memoire"] {
+  --color-canvas: #0f0c0e;
+  --color-surface: #181316;
+  --color-surface-2: #21191d;
+  --color-line: #33272d;
+  --color-line-strong: #4a3a42;
+  --color-well: #110d10;
+  --color-ink: #f6eff3;
+  --color-ink-muted: #b9a9b2;
+  --color-ink-faint: #937f8b;
+  --color-primary: #6a1b3a;
+  --color-primary-hover: #7c2247;
+  --color-on-primary: #ffffff;
+  --color-accent: #a64d79;
+  --color-accent-text: #edbbdb;
+  --color-accent-dim: #2d1421;
+  --color-ambient: #6a1b3a;
+  --color-warning: #edbbdb;
+  --color-warning-dim: #2a1420;
+}
+:root[data-theme="mono"] {
+  --color-canvas: #101010;
+  --color-surface: #191919;
+  --color-surface-2: #222222;
+  --color-line: #2e2e2e;
+  --color-line-strong: #404040;
+  --color-well: #0b0b0b;
+  --color-ink: #f2f2f2;
+  --color-ink-muted: #b0b0b0;
+  --color-ink-faint: #888888;
+  --color-primary: #e6e6e6;
+  --color-primary-hover: #ffffff;
+  --color-on-primary: #111111;
+  --color-accent: #9a9a9a;
+  --color-accent-text: #d6d6d6;
+  --color-accent-dim: #232323;
+  --color-ambient: #3a3a3a;
+  --color-warning: #e6e6e6;
+  --color-warning-dim: #262626;
 }
 
 /* "Developing": content comes up out of the dark like a print in the tray. */
@@ -94,8 +181,8 @@
 }
 
 @utility bg-accent-gradient {
-  background-color: var(--color-maroon);
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 @utility text-accent-gradient {
@@ -115,17 +202,6 @@
   & > :nth-child(7) { animation-delay: 240ms; }
 }
 
-/* Contact-sheet frame: 1px rule + crimson registration corners (crisp geometry). */
-@utility frame {
-  position: relative;
-  background-image:
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge));
-  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
-  background-position: -1px -1px, -1px -1px, calc(100% + 1px) calc(100% + 1px), calc(100% + 1px) calc(100% + 1px);
-  background-repeat: no-repeat;
-}
-
 /* ---- Materials (taste: high-end-visual-design · emil · apple-design) ---------------- */
 
 /* Page ground: darkroom black with ambient maroon light pooling from the top, a faint
@@ -133,8 +209,8 @@
 @utility ambient {
   background-color: var(--color-canvas);
   background-image:
-    radial-gradient(1100px 560px at 30% -180px, rgb(106 27 58 / 0.45), transparent 70%),
-    radial-gradient(900px 620px at 105% 110%, rgb(166 77 121 / 0.1), transparent 70%),
+    radial-gradient(1100px 560px at 30% -180px, color-mix(in srgb, var(--color-ambient) 45%, transparent), transparent 70%),
+    radial-gradient(900px 620px at 105% 110%, color-mix(in srgb, var(--color-accent) 8%, transparent), transparent 70%),
     radial-gradient(140% 120% at 50% 35%, transparent 62%, rgb(0 0 0 / 0.5));
   background-attachment: fixed;
 }
@@ -145,23 +221,17 @@
    components/ui/Spotlight.tsx). */
 @utility plate {
   position: relative;
-  background-color: rgb(26 20 24 / 0.88);
-  background-image:
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    linear-gradient(var(--color-edge), var(--color-edge)), linear-gradient(var(--color-edge), var(--color-edge)),
-    radial-gradient(560px circle at var(--mx, -2000px) var(--my, -2000px), rgb(166 77 121 / 0.11), transparent 45%);
-  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 100% 100%;
-  background-position: 4px 4px, 4px 4px, calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), 0 0;
-  background-repeat: no-repeat;
+  background-color: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  background-image: radial-gradient(560px circle at var(--mx, -2000px) var(--my, -2000px), color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 45%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.06),
-    0 0 0 5px rgb(255 236 246 / 0.022),
-    0 0 0 6px rgb(255 236 246 / 0.06),
-    0 30px 50px -30px rgb(16 2 9 / 0.95);
+    0 0 0 5px rgb(255 255 255 / 0.022),
+    0 0 0 6px rgb(255 255 255 / 0.06),
+    0 30px 50px -30px rgb(0 0 0 / 0.75);
   transition: border-color 200ms cubic-bezier(0.23, 1, 0.32, 1);
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      border-color: rgb(166 77 121 / 0.38);
+      border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
     }
   }
 }
@@ -170,14 +240,14 @@
    spine on the leading edge, inside the same double bezel as cards. */
 @utility alert-plate {
   position: relative;
-  border: 1px solid rgb(166 77 121 / 0.35);
-  background-color: rgb(44 18 32 / 0.8);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-warning-dim) 85%, transparent);
   box-shadow:
-    inset 3px 0 0 var(--color-crimson),
+    inset 3px 0 0 var(--color-warning),
     inset 0 1px 0 rgb(255 255 255 / 0.05),
-    0 0 0 5px rgb(255 236 246 / 0.02),
-    0 0 0 6px rgb(166 77 121 / 0.14),
-    0 26px 44px -28px rgb(16 2 9 / 0.95);
+    0 0 0 5px rgb(255 255 255 / 0.02),
+    0 0 0 6px color-mix(in srgb, var(--color-warning) 14%, transparent),
+    0 26px 44px -28px rgb(0 0 0 / 0.75);
 }
 
 /* Empty state: a recessed panel with a small lens-like mark (camera motif) above the
@@ -192,7 +262,7 @@
   text-align: center;
   font-size: 0.875rem;
   color: var(--color-ink-muted);
-  background-color: rgb(17 13 16 / 0.7);
+  background-color: color-mix(in srgb, var(--color-well) 75%, transparent);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.04);
 }
 .empty-state::before {
@@ -200,14 +270,14 @@
   width: 34px;
   height: 34px;
   border-radius: 9999px;
-  border: 1px solid rgb(166 77 121 / 0.45);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
   background: radial-gradient(circle, var(--color-crimson) 0 3px, transparent 3.5px);
-  box-shadow: inset 0 0 0 6px rgb(166 77 121 / 0.1), 0 0 0 5px rgb(255 236 246 / 0.025);
+  box-shadow: inset 0 0 0 6px color-mix(in srgb, var(--color-accent) 10%, transparent), 0 0 0 5px rgb(255 255 255 / 0.025);
 }
 
 /* Recessed well: inputs, selects, segmented tracks, readouts. */
 @utility well {
-  background-color: #110d10;
+  background-color: var(--color-well);
   box-shadow:
     inset 0 1px 2px rgb(0 0 0 / 0.6),
     inset 0 0 0 1px rgb(0 0 0 / 0.2),
@@ -230,10 +300,10 @@
 /* Maroon primary key: pearl-tinted light edge + maroon-tinted shadow (no glow). */
 @utility key-primary {
   box-shadow:
-    inset 0 1px 0 rgb(237 187 219 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
     inset 0 -1px 0 rgb(0 0 0 / 0.25),
-    0 1px 0 #2e0a19,
-    0 6px 16px -8px rgb(106 27 58 / 0.9);
+    0 1px 0 color-mix(in srgb, var(--color-primary) 35%, black),
+    0 6px 16px -8px rgb(0 0 0 / 0.7);
   &:active:not(:disabled) {
     translate: 0 1px;
     box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35);
@@ -250,11 +320,11 @@
 /* Live-state LED (low stock, pending): one soft pulse ring, never a glow. */
 @keyframes led {
   0% {
-    box-shadow: 0 0 0 0 rgb(237 187 219 / 0.45);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-warning) 45%, transparent);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 6px rgb(237 187 219 / 0);
+    box-shadow: 0 0 0 6px transparent;
   }
 }
 .led {
@@ -262,7 +332,7 @@
   width: 7px;
   height: 7px;
   border-radius: 9999px;
-  background: var(--color-pearl);
+  background: var(--color-warning);
   animation: led 2.2s cubic-bezier(0.23, 1, 0.32, 1) infinite;
 }
 
@@ -279,7 +349,7 @@ body {
 
 ::selection {
   background: var(--color-pearl);
-  color: #100f0d;
+  color: var(--color-canvas);
 }
 
 h1,
@@ -384,22 +454,22 @@ select {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-card);
-  background-color: rgb(26 20 24 / 0.7);
-  box-shadow: 0 0 0 5px rgb(255 236 246 / 0.02), 0 0 0 6px rgb(255 236 246 / 0.05);
+  background-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  box-shadow: 0 0 0 5px rgb(255 255 255 / 0.02), 0 0 0 6px rgb(255 255 255 / 0.05);
 }
 .skeleton::after {
   content: "";
   position: absolute;
   inset: 0;
   translate: -100% 0;
-  background: linear-gradient(90deg, transparent, rgb(237 187 219 / 0.05), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
   animation: shimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 /* Data tables: a quiet header band; rows are "strips" that lift on hover with a crimson
    indicator sliding in on the leading edge. */
 table[data-testid] thead th {
-  background-color: rgb(255 236 246 / 0.025);
+  background-color: rgb(255 255 255 / 0.025);
   font-weight: 500;
 }
 table[data-testid] thead th:first-child {
@@ -417,7 +487,7 @@ table[data-testid] tbody tr > :first-child {
 @media (hover: hover) and (pointer: fine) {
   table[data-testid] tbody tr:hover > td,
   table[data-testid] tbody tr:hover > th {
-    background-color: rgb(255 236 246 / 0.035);
+    background-color: rgb(255 255 255 / 0.035);
   }
   table[data-testid] tbody tr:hover > :first-child {
     box-shadow: inset 3px 0 0 0 var(--color-crimson);

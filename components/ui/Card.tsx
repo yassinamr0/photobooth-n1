@@ -41,7 +41,7 @@ export function CardHeader({
   return (
     <div className={cn("mb-4 flex items-start justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h3 className="font-display text-[1.15rem] leading-tight font-semibold tracking-[0.03em] text-ink uppercase">{title}</h3>
+        <h3 className="font-display text-[1.05rem] leading-tight font-bold tracking-[-0.01em] text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}

@@ -74,14 +74,14 @@ export function StatGrid({ totals, size = "sm" }: { totals: ShiftTotals; size?: 
             <div
               data-testid={`stat-${label.split(" ")[0].toLowerCase()}`}
               className={cn(
-                "font-display font-semibold tracking-[-0.01em] tabular-nums leading-none",
-                hero ? "text-[3.4rem] sm:text-[4rem]" : lg ? "text-[2rem]" : "text-[1.3rem]",
+                "font-display font-bold tracking-[-0.03em] tabular-nums leading-none",
+                hero ? "text-[2.8rem] sm:text-[3.25rem]" : lg ? "text-[1.7rem]" : "text-[1.15rem]",
                 TONES[tone].text,
               )}
             >
               {fmtNum(v)}
             </div>
-            {!lg && <div className="mt-1.5 font-display text-[13px] font-medium tracking-[0.07em] text-ink-muted uppercase">{label}</div>}
+            {!lg && <div className="mt-1.5 text-[12.5px] font-medium text-ink-muted">{label}</div>}
             {hero && (
               // Cash vs Visa split of the total (decorative; the exact numbers sit beside it).
               <div aria-hidden className="flex h-1.5 w-full gap-[2px] overflow-hidden rounded-full bg-white/[0.05]"

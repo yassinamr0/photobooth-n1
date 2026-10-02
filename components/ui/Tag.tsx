@@ -6,10 +6,10 @@ export type TagTone = "neutral" | "accent" | "gold" | "success" | "warning" | "d
 // Refined chips: a ~7% wash of the tone colour, a matching hairline, a 3px radius.
 const tones: Record<TagTone, string> = {
   neutral: "bg-white/[0.04] text-ink-muted border-white/[0.08]",
-  accent: "bg-crimson/[0.12] text-pearl border-crimson/40",
+  accent: "bg-accent/[0.12] text-accent-text border-accent/40",
   gold: "bg-gold/[0.08] text-gold border-gold/30",
   success: "bg-success/[0.08] text-success border-success/30",
-  warning: "bg-crimson/[0.12] text-warning border-crimson/40",
+  warning: "bg-warning/[0.08] text-warning border-warning/35",
   danger: "bg-danger/[0.08] text-danger border-danger/35",
   info: "bg-info/[0.08] text-info border-info/30",
 };

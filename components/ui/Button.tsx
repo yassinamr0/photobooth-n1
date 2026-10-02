@@ -24,8 +24,8 @@ const base =
 // Tactile keys (taste "tactile feedback" + emil press physics): raised with a light-catch
 // edge and a lip; pressing sinks them 1px. See the key / key-primary utilities.
 const variants: Record<ButtonVariant, string> = {
-  primary: "key-primary bg-maroon text-white hover:bg-[#7c2247]",
-  secondary: "key bg-surface-2 text-ink border border-white/[0.07] hover:border-line-strong hover:bg-[#2b2126]",
+  primary: "key-primary bg-primary text-on-primary hover:bg-primary-hover",
+  secondary: "key bg-surface-2 text-ink border border-white/[0.07] hover:border-line-strong hover:bg-line",
   // pill colors depend on `selected`; see pillStates
   pill: "border",
   danger: "key bg-danger-dim text-danger border border-danger/40 hover:border-danger/70",
@@ -34,7 +34,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const pillStates = {
-  on: "key-primary bg-maroon text-white border-transparent",
+  on: "key-primary bg-primary text-on-primary border-transparent",
   off: "border-line text-ink-muted hover:text-ink hover:border-line-strong",
 };
 

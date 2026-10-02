@@ -117,7 +117,7 @@ function Tile({ label, value, testid, className, hint, highlight, tint }: {
       highlight === "loss" ? "border-danger/30 bg-danger/[0.08]" : highlight === "profit" ? "border-success/25 bg-success/[0.07]"
         : tint === "gold" ? "border-gold/20 bg-gold/[0.06]" : tint === "loss" ? "border-danger/15 bg-danger/[0.04]" : "border-white/[0.07] bg-white/[0.025]")}>
       <div className="mb-1.5 text-[13px] font-medium text-ink-muted">{label}</div>
-      <div data-testid={testid} className={cn("font-display text-[2.2rem] leading-none font-semibold tracking-[-0.01em] tabular-nums", className)}>{value}</div>
+      <div data-testid={testid} className={cn("font-display text-[1.7rem] leading-none font-bold tracking-[-0.03em] tabular-nums", className)}>{value}</div>
       {hint && <div className="text-[11px] text-ink-faint">{hint}</div>}
     </div>
   );
@@ -339,7 +339,7 @@ function AddExpense() {
         <SegThumb />
         {([["once", "One-off"], ["monthly", "Monthly"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} data-testid={`add-${k}`} onClick={() => setKind(k)}
-            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", kind === k ? "text-white" : "text-ink-muted hover:text-ink")}>
+            className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", kind === k ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             {k === "monthly" && <Repeat className="mr-1.5 inline size-3.5 -translate-y-px" />}{l}
           </button>
         ))}
