@@ -54,7 +54,13 @@ const dayCeil = (until: Date) => addDays(startOfDay(new Date(until.getTime() - 1
 /** First day any expense could count (for "All time"). */
 function firstExpenseDay(inp: PnlInputs): Date | null {
   const days = [
-    ...inp.expenses.map((e) => parseDay(e.date)),
+    // A whole-event expense starts counting on its event's first day (its stored date can be
+    // stale if the event's dates were changed after it was added).
+    ...inp.expenses.map((e) => {
+      const d = parseDay(e.date);
+      const from = e.spread === "event" && e.eventId ? eventSpan(inp.raw, e.eventId).from : null;
+      return from && from < d ? from : d;
+    }),
     ...inp.recurring.map((r) => parseDay(`${r.startMonth}-01`)),
   ];
   return days.length ? new Date(Math.min(...days.map((d) => d.getTime()))) : null;

@@ -139,6 +139,13 @@ describe("event dates", () => {
     expect(f("2026-10-10", "2026-10-20")).toBe(0);
   });
 
+  it("All time includes every event day even if the event's start moved earlier after adding it", () => {
+    // Added when the event started Oct 1; event later changed to 28 Sep – 8 Oct (11 days).
+    const e: Expense = { id: "w", eventId: "E", date: "2026-10-01", amount: 11000, category: "rent", note: "", createdBy: "a", spread: "event" };
+    const inp = base([ev({ startDate: "2026-09-28", endDate: "2026-10-08" })], { expenses: [e] });
+    expect(expenseTotals(inp, () => true, null, null, new Date(2026, 9, 5, 12)).total).toBeCloseTo(8000); // Sep 28 – Oct 5
+  });
+
   it("whole-event expense on an ongoing event counts in full on its date", () => {
     const e: Expense = { id: "w", eventId: "E", date: "2026-10-12", amount: 6000, category: "rent", note: "", createdBy: "a", spread: "event" };
     const inp = base([ev({ startDate: "2026-10-12" })], { expenses: [e] });

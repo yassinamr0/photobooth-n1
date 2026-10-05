@@ -387,7 +387,7 @@ function AddExpense() {
               <p data-testid="exp-event-dates" className="flex h-11 items-center gap-2 text-sm text-ink">
                 <CalendarRange className="size-4 shrink-0 text-ink-faint" />
                 {!span ? <span className="text-ink-faint">Choose an event</span>
-                  : eventReady ? `${dateLabel(span.startDate!)} – ${dateLabel(span.endDate!)}`
+                  : eventReady ? `${dateLabel(span.startDate!)} – ${dateLabel(span.endDate!)} · ${spanDaysOf(span)} days`
                     : <span className="text-warning">No end date yet</span>}
               </p>
             </>

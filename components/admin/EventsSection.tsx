@@ -70,7 +70,7 @@ export function EventsSection() {
         </form>
         <div className="mt-3"><FormError>{error}</FormError></div>
         <p className="mt-2 text-xs text-ink-faint">
-          Leave &quot;Ends&quot; empty if you don&apos;t know yet — it stays ongoing until you mark it as ended (that sets the end date to that day). New events start with 0 paper, ink and frames; restock them from Inventory. Low-stock warning defaults to one box ({fmtNum(paper.sheetsPerBox)} sheets) for paper, 1 ink cartridge and 5 of each frame.
+          &quot;Ends&quot; is the last day the booth runs (both the first and last day count). Leave it empty if you don&apos;t know yet — it stays ongoing until you mark it as ended (that sets the end date to that day). New events start with 0 paper, ink and frames; restock them from Inventory. Low-stock warning defaults to one box ({fmtNum(paper.sheetsPerBox)} sheets) for paper, 1 ink cartridge and 5 of each frame.
         </p>
       </Card>
 
@@ -95,7 +95,9 @@ function fmtSpan(start: string | null, end: string | null) {
   const f = (k: string, year = true) => parseDay(k).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) });
   if (!start) return end ? `until ${f(end)}` : "No dates yet";
   if (!end) return `${f(start)} → ongoing`;
-  return `${f(start, start.slice(0, 4) !== end.slice(0, 4))} – ${f(end)}`;
+  // Both the first and the last day count: 28 Sep – 8 Oct = 11 days.
+  const days = Math.round((parseDay(end).getTime() - parseDay(start).getTime()) / 86_400_000) + 1;
+  return `${f(start, start.slice(0, 4) !== end.slice(0, 4))} – ${f(end)} · ${days} day${days === 1 ? "" : "s"}`;
 }
 
 function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
