@@ -248,7 +248,7 @@ function LocationTable({ rows, rangeText }: { rows: ReturnType<typeof pnlByLocat
 function ExpenseManager({ s, label }: { s: PnlSummary; label: string }) {
   const p = usePnl();
   const [now] = useState(() => new Date());
-  const eventName = (id: string | null) => (id ? p.events.find((e) => e.id === id)?.name ?? "Unknown event" : "General");
+  const eventName = (id: string | null) => (id ? p.events.find((e) => e.id === id)?.name ?? "Deleted event" : "General");
   // Monthly expenses that apply to this scope (all of them under Global).
   const recurring = p.recurring
     .filter((r) => p.scope === "global" || r.eventId === p.scope)

@@ -78,7 +78,7 @@ export function localDateKey(iso: string) {
 
 export function eventLabel(events: EventDoc[], eventId: string | null): string | null {
   if (!eventId) return null;
-  return events.find((e) => e.id === eventId)?.name ?? "Unknown event";
+  return events.find((e) => e.id === eventId)?.name ?? "Deleted event";
 }
 
 export function scopeDashboard(raw: RawDashboard, scope: Scope, range: DateRange, now = new Date()): ScopedDashboard {

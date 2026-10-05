@@ -369,6 +369,12 @@ Owner-approved changes (after Phase 6):
   - **Event dates**: start date (required for new events; older events fall back to their
     first shift's day, else creation day) and optional end date (empty = ongoing). "Mark as
     ended" sets the end date to that day; "Reopen" clears it.
+  - **Events list filter**: All / Active / Finished (Finished = marked as ended, or its end date
+    has passed).
+  - **Delete event** (admin): always removes its stock + stock history and unassigns its staff;
+    refused while a shift is running there. With history it asks each time: *keep history*
+    (shifts/sales stay, labelled "Deleted event"; its expenses move to General) or *delete
+    everything* (its shifts, sales/waste and expenses too, after a second confirmation).
   - **Break-even** for one event counts only the days it was open within the selected dates
     ("Not running on these dates" when there are none).
   - Location = an event, or **General** (not tied to a booth; only counted under Global).

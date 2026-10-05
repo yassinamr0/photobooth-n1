@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CalendarRange, MapPin, Pencil, Plus } from "lucide-react";
+import { CalendarRange, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
@@ -9,12 +9,15 @@ import { Field, FormError } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { authErrorMessage } from "@/lib/auth/errors";
-import { createEvent, setEventStatus, updateEvent } from "@/lib/inventory/firestore";
+import { createEvent, deleteEvent, setEventStatus, updateEvent } from "@/lib/inventory/firestore";
+import { SegThumb } from "@/components/ui/Segmented";
+import { cn } from "@/lib/cn";
+import { formatEGP } from "@/lib/format";
 import type { EventRecord } from "@/lib/inventory/types";
 import { fmtNum } from "@/lib/format";
 import { dayKey, parseDay } from "@/lib/admin/range";
 import { eventSpan } from "@/lib/pnl/eventSpan";
-import { useDashboardRaw, useEvents, useScopedInventory } from "./DashboardData";
+import { useDashboardRaw, useEvents, usePnl, useScopedInventory } from "./DashboardData";
 
 /**
  * Events = physical booth locations (admin-only bookkeeping; staff never see them).
@@ -33,6 +36,12 @@ export function EventsSection() {
   const [endDate, setEndDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"all" | "active" | "finished">("all");
+  const today = dayKey(new Date());
+  // Finished = marked as ended, or its end date has already passed.
+  const finished = (ev: EventRecord) => ev.status === "inactive" || (!!ev.endDate && ev.endDate < today);
+  const shown = events.filter((ev) => view === "all" || (view === "finished") === finished(ev));
+  const counts = { all: events.length, active: events.filter((e) => !finished(e)).length, finished: events.filter(finished).length };
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -76,12 +85,21 @@ export function EventsSection() {
 
       <Card padding="lg">
         <CardHeader title="Events" subtitle={`${events.length} location${events.length === 1 ? "" : "s"} · the list the top switcher uses`} />
-        {events.length === 0 ? (
-          <p className="empty-state">No events yet.</p>
+        <div role="tablist" aria-label="Show events" className="relative mb-4 flex w-full gap-1 rounded-inner border border-white/[0.06] well p-1 sm:w-fit">
+          <SegThumb />
+          {([["all", "All"], ["active", "Active"], ["finished", "Finished"]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={view === k} data-testid={`events-${k}`} onClick={() => setView(k)}
+              className={cn("relative z-[1] h-8 flex-1 rounded-inner px-4 text-sm font-semibold transition-colors sm:flex-none", view === k ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
+              {l} <span className="ml-0.5 tabular-nums opacity-70">{counts[k]}</span>
+            </button>
+          ))}
+        </div>
+        {shown.length === 0 ? (
+          <p className="empty-state">{events.length === 0 ? "No events yet." : view === "active" ? "No active events." : "No finished events."}</p>
         ) : (
           <ul className="flex flex-col gap-3 lg:gap-0 lg:divide-y lg:divide-line">
-            {events.map((ev) => (
-              <EventRow key={ev.id} ev={ev} assigned={assignedCount(ev.id)} />
+            {shown.map((ev) => (
+              <EventRow key={ev.id} ev={ev} assigned={assignedCount(ev.id)} finished={finished(ev)} />
             ))}
           </ul>
         )}
@@ -100,7 +118,7 @@ function fmtSpan(start: string | null, end: string | null) {
   return `${f(start, start.slice(0, 4) !== end.slice(0, 4))} – ${f(end)} · ${days} day${days === 1 ? "" : "s"}`;
 }
 
-function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
+function EventRow({ ev, assigned, finished }: { ev: EventRecord; assigned: number; finished: boolean }) {
   const toast = useToast();
   const { raw } = useDashboardRaw();
   const span = eventSpan(raw, ev.id);
@@ -112,6 +130,14 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
   const [endDate, setEndDate] = useState(ev.endDate ?? "");
   const today = dayKey(new Date());
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [deleting, setDeleting] = useState<null | "ask" | "all">(null);
+  const { expenses, recurring } = usePnl();
+  // What's logged against this event (decides how Delete asks).
+  const shifts = raw.shifts.filter((s) => s.eventId === ev.id);
+  const shiftIds = new Set(shifts.map((s) => s.id));
+  const sales = raw.entries.filter((e) => e.type === "sale" && shiftIds.has(e.shiftId)).reduce((t, e) => t + (e.total || 0), 0);
+  const expCount = expenses.filter((e) => e.eventId === ev.id).length + recurring.filter((r) => r.eventId === ev.id).length;
+  const hasHistory = shifts.length > 0 || expCount > 0;
   const [busy, setBusy] = useState(false);
 
   async function run(fn: () => Promise<void>, ok: string) {
@@ -150,7 +176,7 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
               <span data-testid="event-name">{ev.name}</span>
-              {ev.status === "active" ? <Tag tone="success" dot>Active</Tag> : <Tag tone="neutral" dot>Ended</Tag>}
+              {!finished ? <Tag tone="success" dot>Active</Tag> : <Tag tone="neutral" dot>{ev.status === "inactive" ? "Ended" : "Finished"}</Tag>}
             </p>
             <p data-testid="event-dates" className="mt-0.5 flex items-center gap-1.5 text-xs whitespace-nowrap text-ink-muted">
               <CalendarRange className="size-3.5 shrink-0" />
@@ -165,6 +191,8 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
           <p className="hidden text-sm text-ink-muted lg:block">{fmtNum(assigned)} staff assigned</p>
           <div className="flex items-center gap-2 lg:justify-end">
           <Button size="sm" variant="ghost" leftIcon={<Pencil className="size-3.5" />} onClick={() => setEditing(true)}>Edit</Button>
+          <Button size="sm" variant="ghost" aria-label={`Delete ${ev.name}`} data-testid="event-delete" onClick={() => setDeleting("ask")}
+            className="hover:text-danger"><Trash2 className="size-3.5" /></Button>
           {ev.status === "active" ? (
             <Button size="sm" variant="secondary" onClick={() => (assigned > 0 ? setConfirmDeactivate(true) : run(() => setEventStatus(ev.id, "inactive", { today, endDate: ev.endDate }), `${ev.name} marked as ended`))}>
               Mark as ended
@@ -175,6 +203,46 @@ function EventRow({ ev, assigned }: { ev: EventRecord; assigned: number }) {
             </Button>
           )}
           </div>
+        </div>
+      )}
+      {deleting && (
+        <div role="alertdialog" data-testid="event-delete-confirm" className="mt-3 rounded-inner border border-danger/40 bg-danger-dim px-4 py-3 text-sm text-ink">
+          {!hasHistory ? (
+            <>
+              Delete <b>{ev.name}</b>? It has no shifts or expenses, so nothing else is affected. This can&apos;t be undone.
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
+                <Button size="sm" variant="danger" loading={busy} data-testid="event-delete-go"
+                  onClick={() => run(() => deleteEvent(ev.id, "keep"), `${ev.name} deleted`)}>Delete</Button>
+              </div>
+            </>
+          ) : deleting === "ask" ? (
+            <>
+              <b>{ev.name}</b> has {fmtNum(shifts.length)} shift{shifts.length === 1 ? "" : "s"} ({formatEGP(Math.round(sales))} in sales)
+              {expCount > 0 && <> and {fmtNum(expCount)} expense{expCount === 1 ? "" : "s"}</>}. What should happen to them?
+              <ul className="mt-2 list-disc pl-5 text-xs text-ink-muted">
+                <li><b className="text-ink">Keep history:</b> past shifts and sales stay in your totals (shown as &quot;Deleted event&quot;), its expenses move to General. Past money totals don&apos;t change.</li>
+                <li><b className="text-ink">Delete everything:</b> its shifts, sales, waste and expenses are deleted too. Past revenue and profit go down.</li>
+              </ul>
+              <p className="mt-1 text-xs text-ink-muted">Either way its stock counts are removed{assigned > 0 && " and its staff are unassigned"}.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
+                <Button size="sm" variant="secondary" loading={busy} data-testid="event-delete-keep"
+                  onClick={() => run(() => deleteEvent(ev.id, "keep"), `${ev.name} deleted — history kept`)}>Delete, keep history</Button>
+                <Button size="sm" variant="danger" data-testid="event-delete-all" onClick={() => setDeleting("all")}>Delete everything…</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              This permanently deletes <b>{ev.name}</b>, its {fmtNum(shifts.length)} shift{shifts.length === 1 ? "" : "s"} and their sales
+              {expCount > 0 && <>, and {fmtNum(expCount)} expense{expCount === 1 ? "" : "s"}</>}. It can&apos;t be undone.
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setDeleting("ask")}>Back</Button>
+                <Button size="sm" variant="danger" loading={busy} data-testid="event-delete-all-go"
+                  onClick={() => run(() => deleteEvent(ev.id, "all"), `${ev.name} and its history deleted`)}>Yes, delete everything</Button>
+              </div>
+            </>
+          )}
         </div>
       )}
       {confirmDeactivate && (

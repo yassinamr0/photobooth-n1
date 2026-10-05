@@ -40,7 +40,7 @@ export function buildDailySummary(
   const day = dayKey(yesterday);
   const range = customRange("day", day);
   const ended = new Set(events.filter((e) => e.status === "inactive").map((e) => e.id));
-  const name = (id: string | null) => (id ? events.find((e) => e.id === id)?.name ?? "Unknown event" : "No event");
+  const name = (id: string | null) => (id ? events.find((e) => e.id === id)?.name ?? "Deleted event" : "No event");
 
   const s = pnlSummary(inp, "global", range, now);
   const locations = pnlByLocation(inp, range, now)

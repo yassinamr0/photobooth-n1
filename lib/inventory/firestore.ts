@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDocs,
   increment,
   orderBy,
   query,
@@ -8,8 +9,10 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
   writeBatch,
   type DocumentData,
+  type DocumentReference,
   type Timestamp,
 } from "firebase/firestore";
 import { firebase } from "@/lib/firebase/client";
@@ -128,6 +131,8 @@ const defaultThreshold = (type: StockType, sheetsPerBox: number) => {
  */
 export async function ensureStockDocs(eventId: string, sheetsPerBox: number) {
   await runTransaction(db(), async (tx) => {
+    // Never resurrect stock for an event that has just been deleted.
+    if (!(await tx.get(eventRef(eventId))).exists()) return;
     const snaps = await Promise.all(STOCK_TYPES.map((t) => tx.get(stockRef(eventId, t))));
     const base = { currentQuantity: 0, updatedAt: serverTimestamp(), trackingSince: serverTimestamp() };
     STOCK_TYPES.forEach((t, i) => {
@@ -164,6 +169,54 @@ export function setEventStatus(eventId: string, status: EventStatus, opts?: { to
     return updateDoc(eventRef(eventId), { status, endDate: end });
   }
   return updateDoc(eventRef(eventId), status === "active" ? { status, endDate: null } : { status });
+}
+
+/**
+ * Delete an event (admin). Always removes its stock counts + stock history and unassigns any
+ * staff assigned to it. Its history:
+ *   - "keep": past shifts and sales stay (shown as "Deleted event", still in Global totals);
+ *     its one-off, whole-event and monthly expenses move to General — money totals for past
+ *     dates don't change.
+ *   - "all": its shifts, their sales/waste and its expenses are deleted too (can't be undone).
+ * Refused while a shift is still running there. The event doc is deleted LAST, so if anything
+ * fails half-way it can simply be retried (its stock goes in that same final batch).
+ */
+export async function deleteEvent(eventId: string, mode: "keep" | "all") {
+  const d = db();
+  const shifts = await getDocs(query(collection(d, "shifts"), where("eventId", "==", eventId)));
+  if (shifts.docs.some((s) => !s.data().endTime)) {
+    throw new Error("A shift is still running at this event — delete it after that shift ends.");
+  }
+  const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = [];
+  const del = (r: DocumentReference) => ops.push((b) => b.delete(r));
+  const upd = (r: DocumentReference, data: DocumentData) => ops.push((b) => b.update(r, data));
+
+  (await getDocs(collection(d, "events", eventId, "stockLogs"))).docs.forEach((x) => del(x.ref));
+  // Stock counts go in the SAME final batch as the event doc (below), so nothing can see the
+  // event without its stock and re-create it in between.
+  const stockDocs = (await getDocs(collection(d, "events", eventId, "stock"))).docs;
+  (await getDocs(query(collection(d, "users"), where("assignedEventId", "==", eventId)))).docs.forEach((u) => upd(u.ref, { assignedEventId: null }));
+  for (const col of ["expenses", "recurringExpenses"]) {
+    (await getDocs(query(collection(d, col), where("eventId", "==", eventId)))).docs.forEach((x) =>
+      mode === "all" ? del(x.ref) : upd(x.ref, { eventId: null, ...(col === "expenses" ? { spread: null } : {}) }),
+    );
+  }
+  if (mode === "all") {
+    const ids = shifts.docs.map((s) => s.id);
+    for (let i = 0; i < ids.length; i += 30) {
+      (await getDocs(query(collection(d, "entries"), where("shiftId", "in", ids.slice(i, i + 30))))).docs.forEach((x) => del(x.ref));
+    }
+    shifts.docs.forEach((s) => del(s.ref));
+  }
+  for (let i = 0; i < ops.length; i += 450) {
+    const b = writeBatch(d);
+    ops.slice(i, i + 450).forEach((op) => op(b));
+    await b.commit();
+  }
+  const last = writeBatch(d);
+  stockDocs.forEach((x) => last.delete(x.ref));
+  last.delete(eventRef(eventId));
+  await last.commit();
 }
 
 /* ───────────────────────────── Stock writes ───────────────────────────── */
