@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Info, Minus, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CalendarRange, Info, Minus, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
@@ -26,6 +26,7 @@ import { CATEGORY_LABEL, EXPENSE_CATEGORIES, type Expense, type ExpenseCategory,
 import { useDashboardScope, usePnl } from "../DashboardData";
 import { PnlChart } from "./PnlChart";
 import { ExpenseDonut } from "./ExpenseDonut";
+import { eventSpan } from "@/lib/pnl/eventSpan";
 
 /** Whole pounds for display (spread rent produces fractions). */
 const egp = (n: number) => formatEGP(Math.round(n));
@@ -276,7 +277,7 @@ function ExpenseManager({ s, label }: { s: PnlSummary; label: string }) {
             <Empty>No one-off expenses in this range.</Empty>
           ) : (
             <ul className="flex flex-col divide-y divide-line">
-              {s.expenses.oneOffs.map((e) => <OneOffRow key={e.id} e={e} where={eventName(e.eventId)} />)}
+              {s.expenses.oneOffs.map((e) => <OneOffRow key={e.id} e={e} where={eventName(e.eventId)} counted={s.expenses.oneOffAmounts[e.id] ?? e.amount} />)}
             </ul>
           )}
         </Card>
@@ -307,11 +308,14 @@ function CategorySelect({ id, value, onChange }: { id: string; value: ExpenseCat
 const toEventId = (v: string) => (v === "general" ? null : v);
 const fromEventId = (id: string | null) => id ?? "general";
 
+const spanDaysOf = (s: ReturnType<typeof eventSpan>) => Math.max(1, Math.round((parseDay(s.endDate!).getTime() - parseDay(s.startDate!).getTime()) / 86_400_000) + 1);
+const dateLabel = (k: string) => parseDay(k).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
 function AddExpense() {
-  const { scope } = usePnl();
+  const { scope, raw } = usePnl();
   const { profile } = useAuth();
   const toast = useToast();
-  const [kind, setKind] = useState<"once" | "monthly">("once");
+  const [kind, setKind] = useState<"once" | "monthly" | "event">("once");
   const [where, setWhere] = useState(scope === "global" ? "" : scope);
   const [category, setCategory] = useState<ExpenseCategory>("other");
   const [amount, setAmount] = useState<number | null>(null);
@@ -321,15 +325,22 @@ function AddExpense() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The chosen event's dates (whole-event expenses need both ends; monthly ones start on its start).
+  const span = where && where !== "general" ? eventSpan(raw, where) : null;
+  const eventReady = !!span?.startDate && !!span?.endDate;
+
   async function submit() {
     if (!where) return setError("Choose a location (or General).");
+    if (kind === "event" && where === "general") return setError("A whole-event expense needs an event, not General.");
+    if (kind === "event" && !eventReady) return setError("This event has no end date yet — use Monthly, or set its end date in Events.");
     if (!amount || amount <= 0) return setError("Enter an amount above 0.");
     setBusy(true);
     setError(null);
     try {
       if (kind === "once") await addExpense({ eventId: toEventId(where), date, amount, category, note }, profile?.uid ?? "");
+      else if (kind === "event") await addExpense({ eventId: toEventId(where), date: span!.startDate!, amount, category, note, spread: "event" }, profile?.uid ?? "");
       else await addRecurring({ eventId: toEventId(where), category, note, startMonth: month, amount }, profile?.uid ?? "");
-      toast(kind === "once" ? "Expense added" : "Monthly expense added", "success");
+      toast(kind === "once" ? "Expense added" : kind === "event" ? "Event expense added" : "Monthly expense added", "success");
       setAmount(null);
       setNote("");
     } catch (e) {
@@ -344,7 +355,7 @@ function AddExpense() {
       <CardHeader title="Add an expense" />
       <div role="tablist" aria-label="Expense type" className="mb-4 flex gap-1 relative rounded-inner border border-white/[0.06] well p-1">
         <SegThumb />
-        {([["once", "One-off"], ["monthly", "Monthly"]] as const).map(([k, l]) => (
+        {([["once", "One-off"], ["monthly", "Monthly"], ["event", "Whole event"]] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} data-testid={`add-${k}`} onClick={() => setKind(k)}
             className={cn("relative z-[1] h-8 flex-1 rounded-inner px-3 text-sm font-semibold transition-colors", kind === k ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             {k === "monthly" && <Repeat className="mr-1.5 inline size-3.5 -translate-y-px" />}{l}
@@ -361,7 +372,7 @@ function AddExpense() {
           <CategorySelect id="exp-category" value={category} onChange={setCategory} />
         </div>
         <div>
-          <label htmlFor="exp-amount" className={lbl}>{kind === "once" ? "Amount (EGP)" : "Per month (EGP)"}</label>
+          <label htmlFor="exp-amount" className={lbl}>{kind === "once" ? "Amount (EGP)" : kind === "event" ? "Total for the event (EGP)" : "Per month (EGP)"}</label>
           <NumberInput id="exp-amount" value={amount} onChange={setAmount} className="h-11 text-base" />
         </div>
         <div>
@@ -369,6 +380,16 @@ function AddExpense() {
             <>
               <label htmlFor="exp-date" className={lbl}>Date</label>
               <input id="exp-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+            </>
+          ) : kind === "event" ? (
+            <>
+              <span className={lbl}>Event dates</span>
+              <p data-testid="exp-event-dates" className="flex h-11 items-center gap-2 text-sm text-ink">
+                <CalendarRange className="size-4 shrink-0 text-ink-faint" />
+                {!span ? <span className="text-ink-faint">Choose an event</span>
+                  : eventReady ? `${dateLabel(span.startDate!)} – ${dateLabel(span.endDate!)}`
+                    : <span className="text-warning">No end date yet</span>}
+              </p>
             </>
           ) : (
             <>
@@ -384,22 +405,34 @@ function AddExpense() {
       </div>
       {kind === "monthly" && (
         <p className="mt-3 text-xs text-ink-faint">
-          Counts every month from {monthLabel(month)} until you stop it, spread evenly over each month&apos;s days.
+          Counts every month from {monthLabel(month)} until you stop it, spread evenly over each month&apos;s days
+          {span?.startDate && <> — and only while this event runs ({dateLabel(span.startDate)} → {span.endDate ? dateLabel(span.endDate) : "ongoing"}), so it stops by itself when you mark the event as ended</>}.
+        </p>
+      )}
+      {kind === "event" && (
+        <p className="mt-3 text-xs text-ink-faint">
+          {span && !eventReady
+            ? "This event is ongoing, so there's nothing to divide by yet. Use Monthly for rent you pay every month, or set its end date in Events."
+            : span && amount
+              ? <>Split evenly over the event&apos;s {spanDaysOf(span)} days: <b className="text-ink">{egp(amount / spanDaysOf(span))}</b> a day. If you change the event&apos;s dates, the split follows.</>
+              : "One amount for the whole booking (e.g. the event fee), split evenly over the event's days."}
         </p>
       )}
       <div className="mt-3"><FormError>{error}</FormError></div>
       <Button className="mt-3 w-full" loading={busy} leftIcon={<Plus className="size-4" />} onClick={submit} data-testid="exp-save">
-        {kind === "once" ? "Add expense" : "Add monthly expense"}
+        {kind === "once" ? "Add expense" : kind === "event" ? "Add event expense" : "Add monthly expense"}
       </Button>
     </Card>
   );
 }
 
-function OneOffRow({ e, where }: { e: Expense; where: string }) {
+function OneOffRow({ e, where, counted }: { e: Expense; where: string; counted: number }) {
+  const { raw } = usePnl();
+  const span = e.spread === "event" && e.eventId ? eventSpan(raw, e.eventId) : null;
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const [draft, setDraft] = useState<ExpenseInput>({ eventId: e.eventId, date: e.date, amount: e.amount, category: e.category, note: e.note });
+  const [draft, setDraft] = useState<ExpenseInput>({ eventId: e.eventId, date: e.date, amount: e.amount, category: e.category, note: e.note, ...(e.spread ? { spread: e.spread } : {}) });
   const [busy, setBusy] = useState(false);
 
   if (editing) {
@@ -408,7 +441,9 @@ function OneOffRow({ e, where }: { e: Expense; where: string }) {
         <LocationSelect id={`w-${e.id}`} value={fromEventId(draft.eventId)} onChange={(v) => setDraft({ ...draft, eventId: toEventId(v) })} />
         <CategorySelect id={`c-${e.id}`} value={draft.category} onChange={(v) => setDraft({ ...draft, category: v })} />
         <NumberInput id={`a-${e.id}`} aria-label="Amount" value={draft.amount} onChange={(v) => setDraft({ ...draft, amount: v ?? 0 })} className="h-11 text-base" />
-        <input type="date" aria-label="Date" value={draft.date} onChange={(ev) => setDraft({ ...draft, date: ev.target.value })} className={input} />
+        {e.spread === "event"
+          ? <p className="flex items-center text-xs text-ink-faint">Split over the event&apos;s dates (change them in Events)</p>
+          : <input type="date" aria-label="Date" value={draft.date} onChange={(ev) => setDraft({ ...draft, date: ev.target.value })} className={input} />}
         <input aria-label="Note" value={draft.note} onChange={(ev) => setDraft({ ...draft, note: ev.target.value })} className={cn(input, "sm:col-span-2")} placeholder="Note" />
         <div className="flex gap-2 sm:col-span-2">
           <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
@@ -431,11 +466,17 @@ function OneOffRow({ e, where }: { e: Expense; where: string }) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm" data-testid="oneoff-row">
       <span className="w-24 shrink-0 text-xs text-ink-faint tabular-nums">
-        {parseDay(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        {span?.startDate && span.endDate
+          ? `${parseDay(span.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${parseDay(span.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+          : parseDay(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
       </span>
       <Tag tone="neutral">{CATEGORY_LABEL[e.category]}</Tag>
+      {e.spread === "event" && <Tag tone="accent">Whole event</Tag>}
       <span className="min-w-0 flex-1 truncate text-ink-muted">{where}{e.note && ` · ${e.note}`}</span>
-      <span className="font-semibold text-ink tabular-nums">{egp(e.amount)}</span>
+      <span className="text-right font-semibold text-ink tabular-nums">
+        {egp(counted)}
+        {Math.abs(counted - e.amount) > 0.5 && <span className="block text-[11px] font-normal text-ink-faint">of {egp(e.amount)} total</span>}
+      </span>
       {confirm ? (
         <span className="flex items-center gap-2">
           <Button size="sm" variant="secondary" onClick={() => setConfirm(false)}>Keep</Button>

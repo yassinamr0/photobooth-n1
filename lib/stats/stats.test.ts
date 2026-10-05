@@ -95,7 +95,7 @@ describe("climbing", () => {
 describe("burn rows", () => {
   const fc = (daysLeft: number | null) => ({ avgPerDay: 1, windowDays: 14, daysLeft });
   const row = (name: string, paperDays: number | null, inkDays: number | null, low = false, acrylicDays: number | null = null): InventoryRow => ({
-    event: { id: name, name, notes: "", status: "active", createdAtMs: 0, createdBy: null },
+    event: { id: name, name, notes: "", status: "active", createdAtMs: 0, createdBy: null, startDate: null, endDate: null },
     inv: { paper: null, ink: null, acrylic: null, magnetic: null, logs: [] }, tracked: true,
     low: { paper: low, ink: false, acrylic: false, magnetic: false },
     alerting: { paper: low, ink: false, acrylic: false, magnetic: false },

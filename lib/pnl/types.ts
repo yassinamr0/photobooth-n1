@@ -1,9 +1,13 @@
 /*
  * P&L expense data (admin-only; see firestore.rules /expenses and /recurringExpenses).
  *   - One-off expense: counted on its own date.
+ *   - "Whole event" expense (spread: "event"): one amount split evenly over its event's days
+ *     (start → end). Until the event has an end date it counts in full on its date.
  *   - Recurring (monthly) expense: e.g. rent or a salary. Its monthly amount is SPREAD evenly
  *     over the days of each month (owner's choice), so any range gets its fair share.
  *     Amount changes apply from the month they're made; earlier months keep the old amount.
+ * A monthly expense tied to an event only counts on the days that event runs (its start date
+ * → end date / today), never before it opened or after it ended.
  * eventId null = "General" — a cost not tied to one booth; only counted under Global.
  */
 
@@ -28,6 +32,8 @@ export type Expense = {
   category: ExpenseCategory;
   note: string;
   createdBy: string;
+  /** "event" = split evenly over the event's days (see eventSpan.ts). */
+  spread?: "event";
 };
 
 /** A monthly amount in force from `from` (YYYY-MM) until the next change. */

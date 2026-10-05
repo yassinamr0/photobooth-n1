@@ -7,13 +7,16 @@ import { productBreakdown, type ProductBreakdown } from "./products";
 import { comparisonWindows } from "@/lib/stats/revenue";
 import { trendBuckets } from "@/lib/stats/waste";
 import { recurringShare } from "./recurring";
+import { clampToSpan, eventSpan, overlapDays, spanDays, type EventSpan } from "./eventSpan";
 import { EXPENSE_CATEGORIES, type Expense, type ExpenseCategory, type RecurringExpense } from "./types";
 
 /*
  * Profit & loss. Revenue is EXACTLY the Overview figure for the same scope + range (sales
  * entries only, via scopeDashboard/scopeWindow). Expenses:
  *   - one-off: counted on its date;
- *   - recurring: spread evenly over the days of each month (recurring.ts).
+ *   - recurring: spread evenly over the days of each month (recurring.ts), and — when tied to
+ *     an event — only on the days that event runs (eventSpan.ts);
+ *   - whole-event: split evenly over the event's days.
  * Expenses are counted in whole local days, up to and including TODAY — like revenue, the
  * P&L is "to date": a future-dated expense or a future part of a month counts once it arrives.
  * Scope: an event → only that event's expenses. Global → everything, incl. General (eventId null).
@@ -37,6 +40,8 @@ export type ExpenseTotals = {
   cardFees: number;
   byCategory: Record<PnlCategory, number>;
   oneOffs: Expense[]; // in the window, newest first
+  /** What each one-off counts in the window (a whole-event expense counts only its share). */
+  oneOffAmounts: Record<string, number>;
   recurring: { r: RecurringExpense; amount: number }[]; // share in the window (> 0)
 };
 
@@ -63,23 +68,40 @@ export function expenseTotals(
   until: Date | null,
   now: Date,
 ): ExpenseTotals {
-  const out: ExpenseTotals = { total: 0, manual: 0, cardFees: 0, byCategory: emptyCats(), oneOffs: [], recurring: [] };
+  const out: ExpenseTotals = { total: 0, manual: 0, cardFees: 0, byCategory: emptyCats(), oneOffs: [], oneOffAmounts: {}, recurring: [] };
   const endToday = addDays(startOfDay(now), 1);
   let u = until ? dayCeil(until) : endToday;
   if (u > endToday) u = endToday;
   const f = from ? startOfDay(from) : firstExpenseDay(inp);
   if (!f || f >= u) return out;
+  const spans = new Map<string, EventSpan>();
+  const spanOf = (id: string) => {
+    if (!spans.has(id)) spans.set(id, eventSpan(inp.raw, id));
+    return spans.get(id)!;
+  };
   for (const e of inp.expenses) {
     if (!match(e.eventId)) continue;
-    const d = parseDay(e.date);
-    if (d < f || d >= u) continue;
+    let amount = 0;
+    const span = e.spread === "event" && e.eventId ? spanOf(e.eventId) : null;
+    const total = span ? spanDays(span) : null;
+    if (span && total) {
+      // Whole-event expense: its share of the event's days that fall in the window.
+      amount = (e.amount * overlapDays(f, u, span)) / total;
+    } else {
+      const d = parseDay(e.date);
+      if (d >= f && d < u) amount = e.amount;
+    }
+    if (amount <= 0.004) continue;
     out.oneOffs.push(e);
-    out.total += e.amount;
-    out.byCategory[e.category] += e.amount;
+    out.oneOffAmounts[e.id] = amount;
+    out.total += amount;
+    out.byCategory[e.category] += amount;
   }
   for (const r of inp.recurring) {
     if (!match(r.eventId)) continue;
-    const amount = recurringShare(r, f, u);
+    // Tied to an event → only the days it runs.
+    const w = r.eventId && inp.raw.events.some((ev) => ev.id === r.eventId) ? clampToSpan(f, u, spanOf(r.eventId)) : { from: f, until: u };
+    const amount = w.until > w.from ? recurringShare(r, w.from, w.until) : 0;
     if (amount <= 0) continue;
     out.recurring.push({ r, amount });
     out.total += amount;
@@ -188,11 +210,15 @@ export function pnlByLocation(inp: PnlInputs, range: DateRange, now: Date): PnlL
   return rows;
 }
 
-/** Days the range covers up to and including today (All time: from the scope's first data). */
+/**
+ * Days the range covers up to and including today (All time: from the scope's first data).
+ * For one event: only the days it was open (its start date → end date), so a booth that
+ * opened on the 12th isn't judged on the 1st–11th. 0 = not open at all in the range.
+ */
 function daysToDate(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): number {
   const w = rangeWindow(range, now);
   const endToday = addDays(startOfDay(now), 1);
-  const until = w.until && w.until < endToday ? w.until : endToday;
+  let until = w.until && w.until < endToday ? w.until : endToday;
   let from = w.from;
   if (!from) {
     const starts = inp.raw.shifts
@@ -203,6 +229,12 @@ function daysToDate(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): 
     const all = [...starts, ...(fe ? [fe.getTime()] : [])];
     from = all.length ? startOfDay(new Date(Math.min(...all))) : startOfDay(now);
   }
+  if (scope !== "global") {
+    const c = clampToSpan(startOfDay(from), until, eventSpan(inp.raw, scope));
+    from = c.from;
+    until = c.until;
+    if (until <= from) return 0;
+  }
   return Math.max(1, daysBetween(from, until));
 }
 
@@ -212,16 +244,19 @@ export function pnlProducts(inp: PnlInputs, scope: Scope, range: DateRange, now:
   return productBreakdown(d, inp.fees ?? [], inp.costs ?? [], inp.sheetsPerBox ?? 0);
 }
 
-export type BreakEvenRow = { id: string | null; name: string; be: BreakEven; materialsMissing: boolean };
+export type BreakEvenRow = { id: string | null; name: string; be: BreakEven; materialsMissing: boolean; notOpen: boolean };
 
 /** Break-even for one scope (a location, or Global incl. General costs). */
-export function pnlBreakEven(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): { be: BreakEven; materialsMissing: boolean } {
+export function pnlBreakEven(inp: PnlInputs, scope: Scope, range: DateRange, now: Date): { be: BreakEven; materialsMissing: boolean; notOpen: boolean } {
   const s = pnlSummary(inp, scope, range, now);
   const products = pnlProducts(inp, scope, range, now);
   const materials = products.materials ?? products.rows.reduce((t, r) => t + (r.materials ?? 0), 0);
+  const days = daysToDate(inp, scope, range, now);
   return {
-    be: breakEven({ revenue: s.revenue, fixed: s.expenses.manual, variable: materials + s.expenses.cardFees, days: daysToDate(inp, scope, range, now) }),
+    be: breakEven({ revenue: s.revenue, fixed: s.expenses.manual, variable: materials + s.expenses.cardFees, days }),
     materialsMissing: products.missingCosts,
+    /** The event wasn't running on any day of the selected dates. */
+    notOpen: days === 0,
   };
 }
 

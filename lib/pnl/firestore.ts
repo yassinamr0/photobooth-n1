@@ -26,6 +26,7 @@ export function parseExpense(id: string, d: DocumentData): Expense {
     category: isCategory(d.category) ? d.category : "other",
     note: str(d.note),
     createdBy: str(d.createdBy),
+    ...(d.spread === "event" ? { spread: "event" as const } : {}),
   };
 }
 
@@ -53,7 +54,7 @@ export function watchRecurring(onChange: (r: RecurringExpense[]) => void, onErro
   return listen(recurringCol(), (s) => onChange(s.docs.map((d) => parseRecurring(d.id, d.data()))), onError);
 }
 
-export type ExpenseInput = { eventId: string | null; date: string; amount: number; category: ExpenseCategory; note: string };
+export type ExpenseInput = { eventId: string | null; date: string; amount: number; category: ExpenseCategory; note: string; spread?: "event" };
 
 function check(amount: number) {
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter an amount above 0");
@@ -62,6 +63,7 @@ function check(amount: number) {
 export function addExpense(e: ExpenseInput, by: string) {
   check(e.amount);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(e.date)) throw new Error("Pick a date");
+  if (e.spread === "event" && !e.eventId) throw new Error("A whole-event expense needs an event");
   return addDoc(expensesCol(), { ...e, note: e.note.trim(), createdBy: by, createdAt: serverTimestamp() });
 }
 

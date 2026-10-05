@@ -5,7 +5,7 @@ import type { Entry, Shift } from "@/lib/shift/types";
 import { buildDailySummary } from "./build";
 import { renderSummaryEmail } from "./email";
 
-const ev = (id: string, name: string, status: "active" | "inactive" = "active"): EventRecord => ({ id, name, notes: "", status, createdAtMs: 0, createdBy: null });
+const ev = (id: string, name: string, status: "active" | "inactive" = "active"): EventRecord => ({ id, name, notes: "", status, createdAtMs: 0, createdBy: null, startDate: null, endDate: null });
 const shift = (id: string, eventId: string, start: Date, hours: number, extra: Partial<Shift> = {}): Shift => ({
   id, uid: "u", staffName: "Nour Hassan", eventId, startTime: start.toISOString(), endTime: new Date(start.getTime() + hours * 3600e3).toISOString(),
   startPaperCount: null, paperChanges: 0, inkChanges: 0, endPaperCount: null, ...extra,

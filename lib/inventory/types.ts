@@ -26,6 +26,10 @@ export type EventRecord = {
   status: EventStatus;
   createdAtMs: number | null;
   createdBy: string | null;
+  /** First day the booth runs (YYYY-MM-DD). null on older events → first shift's day is used. */
+  startDate: string | null;
+  /** Last day it runs (YYYY-MM-DD, inclusive). null = ongoing / not known yet. */
+  endDate: string | null;
 };
 
 export type StockDoc = {

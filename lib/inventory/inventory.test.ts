@@ -103,7 +103,7 @@ import type { EventInventory, EventRecord } from "./types";
 
 describe("scopeInventory — switcher scoping", () => {
   const now = Date.UTC(2026, 9, 1);
-  const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null });
+  const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null, startDate: null, endDate: null });
   const stock = (type: StockType, q: number, th: number, alertDismissed = false): StockDoc => ({ type, currentQuantity: q, lowStockThreshold: th, trackingSinceMs: now - 5 * DAY, updatedAtMs: 0, alertDismissed });
   const inv = new Map<string, EventInventory>([
     ["A", { paper: stock("paper", 50, 108), ink: stock("ink", 3, 1), acrylic: null, magnetic: null, logs: [] }],
@@ -136,7 +136,7 @@ describe("scopeInventory — switcher scoping", () => {
 
 describe("low-stock alerts — Mark as read", () => {
   const now = Date.UTC(2026, 9, 1);
-  const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null });
+  const ev = (id: string): EventRecord => ({ id, name: id, notes: "", status: "active", createdAtMs: 0, createdBy: null, startDate: null, endDate: null });
   const st = (type: StockType, q: number, th: number, alertDismissed = false): StockDoc =>
     ({ type, currentQuantity: q, lowStockThreshold: th, trackingSinceMs: 0, updatedAtMs: 0, alertDismissed });
   it("a read alert leaves the banner but stays listed as read; frames alert too", () => {
@@ -163,7 +163,7 @@ describe("ended events raise no low-stock alerts", () => {
     const now = Date.UTC(2026, 9, 1);
     const st = (type: StockType): StockDoc => ({ type, currentQuantity: 0, lowStockThreshold: 5, trackingSinceMs: 0, updatedAtMs: 0, alertDismissed: false });
     const inv = new Map<string, EventInventory>([["D5", { paper: st("paper"), ink: st("ink"), acrylic: st("acrylic"), magnetic: st("magnetic"), logs: [] }]]);
-    const g = scopeInventory([{ id: "D5", name: "District 5", notes: "", status: "inactive", createdAtMs: 0, createdBy: null }], inv, [], "global", now);
+    const g = scopeInventory([{ id: "D5", name: "District 5", notes: "", status: "inactive", createdAtMs: 0, createdBy: null, startDate: null, endDate: null }], inv, [], "global", now);
     expect(g.alerts).toEqual([]);
     expect(g.readAlerts).toEqual([]);
     expect(g.lowRows).toEqual([]);

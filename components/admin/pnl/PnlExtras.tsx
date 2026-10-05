@@ -54,7 +54,7 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
         <Empty>{scope !== "global" && ended.has(scope) ? "This event has ended — break-even isn't shown." : "No active locations."}</Empty>
       ) : (
         <ul className="flex flex-col divide-y divide-line">
-          {items.map((i) => <BreakEvenRow key={i.id ?? "all"} name={i.name} be={i.be} total={i.id === null} />)}
+          {items.map((i) => <BreakEvenRow key={i.id ?? "all"} name={i.name} be={i.be} total={i.id === null} notOpen={i.notOpen} />)}
         </ul>
       )}
       <p className="mt-3 flex items-start gap-2 text-xs text-ink-faint">
@@ -67,7 +67,15 @@ export function BreakEvenCard({ inp, now, label }: { inp: PnlInputs; now: Date; 
   );
 }
 
-function BreakEvenRow({ name, be, total }: { name: string; be: BreakEven; total: boolean }) {
+function BreakEvenRow({ name, be, total, notOpen }: { name: string; be: BreakEven; total: boolean; notOpen?: boolean }) {
+  if (notOpen) {
+    return (
+      <li data-testid="breakeven-row" className="flex flex-wrap items-center justify-between gap-2 py-4 text-sm">
+        <span className="font-semibold text-ink">{name}</span>
+        <span className="text-ink-faint">Not running on these dates</span>
+      </li>
+    );
+  }
   const need = be.breakEvenPerDay;
   const ok = be.covered === true;
   const none = be.covered === null;

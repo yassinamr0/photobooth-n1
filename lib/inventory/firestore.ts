@@ -54,7 +54,19 @@ export function parseEvent(id: string, d: DocumentData): EventRecord {
     status: d.status === "inactive" ? "inactive" : "active", // manual Phase-4 docs → active
     createdAtMs: ms(d.createdAt),
     createdBy: typeof d.createdBy === "string" ? d.createdBy : null,
+    startDate: isDay(d.startDate) ? d.startDate : null,
+    endDate: isDay(d.endDate) ? d.endDate : null,
   };
+}
+
+const isDay = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** Event dates: start required for new events, end optional (ongoing) but never before the start. */
+export type EventDates = { startDate: string; endDate: string | null };
+function checkDates(d: EventDates) {
+  if (!isDay(d.startDate)) throw new Error("Pick a start date.");
+  if (d.endDate != null && !isDay(d.endDate)) throw new Error("End date isn't a valid date.");
+  if (d.endDate && d.endDate < d.startDate) throw new Error("The end date can't be before the start date.");
 }
 
 export function parseStock(type: StockType, d: DocumentData): StockDoc {
@@ -126,22 +138,32 @@ export async function ensureStockDocs(eventId: string, sheetsPerBox: number) {
 
 /* ───────────────────────────── Events CRUD ───────────────────────────── */
 
-export async function createEvent(name: string, notes: string, by: Actor, sheetsPerBox: number) {
+export async function createEvent(name: string, notes: string, by: Actor, sheetsPerBox: number, dates: EventDates) {
+  checkDates(dates);
   const ref = doc(collection(db(), "events"));
   const b = writeBatch(db());
-  b.set(ref, { name: name.trim(), notes: notes.trim(), status: "active", createdAt: serverTimestamp(), createdBy: by.uid });
+  b.set(ref, { name: name.trim(), notes: notes.trim(), status: "active", startDate: dates.startDate, endDate: dates.endDate, createdAt: serverTimestamp(), createdBy: by.uid });
   const base = { currentQuantity: 0, updatedAt: serverTimestamp(), trackingSince: serverTimestamp() };
   for (const t of STOCK_TYPES) b.set(stockRef(ref.id, t), { ...base, lowStockThreshold: defaultThreshold(t, sheetsPerBox) });
   await b.commit();
   return ref.id;
 }
 
-export function updateEvent(eventId: string, patch: { name: string; notes: string }) {
-  return updateDoc(eventRef(eventId), { name: patch.name.trim(), notes: patch.notes.trim() });
+export function updateEvent(eventId: string, patch: { name: string; notes: string } & EventDates) {
+  checkDates(patch);
+  return updateDoc(eventRef(eventId), { name: patch.name.trim(), notes: patch.notes.trim(), startDate: patch.startDate, endDate: patch.endDate });
 }
 
-export function setEventStatus(eventId: string, status: EventStatus) {
-  return updateDoc(eventRef(eventId), { status });
+/**
+ * Mark as ended → its end date becomes `today` (unless it already ended earlier);
+ * Reopen → back to ongoing (end date cleared).
+ */
+export function setEventStatus(eventId: string, status: EventStatus, opts?: { today: string; endDate: string | null }) {
+  if (status === "inactive" && opts) {
+    const end = opts.endDate && opts.endDate <= opts.today ? opts.endDate : opts.today;
+    return updateDoc(eventRef(eventId), { status, endDate: end });
+  }
+  return updateDoc(eventRef(eventId), status === "active" ? { status, endDate: null } : { status });
 }
 
 /* ───────────────────────────── Stock writes ───────────────────────────── */

@@ -362,6 +362,15 @@ Owner-approved changes (after Phase 6):
     monthly recurring (rent, salaries…), **spread evenly over the days of each month**.
     Changing a monthly amount applies from a chosen month; earlier months keep theirs.
     "Stop after this month" ends it; Delete removes it from every month.
+    A monthly expense tied to an event only counts on the days that event runs.
+  - **Whole-event expense** (`spread: "event"`): one amount split evenly over the event's days
+    (start → end, inclusive). Needs an event with an end date; follows the event if its dates
+    change.
+  - **Event dates**: start date (required for new events; older events fall back to their
+    first shift's day, else creation day) and optional end date (empty = ongoing). "Mark as
+    ended" sets the end date to that day; "Reopen" clears it.
+  - **Break-even** for one event counts only the days it was open within the selected dates
+    ("Not running on these dates" when there are none).
   - Location = an event, or **General** (not tied to a booth; only counted under Global).
   - Stock purchases and staff pay are entered as expenses by hand.
   - Everything counts up to today. The optional hadr "cost" field isn't counted.
