@@ -165,6 +165,17 @@ describe("event dates", () => {
     expect(eventSpan(withShift, "E").startDate).toBe("2026-10-07");
   });
 
+  it("an event marked as ended before end dates existed ends on its last shift's day", () => {
+    const raw = { events: [ev({ status: "inactive", startDate: "2026-09-15" })] as never, shifts: [shift("a", "E", "2026-09-20"), shift("b", "E", "2026-09-28")] };
+    expect(eventSpan(raw, "E")).toMatchObject({ endDate: "2026-09-28", endGuessed: true });
+    const inp = base([ev({ status: "inactive", startDate: "2026-09-15" })], {
+      recurring: [rec({ eventId: "E", startMonth: "2026-09", amounts: [{ from: "2026-09", amount: 3000 }] })],
+    });
+    inp.raw.shifts = raw.shifts;
+    // rent stops after Sep 28: Sep 15–28 = 14 days × 100, nothing in October
+    expect(expenseTotals(inp, () => true, day("2026-09-01"), day("2026-11-01"), oct31).total).toBeCloseTo(1400);
+  });
+
   it("break-even counts only the days the booth was open", () => {
     const inp = base([ev({ startDate: "2026-10-12" })], { recurring: [rec({ eventId: "E", startMonth: "2026-10", amounts: [{ from: "2026-10", amount: 3100 }] })] });
     const r = pnlBreakEven(inp, "E", "month", new Date(2026, 9, 21, 12)); // Oct 12–21 = 10 days

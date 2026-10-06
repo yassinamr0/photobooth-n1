@@ -8,41 +8,53 @@ import type { RawDashboard } from "@/lib/admin/scope";
  *   - split a "whole event" expense evenly over the event's days;
  *   - count break-even only over the days the booth was open.
  * Start: the event's startDate; older events without one fall back to the day of their first
- * shift (or the day they were created). End: endDate (inclusive); null = ongoing.
+ * shift (or the day they were created). End: endDate (inclusive); null = ongoing — except an
+ * event marked as ended before end dates existed, which ends on its last shift's day.
  */
 export type EventSpan = {
   from: Date | null;
   until: Date | null;
   /** Start came from the first shift / creation day, not a saved start date. */
   startGuessed: boolean;
+  /** Ended (marked) before end dates existed: end taken from its last shift / start day. */
+  endGuessed: boolean;
   startDate: string | null;
   endDate: string | null;
 };
 
-const OPEN: EventSpan = { from: null, until: null, startGuessed: false, startDate: null, endDate: null };
+const OPEN: EventSpan = { from: null, until: null, startGuessed: false, endGuessed: false, startDate: null, endDate: null };
 
 export function eventSpan(raw: Pick<RawDashboard, "events" | "shifts">, eventId: string): EventSpan {
   const ev = raw.events.find((e) => e.id === eventId);
   if (!ev) return OPEN;
   let startDate = ev.startDate ?? null;
   let startGuessed = false;
+  const shiftTimes = raw.shifts
+    .filter((s) => s.eventId === eventId)
+    .map((s) => new Date(s.startTime).getTime())
+    .filter((t) => !Number.isNaN(t));
   if (!startDate) {
-    const firstShift = raw.shifts
-      .filter((s) => s.eventId === eventId)
-      .map((s) => new Date(s.startTime).getTime())
-      .filter((t) => !Number.isNaN(t))
-      .reduce((m, t) => Math.min(m, t), Infinity);
+    const firstShift = shiftTimes.reduce((m, t) => Math.min(m, t), Infinity);
     const t = Number.isFinite(firstShift) ? firstShift : ev.createdAtMs ?? null;
     if (t != null) {
       startDate = dayKey(new Date(t));
       startGuessed = true;
     }
   }
-  const endDate = ev.endDate ?? null;
+  let endDate = ev.endDate ?? null;
+  let endGuessed = false;
+  // Marked as ended before end dates existed → it ended on its last shift's day (or its start).
+  if (!endDate && ev.status === "inactive") {
+    const lastShift = shiftTimes.reduce((m, t) => Math.max(m, t), -Infinity);
+    endDate = Number.isFinite(lastShift) ? dayKey(new Date(lastShift)) : startDate;
+    if (endDate && startDate && endDate < startDate) endDate = startDate;
+    endGuessed = !!endDate;
+  }
   return {
     from: startDate ? parseDay(startDate) : null,
     until: endDate ? addDays(parseDay(endDate), 1) : null,
     startGuessed,
+    endGuessed,
     startDate,
     endDate,
   };

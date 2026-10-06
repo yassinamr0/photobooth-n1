@@ -127,7 +127,7 @@ function EventRow({ ev, assigned, finished }: { ev: EventRecord; assigned: numbe
   const [notes, setNotes] = useState(ev.notes);
   // Older events have no saved start date: prefill the guess (first shift / creation day).
   const [startDate, setStartDate] = useState(ev.startDate ?? span.startDate ?? dayKey(new Date()));
-  const [endDate, setEndDate] = useState(ev.endDate ?? "");
+  const [endDate, setEndDate] = useState(ev.endDate ?? (span.endGuessed ? span.endDate ?? "" : ""));
   const today = dayKey(new Date());
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [deleting, setDeleting] = useState<null | "ask" | "all">(null);
@@ -163,7 +163,7 @@ function EventRow({ ev, assigned, finished }: { ev: EventRecord; assigned: numbe
           <Field id={`edit-start-${ev.id}`} label="Starts" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="[color-scheme:dark]" />
           <Field id={`edit-end-${ev.id}`} label="Ends (optional)" type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className="[color-scheme:dark]" />
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => { setEditing(false); setName(ev.name); setNotes(ev.notes); setStartDate(ev.startDate ?? span.startDate ?? today); setEndDate(ev.endDate ?? ""); }}>Cancel</Button>
+            <Button variant="secondary" onClick={() => { setEditing(false); setName(ev.name); setNotes(ev.notes); setStartDate(ev.startDate ?? span.startDate ?? today); setEndDate(ev.endDate ?? (span.endGuessed ? span.endDate ?? "" : "")); }}>Cancel</Button>
             <Button loading={busy} disabled={!name.trim() || !startDate}
               onClick={async () => { if (await run(() => updateEvent(ev.id, { name, notes, startDate, endDate: endDate || null }), "Event updated")) setEditing(false); }}>
               Save
@@ -182,7 +182,12 @@ function EventRow({ ev, assigned, finished }: { ev: EventRecord; assigned: numbe
               <CalendarRange className="size-3.5 shrink-0" />
               {fmtSpan(span.startDate, span.endDate)}
             </p>
-            {span.startGuessed && <p className="text-[11px] text-ink-faint">Start taken from its first shift — edit to change</p>}
+            {(span.startGuessed || span.endGuessed) && (
+              <p className="text-[11px] text-ink-faint">
+                {span.startGuessed && span.endGuessed ? "Start and end taken from its first and last shift"
+                  : span.startGuessed ? "Start taken from its first shift" : "End taken from its last shift"} — edit to change
+              </p>
+            )}
             <p className="truncate text-xs text-ink-faint lg:hidden">
               {ev.notes || "No notes"} · {assigned} staff assigned
             </p>
