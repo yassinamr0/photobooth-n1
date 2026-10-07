@@ -317,6 +317,14 @@ function AddExpense() {
   const toast = useToast();
   const [kind, setKind] = useState<"once" | "monthly" | "event">("once");
   const [where, setWhere] = useState(scope === "global" ? "" : scope);
+  // Follow the location picked in the top switcher: switching the scope to an event preselects
+  // it here (a manual change within the same scope is kept until the scope changes again).
+  // React's "adjust state while rendering" pattern — no effect needed.
+  const [prevScope, setPrevScope] = useState(scope);
+  if (scope !== prevScope) {
+    setPrevScope(scope);
+    if (scope !== "global") setWhere(scope);
+  }
   const [category, setCategory] = useState<ExpenseCategory>("other");
   const [amount, setAmount] = useState<number | null>(null);
   const [date, setDate] = useState(() => dayKey(new Date()));
