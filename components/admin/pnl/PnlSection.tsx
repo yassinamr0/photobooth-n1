@@ -16,7 +16,7 @@ import { dayKey, parseDay, rangeLabel } from "@/lib/admin/range";
 import { formatEGP } from "@/lib/format";
 import { pct } from "@/lib/stats/waste";
 import { pnlByLocation, pnlSummary, pnlTrend, type PnlCategory, type PnlSummary } from "@/lib/pnl/pnl";
-import { BreakEvenCard, CostsCard, EmailCard, FeesCard, ProductsCard } from "./PnlExtras";
+import { BackupCard, BreakEvenCard, CostsCard, EmailCard, FeesCard, ProductsCard } from "./PnlExtras";
 import { currentAmount, isActive, monthKey } from "@/lib/pnl/recurring";
 import {
   addExpense, addRecurring, changeRecurringAmount, deleteExpense, deleteRecurring, setRecurringEnd, updateExpense,
@@ -76,6 +76,7 @@ export function PnlSection() {
         <FeesCard key={`fees-${JSON.stringify(p.fees)}`} />
         <CostsCard key={`costs-${JSON.stringify(p.costs)}-${p.paper.sheetsPerBox}`} />
         <EmailCard />
+        <BackupCard />
       </div>
       <p className="flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />

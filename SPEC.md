@@ -400,6 +400,12 @@ Owner-approved changes (after Phase 6):
   vs the day before, shifts, month so far with break-even, alerts (ended events skipped).
   Vercel Cron → `/api/daily-summary` (Firebase Admin SDK, CRON_SECRET); admin "Send test
   email now". WhatsApp later.
+- **Data backups**: one JSON file of every collection (users, events + stock/stockLogs,
+  shifts, entries, expenses, recurringExpenses, settings). Admin "Download backup" in P&L
+  (`POST /api/backup`, admin token) + a weekly emailed backup (Vercel Cron → `GET /api/backup`,
+  CRON_SECRET; Resend attachment to BACKUP_EMAIL_TO || SUMMARY_EMAIL_TO, deduped via
+  `settings/backupLog`). Read-only export; no in-app restore (done by hand if ever needed).
+  Firebase Auth login accounts aren't exportable; the /users profile docs are.
 
 ---
 

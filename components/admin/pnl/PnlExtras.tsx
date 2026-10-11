@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, CreditCard, Info, Mail, Package } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, Download, Info, Mail, Package } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/Field";
@@ -358,6 +358,54 @@ export function CostsCard() {
 }
 
 /* ─────────────── Daily summary email ─────────────── */
+export function BackupCard() {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <Card padding="lg" data-testid="backup-card">
+      <CardHeader title="Data backup" subtitle="Save everything — staff, events, shifts, sales, waste, inventory and expenses — as one file"
+        action={<Download className="size-5 text-ink-faint" />} />
+      <Button size="sm" variant="secondary" loading={busy} data-testid="backup-download" leftIcon={<Download className="size-4" />}
+        onClick={async () => {
+          setBusy(true);
+          setResult(null);
+          try {
+            const token = await firebase().auth.currentUser?.getIdToken();
+            const res = await fetch("/api/backup", { method: "POST", headers: { Authorization: `Bearer ${token ?? ""}` } });
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.error || `Failed (${res.status})`);
+            }
+            const blob = await res.blob();
+            const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") || "")?.[1]
+              || `booth-log-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            setResult({ ok: true, text: `Saved ${name} — keep it somewhere safe.` });
+            toast("Backup downloaded", "success");
+          } catch (e) {
+            setResult({ ok: false, text: (e as Error).message });
+          } finally {
+            setBusy(false);
+          }
+        }}>
+        Download backup
+      </Button>
+      <p className="mt-3 text-xs text-ink-faint">A backup is also emailed to you automatically every week. Restoring a backup, if it&apos;s ever needed, is done by hand — keep the files.</p>
+      {result && (
+        <p data-testid="backup-result" className={cn("mt-3 text-sm", result.ok ? "text-success" : "text-danger")}>{result.text}</p>
+      )}
+    </Card>
+  );
+}
+
 export function EmailCard() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
