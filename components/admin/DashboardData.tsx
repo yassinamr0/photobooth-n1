@@ -13,6 +13,7 @@ import { DEFAULT_SHEETS_PER_BOX, DEFAULT_SHEETS_PER_PACK, type PaperSettings } f
 import { ensureStockDocs, watchEventLogs, watchEventStock } from "@/lib/inventory/firestore";
 import { emptyInventory, STOCK_TYPES } from "@/lib/inventory/types";
 import { scopeInventory, type ScopedInventory } from "@/lib/inventory/scope";
+import { eventPeriodRange } from "@/lib/pnl/eventSpan";
 import type { EventInventory, EventRecord } from "@/lib/inventory/types";
 import { authErrorMessage } from "@/lib/auth/errors";
 
@@ -28,7 +29,8 @@ const STORAGE_KEY = "bl.admin.scope.v1";
 type Ctx = {
   scope: Scope;
   setScope: (s: Scope) => void;
-  range: DateRange;
+  range: DateRange; // RESOLVED (event period → its concrete dates); what sections compute with
+  rangePreset: DateRange; // raw switcher choice ("event" stays "event"); drives the buttons
   setRange: (r: DateRange) => void;
   raw: RawDashboard;
   scoped: ScopedDashboard;
@@ -147,7 +149,13 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const scoped = useMemo(() => scopeDashboard(raw, scope, pref.range), [raw, scope, pref.range]);
+  // "Event period" depends on the selected event, so resolve it to that event's own dates
+  // here (once), before any calculation sees it. Every other range passes straight through.
+  const resolvedRange: DateRange = useMemo(
+    () => (pref.range === "event" ? (scope === "global" ? "all" : eventPeriodRange(raw, scope, new Date(now))) : pref.range),
+    [pref.range, scope, raw, now],
+  );
+  const scoped = useMemo(() => scopeDashboard(raw, scope, resolvedRange), [raw, scope, resolvedRange]);
   // Inventory is NOT date-ranged (stock is a current quantity); only the event scope applies.
   const inventory = useMemo(
     () => scopeInventory(events, inventories, raw.shifts, scope, now),
@@ -156,8 +164,9 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     scope,
-    setScope: (s) => update({ scope: s, range: pref.range }),
-    range: pref.range,
+    setScope: (s) => update({ scope: s, range: s === "global" && pref.range === "event" ? "all" : pref.range }),
+    range: resolvedRange,
+    rangePreset: pref.range,
     setRange: (r) => update({ scope, range: r }),
     raw,
     scoped,
@@ -184,9 +193,11 @@ function useDashboard() {
 
 /** The switcher's state (top bar). */
 export function useDashboardScope() {
-  const { scope, setScope, range, setRange, events } = useDashboard();
+  const { scope, setScope, range, rangePreset, setRange, events } = useDashboard();
   const scopeName = scope === "global" ? "Global" : events.find((e) => e.id === scope)?.name ?? "Event";
-  return { scope, setScope, range, setRange, events, scopeName };
+  // `range` is the raw switcher choice (drives the buttons); `resolvedRange` is the concrete
+  // window (for showing the Event period's actual dates).
+  return { scope, setScope, range: rangePreset, resolvedRange: range, setRange, events, scopeName };
 }
 
 /** Scoped data — the ONLY data source for Overview, Staff, Shifts and Staff history. */

@@ -108,7 +108,7 @@ describe("P&L", () => {
 
 // ---- Event dates: monthly expenses only while the event runs, whole-event split, break-even days
 import { pnlBreakEven } from "./pnl";
-import { eventSpan } from "./eventSpan";
+import { eventPeriodRange, eventSpan } from "./eventSpan";
 
 describe("event dates", () => {
   const ev = (o: object) => ({ id: "E", name: "Pop-up", status: "active" as const, notes: "", createdAtMs: null, createdBy: null, startDate: null, endDate: null, ...o });
@@ -174,6 +174,15 @@ describe("event dates", () => {
     inp.raw.shifts = raw.shifts;
     // rent stops after Sep 28: Sep 15–28 = 14 days × 100, nothing in October
     expect(expenseTotals(inp, () => true, day("2026-09-01"), day("2026-11-01"), oct31).total).toBeCloseTo(1400);
+  });
+
+  it("event-period range = the event's own dates (ongoing → up to today)", () => {
+    const rawOngoing = { events: [ev({ startDate: "2026-10-01" })] as never, shifts: [] };
+    expect(eventPeriodRange(rawOngoing, "E", new Date(2026, 9, 11, 12))).toEqual({ kind: "custom", mode: "range", from: "2026-10-01", to: "2026-10-11" });
+    const rawEnded = { events: [ev({ startDate: "2026-09-28", endDate: "2026-10-08" })] as never, shifts: [] };
+    expect(eventPeriodRange(rawEnded, "E", new Date(2026, 9, 11, 12))).toEqual({ kind: "custom", mode: "range", from: "2026-09-28", to: "2026-10-08" });
+    const rawNoStart = { events: [{ id: "E", name: "X", status: "active", notes: "", createdAtMs: null, createdBy: null, startDate: null, endDate: null }] as never, shifts: [] };
+    expect(eventPeriodRange(rawNoStart, "E", new Date(2026, 9, 11, 12))).toBe("all");
   });
 
   it("break-even counts only the days the booth was open", () => {

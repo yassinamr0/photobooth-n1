@@ -227,6 +227,11 @@ For any mismatched, unverified shift:
   icon/count (numbers stay visible with a "checked off by admin ✓" note and an "Unmark" link).
 
 ### Dashboard sections
+- **Date range** (every scoped section): This week · This month · All time · Custom (day /
+  week / from–to), plus **Event period** — shown only when a specific event is selected; it
+  spans that event's own dates (start date → end date, or start date → today if the event is
+  ongoing). It is resolved to the event's concrete dates before any calculation, so it behaves
+  exactly like a custom range. Switching to Global clears it back to All time.
 - **Overview**: date-range tabs (This week / This month / All time), combined stats grid,
   warning banners.
 - **Pending approvals**: not-yet-approved signups with Approve/Reject. Always global.

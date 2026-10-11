@@ -153,11 +153,12 @@ const RANGES: { id: RangePreset; label: string; short: string }[] = [
   { id: "week", label: "This week", short: "Week" },
   { id: "month", label: "This month", short: "Month" },
   { id: "all", label: "All time", short: "All" },
+  { id: "event", label: "Event period", short: "Event" },
 ];
 
 /** Event scope switcher + date range. Pending approvals ignores both (always global). */
 function ScopeBar({ section }: { section: Section }) {
-  const { scope, setScope, range, setRange, events, scopeName } = useDashboardScope();
+  const { scope, setScope, range, resolvedRange, setRange, events, scopeName } = useDashboardScope();
   const [picking, setPicking] = useState(false);
   const custom = isCustom(range);
   const note =
@@ -190,8 +191,9 @@ function ScopeBar({ section }: { section: Section }) {
       </label>
       <div role="tablist" aria-label="Date range" className="flex w-full gap-1 relative rounded-inner border border-white/[0.06] well p-1 sm:w-auto">
         <SegThumb />
-        {RANGES.map((r) => (
-          <button key={r.id} type="button" role="tab" aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
+        {/* "Event period" = the selected event's own dates; only shown for a specific event. */}
+        {RANGES.filter((r) => r.id !== "event" || scope !== "global").map((r) => (
+          <button key={r.id} type="button" role="tab" data-testid={`range-${r.id}`} aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
             className={cn("relative z-[1] h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
               range === r.id ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
@@ -213,7 +215,9 @@ function ScopeBar({ section }: { section: Section }) {
         {note ?? (
           <>
             Showing: <span className="text-ink">{scopeName}</span>
-            {note === null ? " · current stock (date range doesn't apply)" : ` · ${custom ? rangeLabel(range) : RANGES.find((r) => r.id === range)?.label}`}
+            {note === null
+              ? " · current stock (date range doesn't apply)"
+              : ` · ${custom ? rangeLabel(range) : range === "event" ? (isCustom(resolvedRange) ? `event period (${rangeChip(resolvedRange)})` : "event period") : RANGES.find((r) => r.id === range)?.label}`}
           </>
         )}
       </span>

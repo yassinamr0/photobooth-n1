@@ -4,7 +4,10 @@
  * Everything is in LOCAL time (same as the rest of the dashboard). Pure + unit-tested.
  */
 
-export type RangePreset = "week" | "month" | "all";
+// "event" = the selected event's own date window; it depends on the event, so it is always
+// RESOLVED to a concrete custom range (eventPeriodRange in lib/pnl/eventSpan.ts) before any
+// calculation — rangeWindow/the calcs never actually receive "event".
+export type RangePreset = "week" | "month" | "all" | "event";
 export type CustomMode = "day" | "week" | "range";
 /** from / to are local calendar days, "YYYY-MM-DD", inclusive. */
 export type CustomRange = { kind: "custom"; mode: CustomMode; from: string; to: string };
@@ -82,6 +85,7 @@ export function rangeWindow(range: DateRange, now: Date): { from: Date | null; u
   if (isCustom(range)) return { from: parseDay(range.from), until: addDays(parseDay(range.to), 1) };
   if (range === "week") return { from: startOfWeek(now), until: null };
   if (range === "month") return { from: startOfMonth(now), until: null };
+  // "event" is resolved to a custom range before it gets here; treat a stray one as all-time.
   return { from: null, until: null };
 }
 
@@ -105,6 +109,7 @@ export function rangeLabel(range: DateRange): string {
   if (range === "week") return "this week";
   if (range === "month") return "this month";
   if (range === "all") return "all time";
+  if (range === "event") return "the event period";
   const a = parseDay(range.from);
   const b = parseDay(range.to);
   if (range.from === range.to) return fmt(a, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
@@ -122,7 +127,7 @@ export function rangeChip(r: CustomRange): string {
 
 /** Validates a range loaded from storage. */
 export function parseStoredRange(v: unknown): DateRange | null {
-  if (v === "week" || v === "month" || v === "all") return v;
+  if (v === "week" || v === "month" || v === "all" || v === "event") return v;
   if (v && typeof v === "object") {
     const r = v as Partial<CustomRange>;
     if (

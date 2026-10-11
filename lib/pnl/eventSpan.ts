@@ -1,4 +1,4 @@
-import { addDays, dayKey, daysBetween, parseDay, startOfDay } from "@/lib/admin/range";
+import { addDays, customRange, dayKey, daysBetween, parseDay, startOfDay, type DateRange } from "@/lib/admin/range";
 import type { RawDashboard } from "@/lib/admin/scope";
 
 /*
@@ -76,4 +76,19 @@ export function spanDays(span: EventSpan): number | null {
 export function overlapDays(from: Date, until: Date, span: EventSpan): number {
   const c = clampToSpan(startOfDay(from), startOfDay(until), span);
   return c.until > c.from ? daysBetween(c.from, c.until) : 0;
+}
+
+/**
+ * The "Event period" date window for the top switcher: the event's own dates — start date to
+ * end date, or start date to TODAY when it has no end date yet (ongoing). Resolved to a
+ * concrete custom range so every calculation handles it like any other dated range. Falls back
+ * to "all" if the event has no resolvable start (shouldn't happen — new events require one).
+ */
+export function eventPeriodRange(raw: Pick<RawDashboard, "events" | "shifts">, eventId: string, now: Date): DateRange {
+  const span = eventSpan(raw, eventId);
+  if (!span.startDate) return "all";
+  const todayKey = dayKey(startOfDay(now));
+  let to = span.endDate ?? todayKey;
+  if (to < span.startDate) to = span.startDate; // event not started yet → just its start day
+  return customRange("range", span.startDate, to);
 }
