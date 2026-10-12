@@ -150,17 +150,21 @@ function DashboardInner() {
 }
 
 const RANGES: { id: RangePreset; label: string; short: string }[] = [
+  { id: "event", label: "Event period", short: "Event" },
   { id: "week", label: "This week", short: "Week" },
   { id: "month", label: "This month", short: "Month" },
   { id: "all", label: "All time", short: "All" },
-  { id: "event", label: "Event period", short: "Event" },
 ];
 
 /** Event scope switcher + date range. Pending approvals ignores both (always global). */
 function ScopeBar({ section }: { section: Section }) {
-  const { scope, setScope, range, resolvedRange, setRange, events, scopeName } = useDashboardScope();
+  const { scope, setScope, range, rangePreset, setRange, events, scopeName } = useDashboardScope();
   const [picking, setPicking] = useState(false);
-  const custom = isCustom(range);
+  // `rangePreset` is the raw switcher choice ("event"/"week"/… or a manual custom range);
+  // `range` is the resolved concrete window (event period → its actual dates).
+  const custom = isCustom(rangePreset);
+  // On Global there is no event period, so a stored "event" choice reads as All time.
+  const activePreset = scope === "global" && rangePreset === "event" ? "all" : rangePreset;
   const note =
     section === "pending"
       ? "Pending approvals always show all locations"
@@ -193,9 +197,9 @@ function ScopeBar({ section }: { section: Section }) {
         <SegThumb />
         {/* "Event period" = the selected event's own dates; only shown for a specific event. */}
         {RANGES.filter((r) => r.id !== "event" || scope !== "global").map((r) => (
-          <button key={r.id} type="button" role="tab" data-testid={`range-${r.id}`} aria-label={r.label} aria-selected={range === r.id} onClick={() => setRange(r.id)}
+          <button key={r.id} type="button" role="tab" data-testid={`range-${r.id}`} aria-label={r.label} aria-selected={activePreset === r.id} onClick={() => setRange(r.id)}
             className={cn("relative z-[1] h-8 flex-1 rounded-inner px-2 text-sm sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
-              range === r.id ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
+              activePreset === r.id ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
             <span className="sm:hidden">{r.short}</span>
             <span className="hidden sm:inline">{r.label}</span>
           </button>
@@ -204,7 +208,7 @@ function ScopeBar({ section }: { section: Section }) {
           className={cn("relative z-[1] flex h-8 min-w-0 flex-[1.4] items-center justify-center gap-1.5 rounded-inner px-2 text-sm sm:flex-none sm:px-3 font-semibold whitespace-nowrap transition-colors sm:flex-none",
             custom ? "text-on-primary" : "text-ink-muted hover:text-ink")}>
           <CalendarDays className="size-3.5" />
-          <span className="truncate">{custom ? rangeChip(range) : "Custom"}</span>
+          <span className="truncate">{isCustom(range) ? rangeChip(range) : "Custom"}</span>
         </button>
       </div>
       {picking && (
@@ -217,7 +221,7 @@ function ScopeBar({ section }: { section: Section }) {
             Showing: <span className="text-ink">{scopeName}</span>
             {note === null
               ? " · current stock (date range doesn't apply)"
-              : ` · ${custom ? rangeLabel(range) : range === "event" ? (isCustom(resolvedRange) ? `event period (${rangeChip(resolvedRange)})` : "event period") : RANGES.find((r) => r.id === range)?.label}`}
+              : ` · ${custom ? rangeLabel(range) : activePreset === "event" ? (isCustom(range) ? `event period (${rangeChip(range)})` : "event period") : RANGES.find((r) => r.id === activePreset)?.label}`}
           </>
         )}
       </span>

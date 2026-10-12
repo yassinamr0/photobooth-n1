@@ -57,12 +57,12 @@ function readStored(): { scope: Scope; range: DateRange } {
   } catch {
     // storage blocked / corrupt — use defaults
   }
-  return { scope: "global", range: "week" };
+  return { scope: "global", range: "event" };
 }
 
 export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [pref, setPref] = useState<{ scope: Scope; range: DateRange }>(() =>
-    typeof window === "undefined" ? { scope: "global", range: "week" } : readStored(),
+    typeof window === "undefined" ? { scope: "global", range: "event" } : readStored(),
   );
   const [raw, setRaw] = useState<RawDashboard>({
     users: [], shifts: [], entries: [], events: [], sheetsPerPack: DEFAULT_SHEETS_PER_PACK,
@@ -195,9 +195,10 @@ function useDashboard() {
 export function useDashboardScope() {
   const { scope, setScope, range, rangePreset, setRange, events } = useDashboard();
   const scopeName = scope === "global" ? "Global" : events.find((e) => e.id === scope)?.name ?? "Event";
-  // `range` is the raw switcher choice (drives the buttons); `resolvedRange` is the concrete
-  // window (for showing the Event period's actual dates).
-  return { scope, setScope, range: rangePreset, resolvedRange: range, setRange, events, scopeName };
+  // `range` is the RESOLVED concrete window — every section/card computes with it, so it must
+  // never be the "event" sentinel (calc functions only understand concrete ranges). The raw
+  // switcher choice is exposed as `rangePreset` for the top-bar buttons only.
+  return { scope, setScope, range, rangePreset, setRange, events, scopeName };
 }
 
 /** Scoped data — the ONLY data source for Overview, Staff, Shifts and Staff history. */

@@ -25,7 +25,10 @@ export function SegThumb() {
     const ro = new ResizeObserver(measure);
     ro.observe(track);
     const mo = new MutationObserver(measure);
-    mo.observe(track, { subtree: true, attributes: true, attributeFilter: ["aria-selected"] });
+    // Watch both the selection (aria-selected) AND tabs being added/removed (childList) — the
+    // "Event period" tab appears/disappears as the scope switches, which shifts every tab's
+    // offset; without childList the thumb would keep a stale position and overlap a neighbour.
+    mo.observe(track, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected"] });
     // Only start animating after the first placement, so it never slides in from 0.
     const id = requestAnimationFrame(() => setReady(true));
     return () => {
