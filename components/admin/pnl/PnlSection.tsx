@@ -80,9 +80,11 @@ export function PnlSection() {
       </div>
       <p className="flex items-start gap-2 text-xs text-ink-faint">
         <Info className="mt-px size-3.5 shrink-0" />
-        Monthly expenses are spread evenly over the days of each month, so any range gets its fair share. Everything counts up to
-        today. Revenue is the same figure as Overview. The optional cost staff type on a hadr waste entry isn&apos;t counted — that
-        paper is already paid for through stock purchases.
+        Profit is a running total: whatever you made or lost before the view you&apos;re looking at is carried in as the opening
+        balance (for an event, back to its first day; on Global, back to the start), so a shortfall never disappears when a day or
+        week rolls over. Revenue and expenses stay &quot;this view only&quot;. Monthly expenses are spread evenly over the days of each
+        month, so any range gets its fair share, and everything counts up to today. Revenue is the same figure as Overview. The
+        optional cost staff type on a hadr waste entry isn&apos;t counted — that paper is already paid for through stock purchases.
       </p>
     </div>
   );
@@ -93,19 +95,38 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 /* ─────────────── Headline ─────────────── */
+const signed = (n: number) => `${n < -0.5 ? "−" : "+"}${egp(Math.abs(n))}`;
+
 function Headline({ s, label }: { s: PnlSummary; label: string }) {
-  const loss = s.profit < -0.5;
+  // Running balance: carry in what came before this range so Profit is where you actually stand,
+  // not one isolated slice. When there's nothing before (All time / the event period itself),
+  // carried-over is 0 and this reads exactly like a plain revenue − expenses view.
+  const carry = Math.abs(s.carriedOver) > 0.5;
+  const loss = s.runningProfit < -0.5;
   return (
     <Card padding="lg" data-testid="pnl-headline">
       <CardHeader title="Profit & loss" subtitle={label} />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-gold" tint="gold" />
-        <Tile label="Expenses" value={egp(s.expenses.total)} testid="pnl-expenses" className="text-ink" tint="loss" />
-        <Tile label={loss ? "Net loss" : "Net profit"} value={`${loss ? "−" : ""}${egp(Math.abs(s.profit))}`} testid="pnl-profit"
-          className={loss ? "text-danger" : "text-success"} highlight={loss ? "loss" : "profit"} />
+      <div className={cn("grid gap-3 sm:grid-cols-2", carry ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
+        <Tile label="Revenue" value={egp(s.revenue)} testid="pnl-revenue" className="text-gold" tint="gold" hint="this view" />
+        <Tile label="Expenses" value={egp(s.expenses.total)} testid="pnl-expenses" className="text-ink" tint="loss" hint="this view" />
+        {carry && (
+          <Tile label="Carried over" value={signed(s.carriedOver)} testid="pnl-carried"
+            className={s.carriedOver < -0.5 ? "text-danger" : "text-success"} hint="before this view" />
+        )}
+        <Tile label={loss ? "Net loss" : "Net profit"} value={`${loss ? "−" : ""}${egp(Math.abs(s.runningProfit))}`} testid="pnl-profit"
+          className={loss ? "text-danger" : "text-success"} highlight={loss ? "loss" : "profit"} hint={carry ? "running total" : undefined} />
         <Tile label="Margin" value={s.margin == null ? "—" : pct(s.margin)} testid="pnl-margin" className="text-ink"
-          hint={s.margin == null ? "no revenue" : "profit ÷ revenue"} />
+          hint={s.margin == null ? "no revenue" : "this view"} />
       </div>
+      {carry && (
+        <p data-testid="pnl-running" className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
+          <span>Carried over <b className={cn("tabular-nums", s.carriedOver < -0.5 ? "text-danger" : "text-ink")}>{signed(s.carriedOver)}</b></span>
+          <span className="text-ink-faint">+</span>
+          <span>this view <b className={cn("tabular-nums", s.profit < -0.5 ? "text-danger" : "text-ink")}>{signed(s.profit)}</b></span>
+          <span className="text-ink-faint">=</span>
+          <span>where you stand <b className={cn("tabular-nums", loss ? "text-danger" : "text-success")}>{signed(s.runningProfit)}</b></span>
+        </p>
+      )}
       {s.previous && <Compare s={s} />}
     </Card>
   );

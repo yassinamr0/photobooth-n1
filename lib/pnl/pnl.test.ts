@@ -195,3 +195,52 @@ describe("event dates", () => {
     expect(before.notOpen).toBe(true);
   });
 });
+
+// ---- Running balance: carry the net from before the range into it ------------------------
+describe("carried-over / running profit", () => {
+  const rawCE: RawDashboard = {
+    users: [], sheetsPerPack: 18,
+    events: [{ id: "E", name: "E", startDate: "2026-10-10", endDate: "2026-10-14" } as never],
+    shifts: [shift("d1", "E", "2026-10-10"), shift("d2", "E", "2026-10-11"), shift("d3", "E", "2026-10-12")],
+    entries: [sale("d1", 100), sale("d2", 150), sale("d3", 150)],
+  };
+  // One 170 expense on day 2 (Oct 11).
+  const inpCE: PnlInputs = { raw: rawCE, expenses: [exp("x", "E", "2026-10-11", 170)], recurring: [] };
+  const nowCE = new Date(2026, 9, 12, 15); // Oct 12 (day 3)
+  const today = customRange("day", "2026-10-12");
+
+  it("event: today carries in the net from the event's earlier days", () => {
+    const p = pnlSummary(inpCE, "E", today, nowCE);
+    expect(p.revenue).toBe(150); // just today's sale
+    expect(p.profit).toBeCloseTo(150); // today alone (no expense today)
+    expect(p.carriedOver).toBeCloseTo(80); // (100 + 150) − 170 from Oct 10–11
+    expect(p.runningProfit).toBeCloseTo(230); // 80 + 150 = everything through today
+  });
+
+  it("carried-over is 0 over the event period itself (range starts at day 1)", () => {
+    const p = pnlSummary(inpCE, "E", customRange("range", "2026-10-10", "2026-10-14"), nowCE);
+    expect(p.carriedOver).toBe(0);
+    expect(p.runningProfit).toBeCloseTo(p.profit);
+    expect(p.runningProfit).toBeCloseTo(230); // 400 sales − 170
+  });
+
+  it("carried-over is 0 over All time", () => {
+    const p = pnlSummary(inpCE, "E", "all", nowCE);
+    expect(p.carriedOver).toBe(0);
+    expect(p.runningProfit).toBeCloseTo(p.profit);
+  });
+
+  it("carried-over can be negative (yesterday's shortfall shows as the opening balance)", () => {
+    const inpLoss: PnlInputs = { raw: rawCE, expenses: [exp("big", "E", "2026-10-10", 500)], recurring: [] };
+    const p = pnlSummary(inpLoss, "E", today, nowCE);
+    expect(p.carriedOver).toBeCloseTo(100 + 150 - 500); // −250
+    expect(p.runningProfit).toBeCloseTo(-250 + 150); // −100
+  });
+
+  it("running profit = carried-over + this range, always", () => {
+    for (const r of ["all", "month", customRange("day", "2026-10-11"), customRange("range", "2026-10-11", "2026-10-12")] as const) {
+      const p = pnlSummary(inpCE, "E", r, nowCE);
+      expect(p.runningProfit).toBeCloseTo(p.carriedOver + p.profit);
+    }
+  });
+});

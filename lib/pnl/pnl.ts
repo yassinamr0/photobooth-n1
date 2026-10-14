@@ -141,9 +141,17 @@ function addFees(t: ExpenseTotals, fees: number): ExpenseTotals {
 export type PnlSummary = {
   revenue: number;
   expenses: ExpenseTotals;
-  profit: number;
+  profit: number; // this range only: revenue − expenses
   /** profit ÷ revenue; null with no revenue. */
   margin: number | null;
+  /**
+   * Net profit/loss from BEFORE this range — for an event, back to its first day; Global, back
+   * to the very start. Lets a range read like a statement: carried over + this range = running.
+   * 0 when the range already starts at the beginning (All time, or the event period itself).
+   */
+  carriedOver: number;
+  /** carriedOver + profit — where you actually stand through the end of this range. */
+  runningProfit: number;
   previous: { revenue: number; expenses: number; profit: number; label: string } | null;
 };
 
@@ -153,6 +161,17 @@ export function pnlSummary(inp: PnlInputs, scope: Scope, range: DateRange, now: 
   const revenue = scoped.overview.total;
   const expenses = addFees(expenseTotals(inp, inScope(scope), w.from, w.until, now), cardFeesFor(scoped, inp.fees));
   const profit = revenue - expenses.total;
+  // Running balance: the net profit/loss accumulated before this range's first day, so nothing
+  // "disappears" when a day/week rolls over — last period's shortfall becomes this one's opening
+  // balance. Pure presentation: it never changes how expenses are allocated or counted.
+  const baselineFrom = scope === "global" ? null : eventSpan(inp.raw, scope).from;
+  let carriedOver = 0;
+  if (w.from && !(baselineFrom && baselineFrom >= w.from)) {
+    const before = scopeWindow(inp.raw, scope, baselineFrom, w.from);
+    const beforeExp = expenseTotals(inp, inScope(scope), baselineFrom, w.from, now).total + cardFeesFor(before, inp.fees);
+    carriedOver = before.overview.total - beforeExp;
+  }
+  const runningProfit = carriedOver + profit;
   const cw = comparisonWindows(range, now);
   let previous: PnlSummary["previous"] = null;
   if (cw) {
@@ -161,7 +180,7 @@ export function pnlSummary(inp: PnlInputs, scope: Scope, range: DateRange, now: 
     const pe = expenseTotals(inp, inScope(scope), cw.previous.from, cw.previous.until, now).total + cardFeesFor(prevScoped, inp.fees);
     previous = { revenue: pr, expenses: pe, profit: pr - pe, label: cw.previousLabel };
   }
-  return { revenue, expenses, profit, margin: revenue > 0 ? profit / revenue : null, previous };
+  return { revenue, expenses, profit, margin: revenue > 0 ? profit / revenue : null, carriedOver, runningProfit, previous };
 }
 
 export type PnlPoint = { key: string; label: string; revenue: number; expenses: number; profit: number };
