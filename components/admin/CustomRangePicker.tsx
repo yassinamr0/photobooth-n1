@@ -63,7 +63,11 @@ export function CustomRangePicker({
 
   const draft = customRange(mode, a, mode === "range" ? b : undefined);
   const valid = !!a && (mode !== "range" || !!b);
+  // The P&L and every stat only count up to today, so a future day/week is always empty —
+  // block stepping into one (the date inputs are capped at today too).
+  const canNext = draft.to < today;
   const step = (dir: -1 | 1) => {
+    if (dir === 1 && !canNext) return;
     const next = shiftCustom(draft, dir);
     setA(next.from);
     setB(next.to);
@@ -99,11 +103,11 @@ export function CustomRangePicker({
         <div className="grid grid-cols-2 gap-3">
           <label>
             <span className={label}>From</span>
-            <input type="date" data-testid="custom-from" className={input} value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} />
+            <input type="date" data-testid="custom-from" className={input} value={a} max={b && b < today ? b : today} onChange={(e) => setA(e.target.value)} />
           </label>
           <label>
             <span className={label}>To</span>
-            <input type="date" data-testid="custom-to" className={input} value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} />
+            <input type="date" data-testid="custom-to" className={input} value={b} min={a || undefined} max={today} onChange={(e) => setB(e.target.value)} />
           </label>
         </div>
       ) : (
@@ -114,9 +118,9 @@ export function CustomRangePicker({
               className="grid size-10 shrink-0 place-items-center rounded-inner border border-line text-ink-muted hover:text-ink">
               <ChevronLeft className="size-4" />
             </button>
-            <input type="date" data-testid="custom-day" className={input} value={a} onChange={(e) => setA(e.target.value)} />
-            <button type="button" aria-label={mode === "day" ? "Next day" : "Next week"} onClick={() => valid && step(1)}
-              className="grid size-10 shrink-0 place-items-center rounded-inner border border-line text-ink-muted hover:text-ink">
+            <input type="date" data-testid="custom-day" className={input} value={a} max={today} onChange={(e) => setA(e.target.value)} />
+            <button type="button" aria-label={mode === "day" ? "Next day" : "Next week"} disabled={!canNext} onClick={() => valid && step(1)}
+              className="grid size-10 shrink-0 place-items-center rounded-inner border border-line text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-muted">
               <ChevronRight className="size-4" />
             </button>
           </div>
